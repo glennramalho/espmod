@@ -29,8 +29,7 @@
  * returns: none
  * globals: none
  *
- * This is a single-function GPIO. This function is here just for
- * completeness.
+ * This is a single-function GPIO. This function is here just for completeness.
  */
 void gpio::set_function(gpio_function_t function) {
    if (function != GPIOMF_GPIO)
@@ -48,46 +47,6 @@ void gpio::set_function(gpio_function_t function) {
  */
 gpio_function_t gpio::get_function() {
    return GPIOMF_GPIO;
-}
-
-/*********************
- * Thread: drive()
- * inputs: none
- * outputs: none
- * returns: none
- * globals: none
- *
- * Drives the current level onto the I/O pad.
- */
-void gpio::drive() {
-   for(;;) {
-      /* First we check if the output is enabled. If it is not, we drive the
-       * weak driver. If we are in NONE mode or INPUT mode the pin is also
-       * disabled.
-       */
-      if (driveok == false || dir == GPIODIR_NONE || dir == GPIODIR_INPUT) {
-         /* SystemC does not support weak0/1, so we drive Z and ignore the pin
-          * value. We will flag both WPU and WPD together but any other case
-          * must be done externally via a pull-up.
-          */
-         if (wpu && wpd) pin.write(SC_LOGIC_X);
-         pin.write(SC_LOGIC_Z);
-      }
-      /* WPU and WPD together is just bad. */
-      else if (wpu && wpd) pin.write(SC_LOGIC_X);
-      /* SystemC does not support weak0/1, so we put Z */
-      else if (pindrive == true && wpu) pin.write(SC_LOGIC_Z);
-      else if (pindrive == false && wpd) pin.write(SC_LOGIC_Z);
-      /* If we are driving high and we are in OD mode, we drive Z. OD mode
-       * drives only low.
-       */
-      else if (pindrive == true && od) pin.write(SC_LOGIC_Z);
-      /* And on the remaining cases, we drive the value onto the pin. */
-      else if (pindrive == true) pin.write(SC_LOGIC_1);
-      else pin.write(SC_LOGIC_0);
-
-      wait();
-   }
 }
 
 /*********************
@@ -131,5 +90,45 @@ bool gpio::get_val() {
             /* We return low simply because we have to return something. */
             return false;
       }
+   }
+}
+
+/*********************
+ * Thread: drive()
+ * inputs: none
+ * outputs: none
+ * returns: none
+ * globals: none
+ *
+ * Drives the current level onto the I/O pad.
+ */
+void gpio::drive() {
+   for(;;) {
+      /* First we check if the output is enabled. If it is not, we drive the
+       * weak driver. If we are in NONE mode or INPUT mode the pin is also
+       * disabled.
+       */
+      if (driveok==false || dir == GPIODIR_NONE || dir==GPIODIR_INPUT) {
+         /* SystemC does not support weak0/1, so we drive Z and ignore the pin
+          * value. We will flag both WPU and WPD together but any other case
+          * must be done externally via a pull-up.
+          */
+         if (wpu && wpd) pin.write(SC_LOGIC_X);
+         pin.write(SC_LOGIC_Z);
+      }
+      /* WPU and WPD together is just bad. */
+      else if (wpu && wpd) pin.write(SC_LOGIC_X);
+      /* SystemC does not support weak0/1, so we put Z */
+      else if (pindrive == true && wpu) pin.write(SC_LOGIC_Z);
+      else if (pindrive == false && wpd) pin.write(SC_LOGIC_Z);
+      /* If we are driving high and we are in OD mode, we drive Z. OD mode
+       * drives only low.
+       */
+      else if (pindrive == true && od) pin.write(SC_LOGIC_Z);
+      /* And on the remaining cases, we drive the value onto the pin. */
+      else if (pindrive == true) pin.write(SC_LOGIC_1);
+      else pin.write(SC_LOGIC_0);
+
+      wait();
    }
 }

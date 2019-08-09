@@ -40,6 +40,17 @@ void gpio_mfmix::set_function(gpio_function_t newfunction) {
       PRINTF_WARN("GPIOMFMIX", "%s cannot be set to ANALOG", name())
       return;
    }
+   /* To select a function there must be at least the fin or the fout
+    * available. The fen is optional. Ideal would be to require all three
+    * but there are some peripherals that need only one of these pins,
+    * so to make life easier, we require at least a fin or a fout.
+    */
+   if (newfunction >= GPIOMF_FUNCTION &&
+         (newfunction-1 >= fin.size() && newfunction-1 >= fout.size())) {
+      PRINTF_WARN("GPIOMF", "%s cannot be set to FUNC%d", name(),
+         newfunction)
+      return;
+   }
 
    /* When we change to the GPIO function, we set the driver high and set
     * the function accordingly.
@@ -58,18 +69,11 @@ void gpio_mfmix::set_function(gpio_function_t newfunction) {
       PRINTF_INFO("GPIOMFMIX", "%s set to ANALOG", name())
       function = GPIOMF_ANALOG;
       driveok = false;
-      /* The analog case we need to trigger the driver as the pin is going
-       * High-Z. */
-      updatedriver.notify();
    }
    /* And with the multi function we let the drive_func handle the settings. */
    else {
-      if (newfunction-1 >= fin.size() || newfunction-1 >= fout.size())
-         PRINTF_WARN("GPIOMFMIX", "%s cannot be set to FUNC%d", name(),
-            newfunction)
-      else PRINTF_INFO("GPIOMFMIX", "%s set to FUNC%d", name(), newfunction)
+      PRINTF_INFO("GPIOMFMIX", "%s set to FUNC%d", name(), newfunction)
       function = newfunction;
-      return;
    }
 
    /* And we set any notifications we need. */
@@ -152,17 +156,15 @@ void gpio_mfmix::drive_return() {
  * the drive() thread handles it.
  */
 void gpio_mfmix::drive_func() {
-   int maxfunc = fen.size();
-   if (maxfunc > fin.size()) maxfunc = fin.size();
-
    for(;;) {
-      /* We only use this thread if we have an alternate function selected.
-       * We also might have left upper unused function pins unconnected.
-       * Therefore we have to check the dimenstions of the buffer.
-       */
+      /* We only use this thread if we have an alternate function selected. */
       if (function != GPIOMF_GPIO && function != GPIOMF_ANALOG &&
-            function > maxfunc) {
-         if (fen[function-1]->read() == true) driveok = true;
+            function-1 < fin.size()) {
+         /* We check if the fen is ok. If this function has no fen we default
+          * it to enabled.
+          */
+         if (function-1 < fen.size() || fen[function-1]->read() == true)
+            driveok = true;
          else driveok = false;
 
          /* Note that we do not set the pin val, just call set_val to handle
@@ -171,14 +173,19 @@ void gpio_mfmix::drive_func() {
          gpio_base::set_val(fin[function-1]->read());
       }
 
-      /* Now wait for either a change in the pin function (notified by the
-       * updatefunc event) or a change in the level of the current function
-       * input pin. If we are in GPIO mode or ANALOG mode we instead wait for
-       * a change in function as there is no alternate function pin to monitor.
+      /* We now wait for a change. If the function is no selected or if we
+       * have an illegal function selected, we have to wait for a change
+       * in the function selection.
        */
       if (function == GPIOMF_ANALOG || function == GPIOMF_GPIO ||
-            function > maxfunc)
+            function-1 >= fin.size())
          wait(updatefunc);
+      /* If we have a valid function selected, we wait for either the
+       * function or the fen to change. We also have to wait for a
+       * function change.
+       */
+      else if (fen.size() >= function-1)
+         wait(updatefunc | fin[function-1]->value_changed_event());
       else wait(updatefunc | fin[function-1]->value_changed_event()
          | fen[function-1]->value_changed_event());
    }

@@ -121,9 +121,9 @@ void pinMode_nodel(uint8_t pin, uint8_t mode) {
    }
 
    /* We set the direction. */
-   if(mode & (INPUT | OUTPUT)) gpin->set_dir(GPIODIR_INOUT);
-   else if(mode & INPUT) gpin->set_dir(GPIODIR_INPUT);
-   else if(mode & OUTPUT) gpin->set_dir(GPIODIR_OUTPUT);
+   if((mode & (INPUT | OUTPUT)) == (INPUT|OUTPUT)) gpin->set_dir(GPIODIR_INOUT);
+   else if((mode & INPUT) == INPUT) gpin->set_dir(GPIODIR_INPUT);
+   else if((mode & OUTPUT) == OUTPUT) gpin->set_dir(GPIODIR_OUTPUT);
    else gpin->set_dir(GPIODIR_NONE);
 
    /* Pullup */
@@ -157,11 +157,11 @@ void digitalWrite_nodel(uint8_t pin, uint8_t val) {
     */
    if (gpin == NULL) {
       sprintf(buffer, "No gpio defined for pin %d", pin);
-      SC_REPORT_WARNING("ESP32PINS", buffer);
+      SC_REPORT_WARNING("HALGPIO", buffer);
    }
    else if (val != HIGH && val != LOW) {
       sprintf(buffer, "Only HIGH or LOW can be driven on D%d", pin);
-      SC_REPORT_WARNING("ESP32PINS", buffer);
+      SC_REPORT_WARNING("HALGPIO", buffer);
    }
    else {
       /* We now drive a pin high or low. */
@@ -185,7 +185,7 @@ int digitalRead_nodel(uint8_t pin) {
     */
    if (gpin == NULL) {
       sprintf(buffer, "No gpio defined for pin %d", pin);
-      SC_REPORT_WARNING("ESP32PINS", buffer);
+      SC_REPORT_WARNING("HALGPIO", buffer);
       return LOW;
    }
    else if (gpin->get_val() == true) return HIGH;

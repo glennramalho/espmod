@@ -22,21 +22,6 @@
 #include "info.h"
 
 /**********************
- * start_of_simulation():
- * inputs: none
- * outputs: none
- * return: none
- * globals: none
- *
- * Invokes all commands that must be called before we start simulating.
- */
-void barGraphtest::start_of_simulation() {
-   /* We need logic_0 to always be 0. */
-   logic_0.write(SC_LOGIC_0);
-   logic_mix_0.write(SC_LOGIC_0);
-}
-
-/**********************
  * trace():
  * inputs: trace file
  * outputs: none

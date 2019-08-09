@@ -40,8 +40,13 @@ void gpio_mf::set_function(gpio_function_t newfunction) {
       PRINTF_WARN("GPIOMF", "%s cannot be set to ANALOG", name())
       return;
    }
+   /* To select a function there must be at least the fin or the fout
+    * available. The fen is optional. Ideal would be to require all three
+    * but there are some peripherals that need only one of these pins,
+    * so to make life easier, we require at least a fin or a fout.
+    */
    if (newfunction >= GPIOMF_FUNCTION &&
-         (newfunction-1 >= fin.size() || newfunction-1 >= fout.size())) {
+         (newfunction-1 >= fin.size() && newfunction-1 >= fout.size())) {
       PRINTF_WARN("GPIOMF", "%s cannot be set to FUNC%d", name(),
          newfunction)
       return;
@@ -67,6 +72,15 @@ void gpio_mf::set_function(gpio_function_t newfunction) {
    updatereturn.notify();
 }
 
+/*********************
+ * Function: get_function()
+ * inputs: none
+ * outputs: none
+ * returns: current function
+ * globals: none
+ *
+ * Returns the current function.
+ */
 gpio_function_t gpio_mf::get_function() {
    return function;
 }
@@ -148,8 +162,12 @@ void gpio_mf::drive_return() {
 void gpio_mf::drive_func() {
    for(;;) {
       /* We only use this thread if we have an alternate function selected. */
-      if (function != GPIOMF_GPIO) {
-         if (fen[function-1]->read() == true) driveok = true;
+      if (function != GPIOMF_GPIO && function-1 < fin.size()) {
+         /* We check if the fen is ok. If this function has no fen we default
+          * it to enabled.
+          */
+         if (function-1 < fen.size() || fen[function-1]->read() == true)
+            driveok = true;
          else driveok = false;
 
          /* Note that we do not set the pin val, just call set_val to handle
@@ -158,12 +176,18 @@ void gpio_mf::drive_func() {
          gpio_base::set_val(fin[function-1]->read());
       }
 
-      /* Now wait for either a change in the pin function (notified by the
-       * updatefunc event) or a change in the level of the current function
-       * input pin. If we are in GPIO mode or ANALOG mode we instead wait for
-       * a change in function as there is no alternate function pin to monitor.
+      /* We now wait for a change. If the function is no selected or if we
+       * have an illegal function selected, we have to wait for a change
+       * in the function selection.
        */
-      if (function == GPIOMF_GPIO) wait(updatefunc);
+      if (function == GPIOMF_GPIO || function-1 >= fin.size())
+         wait(updatefunc);
+      /* If we have a valid function selected, we wait for either the
+       * function or the fen to change. We also have to wait for a
+       * function change.
+       */
+      else if (fen.size() >= function-1)
+         wait(updatefunc | fin[function-1]->value_changed_event());
       else wait(updatefunc | fin[function-1]->value_changed_event()
          | fen[function-1]->value_changed_event());
    }

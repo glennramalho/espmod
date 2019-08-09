@@ -187,6 +187,7 @@ gpio_dir_t gpio_base::get_dir() {
  */
 bool gpio_base::set_dir(gpio_dir_t newdir) {
    const char *dirstr;
+   unsigned int newmode;
 
    /* If the pin direction is not changing, we just return. We return true
     * though as it was successful.
@@ -194,14 +195,16 @@ bool gpio_base::set_dir(gpio_dir_t newdir) {
    if (dir == newdir) return true;
 
    /* We get a direction string so that we can print it. */
-   if (newdir == GPIODIR_NONE) dirstr = "NONE";
-   else if (newdir == GPIODIR_INPUT) dirstr = "INPUT";
-   else if (newdir == GPIODIR_OUTPUT) dirstr = "OUTPUT";
-   else if (newdir == GPIODIR_INOUT) dirstr = "BI-DIR";
-   else dirstr = "unknown dir";
+   switch(newdir) {
+      case GPIODIR_NONE: dirstr = "NONE"; newmode = GPIOMODE_NONE; break;
+      case GPIODIR_INPUT: dirstr = "INPUT"; newmode = GPIOMODE_INPUT; break;
+      case GPIODIR_OUTPUT: dirstr = "OUTPUT"; newmode = GPIOMODE_OUTPUT; break;
+      case GPIODIR_INOUT: dirstr = "BI-DIR"; newmode = GPIOMODE_INOUT; break;
+      default: dirstr = "unknown dir"; newmode = GPIOMODE_NONE; break;
+   }
 
    /* We first check that the direction is allowed. If not, we complain. */
-   if ((modes & newdir)==0) {
+   if ((modes & newmode)==0) {
       /* The pin does not have this option. We then need to complain. */
       PRINTF_WARN("GPIO", "Cannot set pin %s to %s", name(), dirstr);
       return false;

@@ -63,6 +63,8 @@ void doitesp32devkitv1::pininit() {
    pinset(18, &i_gpio_d18);
    pinset(19, &i_gpio_d19);
    pinset(21, &i_gpio_d21);
+   pinset(23, &i_gpio_d22);
+   pinset(23, &i_gpio_d23);
    pinset(25, &i_gpio_d25);
    pinset(26, &i_gpio_d26);
    pinset(27, &i_gpio_d27);
@@ -89,6 +91,10 @@ void doitesp32devkitv1::pininit() {
 }
 
 void doitesp32devkitv1::trace(sc_trace_file *tf) {
+   sc_trace(tf, uart0rx, uart0rx.name());
+   sc_trace(tf, uart0tx, uart0tx.name());
+   sc_trace(tf, uart2rx, uart2rx.name());
+   sc_trace(tf, uart2tx, uart2tx.name());
    sc_trace(tf, d0_a11, d0_a11.name());
    sc_trace(tf, d1, d1.name());
    sc_trace(tf, d2_a12, d2_a12.name());

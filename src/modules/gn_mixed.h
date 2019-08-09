@@ -194,8 +194,8 @@ private:
 
 inline void sc_trace(sc_trace_file *tf, const gn_mixed &object,
       const std::string &name) {
-   sc_trace(tf, object.logic, name + ".d");
-   sc_trace(tf, object.lvl, name + ".a");
+   sc_trace(tf, object.logic, name + "_d");
+   sc_trace(tf, object.lvl, name + "_a");
 }
 
 #endif

@@ -81,6 +81,30 @@ SC_MODULE(netcon_booltomix) {
    }
 };
 
+SC_MODULE(netcon_mixtorv) {
+   sc_in<gn_mixed> a;
+   sc_out_resolved b;
+
+   void transport();
+
+   SC_CTOR(netcon_mixtorv): a("a"), b("b") {
+      SC_THREAD(transport);
+      sensitive << a;
+   }
+};
+
+SC_MODULE(netcon_rvtomix) {
+   sc_in_resolved a;
+   sc_out<gn_mixed> b;
+
+   void transport();
+
+   SC_CTOR(netcon_rvtomix): a("a"), b("b") {
+      SC_THREAD(transport);
+      sensitive << a;
+   }
+};
+
 SC_MODULE(netcon_mixtoana) {
    sc_in<gn_mixed> a;
    sc_out<float> b;

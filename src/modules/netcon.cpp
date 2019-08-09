@@ -77,6 +77,21 @@ void netcon_booltomix::transport() {
    }
 }
 
+void netcon_mixtorv::transport() {
+   for(;;) {
+      wait();
+      b.write(a.read().logic);
+   }
+}
+
+void netcon_rvtomix::transport() {
+   b.write(GN_LOGIC_X);
+   for(;;) {
+      wait();
+      b.write(gn_mixed(a.read()));
+   }
+}
+
 void netcon_mixtoana::transport() {
    b.write(0.0);
    for(;;) {

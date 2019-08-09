@@ -38,15 +38,29 @@ void TestSerial::begin(int baudrate) {
    ::printf("Setting Baud rate to %0d\n", baudrate);
    /* If pins were specified to go to some mode we do it. */
    if (pinmodeset) {
+      /* We first drive the TX level high. It is now an input, but when we
+       * change the pin to be an output, it will not drive a zero.
+       */
+      digitalWrite(txpin, true);
       pinMode(rxpin, rxmode);
       pinMode(txpin, txmode);
+      /* Not quite the code but works for now. */
+      gpio_iomux_out(rxpin, 0, false);
+      gpio_iomux_out(txpin, 0, false);
    }
 }
 
 void TestSerial::begin(int baudrate, int mode, int pinrx, int pintx) {
    ::printf("Setting Baud rate to %0d\n", baudrate);
+   /* We first drive the TX level high. It is now an input, but when we change
+    * the pin to be an output, it will not drive a zero.
+    */
+   digitalWrite(txpin, true);
    pinMode(pinrx, rxmode);
    pinMode(pintx, txmode);
+   /* Not quite the code but works for now. */
+   gpio_iomux_out(pinrx, 0, false);
+   gpio_iomux_out(pintx, 0, false);
 }
 
 void TestSerial::setports(sc_fifo<unsigned char> *_to,

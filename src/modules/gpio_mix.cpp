@@ -69,9 +69,9 @@ void gpio_mix::set_function(gpio_function_t newfunction) {
  * inputs: none
  * outputs: none
  * returns: current function
-* globals: none
+ * globals: none
  *
- * Returns the current function.
+ * Returns the function for this GPIOs.
  */
 gpio_function_t gpio_mix::get_function() {
    return function;
@@ -99,15 +99,11 @@ bool gpio_mix::get_val() {
    else {
       /* We sample the pin. */
       sample = pin.read();
-      switch(sample.to_char()) {
+      switch(sample.logic.to_char()) {
          /* Strong 0 or Strong 1 we simply return. */
          case '1': return true;
          case '0': return false;
          /* Z is ok if we had a weak pull-up or down. */
-         case 'A':
-            PRINTF_WARN("Sampling an Analog signal %s", name());
-            /* We return low simply because we have to return something. */
-            return false;
          case 'Z':
             if (wpu) return true;
             else if (wpd) return false;
@@ -156,7 +152,7 @@ void gpio_mix::drive() {
        * weak driver. If we are in NONE mode or INPUT mode the pin is also
        * disabled.
        */
-      else if (driveok==false || dir==GPIODIR_NONE || dir==GPIODIR_INPUT) {
+      else if (driveok==false || dir == GPIODIR_NONE || dir==GPIODIR_INPUT) {
          if (wpu && wpd) pin.write(GN_LOGIC_X);
          else if (wpu) pin.write(GN_LOGIC_W1);
          else if (wpd) pin.write(GN_LOGIC_W0);
@@ -164,6 +160,7 @@ void gpio_mix::drive() {
       }
       /* WPU and WPD together is just bad. */
       else if (wpu && wpd) pin.write(GN_LOGIC_X);
+      /* If we have a weak to drive, we drive it. */
       else if (pindrive == true && wpu) pin.write(GN_LOGIC_W1);
       else if (pindrive == false && wpd) pin.write(GN_LOGIC_W0);
       /* If we are driving high and we are in OD mode, we drive Z. OD mode
