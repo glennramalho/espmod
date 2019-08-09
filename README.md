@@ -97,14 +97,29 @@ to switch it on by setting SC_CPLUSPLUS=201103L and adding the -std=c++11
 to the CXXFLAGS.
 
 Download and install the esp IDF and the Arduino IDF. The esp IDF can be inside
-the Arduino directory.
+the Arduino directory. It should work with the latest versions but I used
+model Arduino 1.8.9 and ESP-IDF github from July 8th.
 
-Next download the ESPMOD and set the Makefile.vars to point to your Arduino
-and ESP directories. This is because the ESPMOD attempts to not override all
-files but only the ones that were adapted to work with the tool.
+Next download the ESPMOD and set the Makefile.vars and Makefile to point to
+your SystemC, Arduino and ESP directories. This is because the ESPMOD attempts
+to not override all files but only the ones that were adapted to work with the
+tool. Once done just do:
 
-Then enter the examples directories and attempt to build a few of them. Once
-done you can try to run your on.
+ % make
+
+It should produce two .a lib files. Once done, enter one of the examples
+in the examples directory and and compile it also using make:
+
+ % cd examples
+ % cd Blink
+ % make
+
+And execute the model:
+
+ % ./Blink.x
+
+You should see the simulation run. You can optionally use the +waveform option
+to get a VCD file and view it using gtkwaves or some other viewer.
 
 # Status
 
@@ -174,7 +189,7 @@ contributions are welcome. Below are some big issues still missing:
  * Needing to put in a SPI interface model
  * Needing to put in a bus model to emulate memory mapped I/O accesses.
  * Needing to build the PCNT
- * Interrupts are partially modeled. Still lots to do here.
+ * Model Interrupts. Still lots to do here.
  * And of course, if you model the system you have to model the test interface
      too. There are some in place, like a WiFi client, flash chip and other
      blocks, but there is still a lot to do here.
