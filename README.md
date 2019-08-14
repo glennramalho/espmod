@@ -111,7 +111,9 @@ It should produce two .a lib files. Once done, enter one of the examples
 in the examples directory and and compile it also using make:
 
  % cd examples
+
  % cd Blink
+
  % make
 
 And execute the model:
