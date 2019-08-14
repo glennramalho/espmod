@@ -37,6 +37,11 @@
 #include "soc/pcnt_struct.h"
 
 #ifdef __cplusplus
+#include "adc_types.h"
+#define PCNT (*pcntptr)
+#endif
+
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -453,6 +458,5 @@ esp_err_t pcnt_isr_handler_remove(pcnt_unit_t unit);
 #ifdef __cplusplus 
 }
 #endif
-
 
 #endif

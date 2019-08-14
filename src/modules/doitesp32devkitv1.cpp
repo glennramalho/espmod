@@ -81,6 +81,9 @@ void doitesp32devkitv1::pininit() {
    adc1ptr = &i_adc1;
    adc2ptr = &i_adc2;
 
+   /* Other modules. */
+   pcntptr = &i_pcnt;
+
    /* We configure the serial protocols. Each TestSerial needs to be connected
     * to the channel it controls.
     */

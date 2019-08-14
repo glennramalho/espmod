@@ -78,6 +78,3 @@ functypes_t funcmatrix[40][6] =
    {UGPIO, UWARN, UGPIO, UWARN, UWARN, UWARN}, /* GPIO38 */
    {UGPIO, UWARN, UGPIO, UWARN, UWARN, UWARN}  /* GPIO39 */
 };
-
-
-

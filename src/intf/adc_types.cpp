@@ -23,3 +23,4 @@
 
 adc1 *adc1ptr;
 adc2 *adc2ptr;
+pcntmod *pcntptr;

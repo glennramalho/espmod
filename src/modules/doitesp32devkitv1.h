@@ -29,6 +29,8 @@
 #include "gpio_mf.h"
 #include "gpio_mix.h"
 #include "gpio_mfmix.h"
+#include "clkgen.h"
+#include "pcntmod.h"
 #include "netcon.h"
 #include "adc_types.h"
 #include "gn_mixed.h"
@@ -83,6 +85,8 @@ SC_MODULE(doitesp32devkitv1) {
    sc_out<bool> itx {"itx"};
 
    /* Submodules */
+   clkgen i_clkgen{"i_clkgen"};
+   pcntmod i_pcnt{"i_pcnt"};
    adc1 i_adc1{"i_adc1"};
    adc2 i_adc2{"i_adc2"};
    uart i_uart0 {"i_uart0", 64, 64};
@@ -194,11 +198,44 @@ SC_MODULE(doitesp32devkitv1) {
    gpio_mix i_gpio_d39 {"i_gpio_d39",
       GPIOMODE_NONE | GPIOMODE_INPUT, GPIOMODE_NONE, true};
 
-   /* GPIO to UART signals */
+   /* signals */
    sc_signal<bool> uart0rx {"uart0rx"};
    sc_signal<bool> uart0tx {"uart0tx"};
    sc_signal<bool> uart2rx {"uart2rx"};
    sc_signal<bool> uart2tx {"uart2tx"};
+   sc_signal<bool> apb_clk;
+   sc_signal<bool> sig_ch0_un0 {"sig_ch0_un0"};
+   sc_signal<bool> sig_ch1_un0 {"sig_ch1_un0"};
+   sc_signal<bool> ctrl_ch0_un0 {"ctrl_ch0_un0"};
+   sc_signal<bool> ctrl_ch1_un0 {"ctrl_ch1_un0"};
+   sc_signal<bool> sig_ch0_un1 {"sig_ch0_un1"};
+   sc_signal<bool> sig_ch1_un1 {"sig_ch1_un1"};
+   sc_signal<bool> ctrl_ch0_un1 {"ctrl_ch0_un1"};
+   sc_signal<bool> ctrl_ch1_un1 {"ctrl_ch1_un1"};
+   sc_signal<bool> sig_ch0_un2 {"sig_ch0_un2"};
+   sc_signal<bool> sig_ch1_un2 {"sig_ch1_un2"};
+   sc_signal<bool> ctrl_ch0_un2 {"ctrl_ch0_un2"};
+   sc_signal<bool> ctrl_ch1_un2 {"ctrl_ch1_un2"};
+   sc_signal<bool> sig_ch0_un3 {"sig_ch0_un3"};
+   sc_signal<bool> sig_ch1_un3 {"sig_ch1_un3"};
+   sc_signal<bool> ctrl_ch0_un3 {"ctrl_ch0_un3"};
+   sc_signal<bool> ctrl_ch1_un3 {"ctrl_ch1_un3"};
+   sc_signal<bool> sig_ch0_un4 {"sig_ch0_un4"};
+   sc_signal<bool> sig_ch1_un4 {"sig_ch1_un4"};
+   sc_signal<bool> ctrl_ch0_un4 {"ctrl_ch0_un4"};
+   sc_signal<bool> ctrl_ch1_un4 {"ctrl_ch1_un4"};
+   sc_signal<bool> sig_ch0_un5 {"sig_ch0_un5"};
+   sc_signal<bool> sig_ch1_un5 {"sig_ch1_un5"};
+   sc_signal<bool> ctrl_ch0_un5 {"ctrl_ch0_un5"};
+   sc_signal<bool> ctrl_ch1_un5 {"ctrl_ch1_un5"};
+   sc_signal<bool> sig_ch0_un6 {"sig_ch0_un6"};
+   sc_signal<bool> sig_ch1_un6 {"sig_ch1_un6"};
+   sc_signal<bool> ctrl_ch0_un6 {"ctrl_ch0_un6"};
+   sc_signal<bool> ctrl_ch1_un6 {"ctrl_ch1_un6"};
+   sc_signal<bool> sig_ch0_un7 {"sig_ch0_un7"};
+   sc_signal<bool> sig_ch1_un7 {"sig_ch1_un7"};
+   sc_signal<bool> ctrl_ch0_un7 {"ctrl_ch0_un7"};
+   sc_signal<bool> ctrl_ch1_un7 {"ctrl_ch1_un7"};
 
    /* Unconnected signals */
    sc_signal<bool> l0_f1 {"l0_f1", false};
@@ -217,6 +254,7 @@ SC_MODULE(doitesp32devkitv1) {
    sc_signal<bool> l1_f7 {"l1_f7", true};
    sc_signal<bool> logic_0 {"logic_0", false};
    sc_signal<bool> logic_1 {"logic_1", false};
+
 
    /* Processes */
    void dut(void);
@@ -286,6 +324,7 @@ SC_MODULE(doitesp32devkitv1) {
       /* GPIO 12 */
       i_gpio_d12.pin(d12_a15);
       CONNECTFUNC(i_gpio_d12,  l0_f1, l1_f1, sig_open); /* F1 MTDO -- not sup.*/
+      CONNECTFUNC(i_gpio_d12,  l0_f1, l1_f1, sig_ch0_un0); /* TODO REmove .*/
       /* F2: HSPIQ -- not supported. */
       /* F3: GPIO -- built-in */
       /* F4: HS2_DATA2 -- not supported. */
@@ -293,6 +332,7 @@ SC_MODULE(doitesp32devkitv1) {
       /* F6: EMAC_TXD3 */
       i_gpio_d13.pin(d13_a14);
       CONNECTFUNC(i_gpio_d13,  l0_f1, l1_f1, sig_open); /* F1 MTCK -- not sup.*/
+      CONNECTFUNC(i_gpio_d13,  l0_f1, l1_f1, sig_ch1_un0); /* TODO REmove .*/
       /* F2: HSPID -- not supported. */
       /* F3: GPIO -- built-in */
       /* F4: HS2_DATA3 -- not supported. */
@@ -300,6 +340,7 @@ SC_MODULE(doitesp32devkitv1) {
       /* F6: EMAC_RX_ER */
       i_gpio_d14.pin(d14_a16);
       CONNECTFUNC(i_gpio_d14,  l0_f1, l1_f1, sig_open); /* F1 MTMS -- not sup.*/
+      CONNECTFUNC(i_gpio_d14,  l0_f1, l1_f1, ctrl_ch0_un0); /* TODO REmove .*/
       /* F2: HSPICLK -- not supported. */
       /* F3: GPIO -- built-in */
       /* F4: HS2_CLK -- not supported. */
@@ -307,6 +348,7 @@ SC_MODULE(doitesp32devkitv1) {
       /* F6: EMAC_TXD2 */
       i_gpio_d15(d15_a13);
       CONNECTFUNC(i_gpio_d15,  l0_f1, l1_f1, sig_open); /* F1 MTDO -- not sup.*/
+      CONNECTFUNC(i_gpio_d15,  l0_f1, l1_f1, ctrl_ch1_un0); /* TODO REmove .*/
       /* F2: HSPICS0 -- not supported. */
       /* F3: GPIO -- built-in */
       /* F4: HS2_CMD -- not supported. */
@@ -412,6 +454,24 @@ SC_MODULE(doitesp32devkitv1) {
       i_adc2.channel_7(d27_a17);
       i_adc2.channel_8(d26_a19);
       i_adc2.channel_9(d25_a18);
+
+      /* And we connect the PCNT. */
+      i_pcnt.sig_ch0_un(sig_ch0_un0); i_pcnt.sig_ch1_un(sig_ch1_un0);
+      i_pcnt.ctrl_ch0_un(ctrl_ch0_un0); i_pcnt.ctrl_ch1_un(ctrl_ch1_un0);
+      i_pcnt.sig_ch0_un(sig_ch0_un1); i_pcnt.sig_ch1_un(sig_ch1_un1);
+      i_pcnt.ctrl_ch0_un(ctrl_ch0_un1); i_pcnt.ctrl_ch1_un(ctrl_ch1_un1);
+      i_pcnt.sig_ch0_un(sig_ch0_un2); i_pcnt.sig_ch1_un(sig_ch1_un2);
+      i_pcnt.ctrl_ch0_un(ctrl_ch0_un2); i_pcnt.ctrl_ch1_un(ctrl_ch1_un2);
+      i_pcnt.sig_ch0_un(sig_ch0_un3); i_pcnt.sig_ch1_un(sig_ch1_un3);
+      i_pcnt.ctrl_ch0_un(ctrl_ch0_un3); i_pcnt.ctrl_ch1_un(ctrl_ch1_un3);
+      i_pcnt.sig_ch0_un(sig_ch0_un4); i_pcnt.sig_ch1_un(sig_ch1_un4);
+      i_pcnt.ctrl_ch0_un(ctrl_ch0_un4); i_pcnt.ctrl_ch1_un(ctrl_ch1_un4);
+      i_pcnt.sig_ch0_un(sig_ch0_un5); i_pcnt.sig_ch1_un(sig_ch1_un5);
+      i_pcnt.ctrl_ch0_un(ctrl_ch0_un5); i_pcnt.ctrl_ch1_un(ctrl_ch1_un5);
+      i_pcnt.sig_ch0_un(sig_ch0_un6); i_pcnt.sig_ch1_un(sig_ch1_un6);
+      i_pcnt.ctrl_ch0_un(ctrl_ch0_un6); i_pcnt.ctrl_ch1_un(ctrl_ch1_un6);
+      i_pcnt.sig_ch0_un(sig_ch0_un7); i_pcnt.sig_ch1_un(sig_ch1_un7);
+      i_pcnt.ctrl_ch0_un(ctrl_ch0_un7); i_pcnt.ctrl_ch1_un(ctrl_ch1_un7);
 
       SC_THREAD(dut);
    }

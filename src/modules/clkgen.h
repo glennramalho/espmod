@@ -1,8 +1,8 @@
 /*******************************************************************************
- * adc_types.h -- Copyright 2019 (c) Glenn Ramalho - RFIDo Design
+ * clkgen.h -- Copyright 2019 (c) Glenn Ramalho - RFIDo Design
  *******************************************************************************
  * Description:
- *   Defines types of ESP32 ADC being used.
+ * Emulates the clocks on the ESP32.
  *******************************************************************************
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,17 +18,21 @@
  *******************************************************************************
  */
 
-#ifndef _ADC_TYPES_H
-#define _ADC_TYPES_H
+#ifndef _CLKGEN_H
+#define _CLKGEN_H
 
 #include <systemc.h>
-#include "esp32adc1.h"
-#include "esp32adc2.h"
-#include "pcntmod.h"
-typedef esp32adc1 adc1;
-typedef esp32adc2 adc2;
-extern adc1 *adc1ptr;
-extern adc2 *adc2ptr;
-extern pcntmod *pcntptr;
+
+SC_MODULE(clkgen) {
+   sc_out<bool> apb_clk;
+
+   /* Threads */
+   void gen(void);
+
+   /* Sets initial drive condition. */
+   SC_CTOR(clkgen) {
+      SC_THREAD(gen);
+   }
+};
 
 #endif

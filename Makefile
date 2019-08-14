@@ -55,6 +55,7 @@ CORES=$(CORESDIR)/Arduino.cpp $(CORESDIR)/HardwareSerial.cpp \
    $(CORESDIR)/esp32-hal-psram.cpp \
    $(CORESDIR)/esp32-hal-spi.cpp \
    $(CORESDIR)/esp32-hal-gpio.cpp \
+   $(CORESDIR)/esp32-hal-ledc.c \
    $(CORESDIR)/Print.cpp \
    $(CORESDIR)/Stream.cpp \
    $(ARDUINO)/StreamString.cpp \
@@ -107,6 +108,7 @@ MODULES=$(MODDIR)/cchan.cpp $(MODDIR)/cchanflash.cpp \
    $(MODDIR)/gn_mixed.cpp $(MODDIR)/ea_pullup.cpp \
    $(MODDIR)/gpio_base.cpp $(MODDIR)/gpio_simple.cpp $(MODDIR)/gpio_mf.cpp \
    $(MODDIR)/gpio_mix.cpp $(MODDIR)/gpio_mfmix.cpp \
+   $(MODDIR)/pcntmod.cpp $(MODDIR)/clkgen.cpp \
    $(MODDIR)/netcon.cpp $(MODDIR)/uart.cpp
 
 # Test Interface Modules
