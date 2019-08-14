@@ -24,7 +24,7 @@
 #include <systemc.h>
 
 SC_MODULE(clkgen) {
-   sc_out<bool> apb_clk;
+   sc_out<bool> apb_clk {"apb_clk"};
 
    /* Threads */
    void gen(void);

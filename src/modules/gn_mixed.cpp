@@ -234,7 +234,7 @@ static void gn_mixed_resolve(gn_mixed& result_,
     */
    for(i = sz - 1; i>0 && res.logic != SC_LOGIC_X; --i) {
       /* If the resolved is high-Z, we resolve to the next one. */
-      if (res.logic == SC_LOGIC_Z) {
+      if (res.value() == GN_LOGIC_Z) {
          res = values_[i];
          continue;
       }
@@ -243,10 +243,10 @@ static void gn_mixed_resolve(gn_mixed& result_,
       current = values_[i];
 
       /* This case is simple. */
-      if (current.logic == SC_LOGIC_Z) continue;
+      if (current.value() == GN_LOGIC_Z) continue;
 
       /* We let the resolution table handle the rest. */
-      res = gn_logic_resolution_tbl[res.logic.value()][current.logic.value()];
+      res = gn_logic_resolution_tbl[res.value()][current.value()];
    }
 
    result_ = res;

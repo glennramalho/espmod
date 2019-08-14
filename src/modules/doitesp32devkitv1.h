@@ -203,7 +203,7 @@ SC_MODULE(doitesp32devkitv1) {
    sc_signal<bool> uart0tx {"uart0tx"};
    sc_signal<bool> uart2rx {"uart2rx"};
    sc_signal<bool> uart2tx {"uart2tx"};
-   sc_signal<bool> apb_clk;
+   sc_signal<bool> apb_clk {"apb_clk"};
    sc_signal<bool> sig_ch0_un0 {"sig_ch0_un0"};
    sc_signal<bool> sig_ch1_un0 {"sig_ch1_un0"};
    sc_signal<bool> ctrl_ch0_un0 {"ctrl_ch0_un0"};
@@ -324,7 +324,7 @@ SC_MODULE(doitesp32devkitv1) {
       /* GPIO 12 */
       i_gpio_d12.pin(d12_a15);
       CONNECTFUNC(i_gpio_d12,  l0_f1, l1_f1, sig_open); /* F1 MTDO -- not sup.*/
-      CONNECTFUNC(i_gpio_d12,  l0_f1, l1_f1, sig_ch0_un0); /* TODO REmove .*/
+      CONNECTFUNC(i_gpio_d12,  l0_f2, l1_f2, sig_ch0_un0); /* TODO REmove .*/
       /* F2: HSPIQ -- not supported. */
       /* F3: GPIO -- built-in */
       /* F4: HS2_DATA2 -- not supported. */
@@ -332,7 +332,7 @@ SC_MODULE(doitesp32devkitv1) {
       /* F6: EMAC_TXD3 */
       i_gpio_d13.pin(d13_a14);
       CONNECTFUNC(i_gpio_d13,  l0_f1, l1_f1, sig_open); /* F1 MTCK -- not sup.*/
-      CONNECTFUNC(i_gpio_d13,  l0_f1, l1_f1, sig_ch1_un0); /* TODO REmove .*/
+      CONNECTFUNC(i_gpio_d13,  l0_f2, l1_f2, sig_ch1_un0); /* TODO REmove .*/
       /* F2: HSPID -- not supported. */
       /* F3: GPIO -- built-in */
       /* F4: HS2_DATA3 -- not supported. */
@@ -340,7 +340,7 @@ SC_MODULE(doitesp32devkitv1) {
       /* F6: EMAC_RX_ER */
       i_gpio_d14.pin(d14_a16);
       CONNECTFUNC(i_gpio_d14,  l0_f1, l1_f1, sig_open); /* F1 MTMS -- not sup.*/
-      CONNECTFUNC(i_gpio_d14,  l0_f1, l1_f1, ctrl_ch0_un0); /* TODO REmove .*/
+      CONNECTFUNC(i_gpio_d14,  l0_f2, l1_f2, ctrl_ch0_un0); /* TODO REmove .*/
       /* F2: HSPICLK -- not supported. */
       /* F3: GPIO -- built-in */
       /* F4: HS2_CLK -- not supported. */
@@ -348,7 +348,7 @@ SC_MODULE(doitesp32devkitv1) {
       /* F6: EMAC_TXD2 */
       i_gpio_d15(d15_a13);
       CONNECTFUNC(i_gpio_d15,  l0_f1, l1_f1, sig_open); /* F1 MTDO -- not sup.*/
-      CONNECTFUNC(i_gpio_d15,  l0_f1, l1_f1, ctrl_ch1_un0); /* TODO REmove .*/
+      CONNECTFUNC(i_gpio_d15,  l0_f2, l1_f2, ctrl_ch1_un0); /* TODO REmove .*/
       /* F2: HSPICS0 -- not supported. */
       /* F3: GPIO -- built-in */
       /* F4: HS2_CMD -- not supported. */
@@ -455,7 +455,11 @@ SC_MODULE(doitesp32devkitv1) {
       i_adc2.channel_8(d26_a19);
       i_adc2.channel_9(d25_a18);
 
+      /* The clock gen */
+      i_clkgen.apb_clk(apb_clk);
+
       /* And we connect the PCNT. */
+      i_pcnt.apb_clk(apb_clk);
       i_pcnt.sig_ch0_un(sig_ch0_un0); i_pcnt.sig_ch1_un(sig_ch1_un0);
       i_pcnt.ctrl_ch0_un(ctrl_ch0_un0); i_pcnt.ctrl_ch1_un(ctrl_ch1_un0);
       i_pcnt.sig_ch0_un(sig_ch0_un1); i_pcnt.sig_ch1_un(sig_ch1_un1);

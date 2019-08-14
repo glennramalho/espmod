@@ -153,6 +153,7 @@ typedef struct {
         };
         uint32_t val;
     } ctrl;
+    /*
     uint32_t reserved_b4;
     uint32_t reserved_b8;
     uint32_t reserved_bc;
@@ -171,9 +172,9 @@ typedef struct {
     uint32_t reserved_f0;
     uint32_t reserved_f4;
     uint32_t reserved_f8;
-    uint32_t date;                                  /**/
+    uint32_t date;*/                                /**/
 } pcnt_dev_t;
-extern pcnt_dev_t PCNT;
+//extern pcnt_dev_t PCNT;
 
 #ifdef __cplusplus
 }

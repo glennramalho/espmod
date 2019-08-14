@@ -22,9 +22,10 @@
 #define _PCNTMOD_H
 
 #include <systemc.h>
+#include "soc/pcnt_struct.h"
 
 SC_MODULE(pcntmod) {
-   sc_in<bool> apb_clk;
+   sc_in<bool> apb_clk {"apb_clk"};
    sc_signal<uint32_t> conf0[8];
    sc_signal<uint32_t> conf1[8];
    sc_signal<uint32_t> conf2[8];
@@ -35,7 +36,8 @@ SC_MODULE(pcntmod) {
    sc_signal<uint32_t> int_clr {"int_clr"};
    sc_signal<uint32_t> status_unit[8];
    sc_signal<uint32_t> ctrl {"ctrl"};
-
+   pcnt_dev_t sv;
+   
    sc_port<sc_signal_in_if<bool>,0> ctrl_ch0_un;
    sc_port<sc_signal_in_if<bool>,0> sig_ch0_un;
    sc_port<sc_signal_in_if<bool>,0> ctrl_ch1_un;
@@ -43,14 +45,24 @@ SC_MODULE(pcntmod) {
 
    /* Functions */
    void docnt(int un, bool ctrllvl, int ch);
+   void update();
 
    /* Threads */
    void capture(void);
+   void updateth(void);
+   void returnth(void);
+
+   sc_event update_ev;
 
    /* Sets initial drive condition. */
    SC_CTOR(pcntmod) {
       SC_THREAD(capture);
       sensitive << apb_clk.pos();
+
+      SC_THREAD(updateth);
+      sensitive << update_ev;
+
+      SC_THREAD(returnth);
    }
 
    void trace(sc_trace_file *tf);

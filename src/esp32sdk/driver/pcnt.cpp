@@ -35,8 +35,8 @@
 #include "driver/pcnt.h"
 #include <stdlib.h>
 //#include "driver/periph_ctrl.h"
-#include "setfield.h"
 #include "adc_types.h"
+#include "Arduino.h"
 
 #define PCNT_CHANNEL_ERR_STR  "PCNT CHANNEL ERROR"
 #define PCNT_UNIT_ERR_STR  "PCNT UNIT ERROR"
@@ -108,23 +108,17 @@ esp_err_t pcnt_set_mode(pcnt_unit_t unit, pcnt_channel_t channel, pcnt_count_mod
     PCNT_CHECK((hctrl_mode < PCNT_MODE_MAX) && (lctrl_mode < PCNT_MODE_MAX), PCNT_CTRL_MODE_ERR_STR, ESP_ERR_INVALID_ARG);
 
     if(channel == 0) {
-        SETFIELD(PCNT.conf0[unit], PCNT_CH0_POS_MODE_U1_M,
-           pos_mode, PCNT_CH0_POS_MODE_U1_S);
-        SETFIELD(PCNT.conf0[unit], PCNT_CH0_NEG_MODE_U1_M,
-           neg_mode, PCNT_CH0_NEG_MODE_U1_S);
-        SETFIELD(PCNT.conf0[unit], PCNT_CH0_HCTRL_MODE_U1_M,
-           hctrl_mode, PCNT_CH0_HCTRL_MODE_U1_S);
-        SETFIELD(PCNT.conf0[unit], PCNT_CH0_LCTRL_MODE_U1_M,
-           lctrl_mode, PCNT_CH0_LCTRL_MODE_U1_S);
+        PCNT.conf_unit[unit].conf0.ch0_pos_mode = pos_mode;
+        PCNT.conf_unit[unit].conf0.ch0_neg_mode = neg_mode;
+        PCNT.conf_unit[unit].conf0.ch0_hctrl_mode = hctrl_mode;
+        PCNT.conf_unit[unit].conf0.ch0_lctrl_mode = lctrl_mode;
+        pcntptr->update();
     } else {
-        SETFIELD(PCNT.conf0[unit], PCNT_CH1_POS_MODE_U1_M,
-           pos_mode, PCNT_CH1_POS_MODE_U1_S);
-        SETFIELD(PCNT.conf0[unit], PCNT_CH1_NEG_MODE_U1_M,
-           neg_mode, PCNT_CH1_NEG_MODE_U1_S);
-        SETFIELD(PCNT.conf0[unit], PCNT_CH1_HCTRL_MODE_U1_M,
-           hctrl_mode, PCNT_CH1_HCTRL_MODE_U1_S);
-        SETFIELD(PCNT.conf0[unit], PCNT_CH1_LCTRL_MODE_U1_M,
-           lctrl_mode, PCNT_CH1_LCTRL_MODE_U1_S);
+        PCNT.conf_unit[unit].conf0.ch1_pos_mode = pos_mode;
+        PCNT.conf_unit[unit].conf0.ch1_neg_mode = neg_mode;
+        PCNT.conf_unit[unit].conf0.ch1_hctrl_mode = hctrl_mode;
+        PCNT.conf_unit[unit].conf0.ch1_lctrl_mode = lctrl_mode;
+        pcntptr->update();
     }
     return ESP_OK;
 }
@@ -149,13 +143,15 @@ esp_err_t pcnt_set_pin(pcnt_unit_t unit, pcnt_channel_t channel, int pulse_io, i
         //PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[pulse_io], PIN_FUNC_GPIO);
         gpio_set_direction((gpio_num_t)pulse_io, GPIO_MODE_INPUT);
         gpio_set_pull_mode((gpio_num_t)pulse_io, GPIO_PULLUP_ONLY);
-        gpio_matrix_in((gpio_num_t)pulse_io, input_sig_index, 0);
+        //gpio_matrix_in((gpio_num_t)pulse_io, input_sig_index, 0);
+        gpio_iomux_out(pulse_io, 1, 0);
     }
     if(ctrl_io >= 0) {
         //PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[ctrl_io], PIN_FUNC_GPIO);
         gpio_set_direction((gpio_num_t)ctrl_io, GPIO_MODE_INPUT);
         gpio_set_pull_mode((gpio_num_t)ctrl_io, GPIO_PULLUP_ONLY);
-        gpio_matrix_in((gpio_num_t)ctrl_io, ctrl_sig_index, 0);
+        //gpio_matrix_in((gpio_num_t)ctrl_io, ctrl_sig_index, 0);
+        gpio_iomux_out(pulse_io, 1, 0);
     }
     return ESP_OK;
 }
@@ -164,7 +160,8 @@ esp_err_t pcnt_get_counter_value(pcnt_unit_t pcnt_unit, int16_t* count)
 {
     PCNT_CHECK(pcnt_unit < PCNT_UNIT_MAX, PCNT_UNIT_ERR_STR, ESP_ERR_INVALID_ARG);
     PCNT_CHECK(count != NULL, PCNT_ADDRESS_ERR_STR, ESP_ERR_INVALID_ARG);
-    *count = (int16_t) RDFIELD(PCNT.cnt_unit[pcnt_unit], PCNT_PLUS_CNT_U0_M, 0);
+    del1cycle();
+    *count = (int16_t) PCNT.cnt_unit[pcnt_unit].cnt_val;
     return ESP_OK;
 }
 
@@ -172,7 +169,8 @@ esp_err_t pcnt_counter_pause(pcnt_unit_t pcnt_unit)
 {
     PCNT_CHECK(pcnt_unit < PCNT_UNIT_MAX, PCNT_UNIT_ERR_STR, ESP_ERR_INVALID_ARG);
     PCNT_ENTER_CRITICAL(&pcnt_spinlock);
-    SETFIELD(PCNT.ctrl, PCNT_CNT_PAUSE_U0_M<<(pcnt_unit*2), 0xffffffff, 0);
+    PCNT.ctrl.val |= BIT(PCNT_CNT_PAUSE_U0_S + (pcnt_unit * 2));
+    pcntptr->update();
     PCNT_EXIT_CRITICAL(&pcnt_spinlock);
     return ESP_OK;
 }
@@ -181,7 +179,8 @@ esp_err_t pcnt_counter_resume(pcnt_unit_t pcnt_unit)
 {
     PCNT_CHECK(pcnt_unit < PCNT_UNIT_MAX, PCNT_UNIT_ERR_STR, ESP_ERR_INVALID_ARG);
     PCNT_ENTER_CRITICAL(&pcnt_spinlock);
-    SETFIELD(PCNT.ctrl, PCNT_CNT_PAUSE_U0_M << (pcnt_unit * 2), 0xffffffff, 0);
+    PCNT.ctrl.val &= (~(BIT(PCNT_CNT_PAUSE_U0_S + (pcnt_unit * 2))));
+    pcntptr->update();
     PCNT_EXIT_CRITICAL(&pcnt_spinlock);
     return ESP_OK;
 }
@@ -190,7 +189,11 @@ esp_err_t pcnt_counter_clear(pcnt_unit_t pcnt_unit)
 {
     PCNT_CHECK(pcnt_unit < PCNT_UNIT_MAX, PCNT_UNIT_ERR_STR, ESP_ERR_INVALID_ARG);
     PCNT_ENTER_CRITICAL(&pcnt_spinlock);
-    SETFIELD(PCNT.ctrl, PCNT_PLUS_CNT_RST_U0_M<<(pcnt_unit*2), 0xffffffff, 0);
+    uint32_t reset_bit = BIT(PCNT_PLUS_CNT_RST_U0_S + (pcnt_unit * 2));
+    PCNT.ctrl.val |= reset_bit;
+    pcntptr->update();
+    PCNT.ctrl.val &= ~reset_bit;
+    pcntptr->update();
     PCNT_EXIT_CRITICAL(&pcnt_spinlock);
     return ESP_OK;
 }
@@ -199,8 +202,8 @@ esp_err_t pcnt_intr_enable(pcnt_unit_t pcnt_unit)
 {
     PCNT_CHECK(pcnt_unit < PCNT_UNIT_MAX, PCNT_UNIT_ERR_STR, ESP_ERR_INVALID_ARG);
     PCNT_ENTER_CRITICAL(&pcnt_spinlock);
-    SETFIELD(PCNT.int_ena, PCNT_CNT_THR_EVENT_U0_INT_ENA_S << pcnt_unit,
-           0xffffffff, 0);
+    PCNT.int_ena.val |= BIT(PCNT_CNT_THR_EVENT_U0_INT_ENA_S + pcnt_unit);
+    pcntptr->update();
     PCNT_EXIT_CRITICAL(&pcnt_spinlock);
     return ESP_OK;
 }
@@ -209,7 +212,8 @@ esp_err_t pcnt_intr_disable(pcnt_unit_t pcnt_unit)
 {
     PCNT_CHECK(pcnt_unit < PCNT_UNIT_MAX, PCNT_UNIT_ERR_STR, ESP_ERR_INVALID_ARG);
     PCNT_ENTER_CRITICAL(&pcnt_spinlock);
-    SETFIELD(PCNT.int_ena, PCNT_CNT_THR_EVENT_U0_INT_ENA_S<<pcnt_unit, 0x0, 0);
+    PCNT.int_ena.val &= (~(BIT(PCNT_CNT_THR_EVENT_U0_INT_ENA_S + pcnt_unit)));
+    pcntptr->update();
     PCNT_EXIT_CRITICAL(&pcnt_spinlock);
     return ESP_OK;
 }
@@ -219,16 +223,17 @@ esp_err_t pcnt_event_enable(pcnt_unit_t unit, pcnt_evt_type_t evt_type)
     PCNT_CHECK(unit < PCNT_UNIT_MAX, PCNT_UNIT_ERR_STR, ESP_ERR_INVALID_ARG);
     PCNT_CHECK(evt_type < PCNT_EVT_MAX, PCNT_EVT_TYPE_ERR_STR, ESP_ERR_INVALID_ARG);
     if(evt_type == PCNT_EVT_L_LIM) {
-        SETFIELD(PCNT.conf0[unit], PCNT_THR_L_LIM_EN_U0, 0xffffffff, 0);
+        PCNT.conf_unit[unit].conf0.thr_l_lim_en = 1;
     } else if(evt_type == PCNT_EVT_H_LIM) {
-        SETFIELD(PCNT.conf0[unit], PCNT_THR_H_LIM_EN_U0_M, 0xffffffff, 0);
+        PCNT.conf_unit[unit].conf0.thr_h_lim_en = 1;
     } else if(evt_type == PCNT_EVT_THRES_0) {
-        SETFIELD(PCNT.conf0[unit], PCNT_THR_THRES0_EN_U0_M, 0xffffffff, 0);
+        PCNT.conf_unit[unit].conf0.thr_thres0_en = 1;
     } else if(evt_type == PCNT_EVT_THRES_1) {
-        SETFIELD(PCNT.conf0[unit], PCNT_THR_THRES1_EN_U0_M, 0xffffffff, 0);
+        PCNT.conf_unit[unit].conf0.thr_thres1_en = 1;
     } else if(evt_type == PCNT_EVT_ZERO) {
-        SETFIELD(PCNT.conf0[unit], PCNT_THR_ZERO_EN_U0_M, 0xffffffff, 0);
+        PCNT.conf_unit[unit].conf0.thr_zero_en = 1;
     }
+    pcntptr->update();
     return ESP_OK;
 }
 
@@ -237,16 +242,17 @@ esp_err_t pcnt_event_disable(pcnt_unit_t unit, pcnt_evt_type_t evt_type)
     PCNT_CHECK(unit < PCNT_UNIT_MAX, PCNT_UNIT_ERR_STR, ESP_ERR_INVALID_ARG);
     PCNT_CHECK(evt_type < PCNT_EVT_MAX, PCNT_EVT_TYPE_ERR_STR, ESP_ERR_INVALID_ARG);
     if(evt_type == PCNT_EVT_L_LIM) {
-        SETFIELD(PCNT.conf0[unit], PCNT_THR_L_LIM_EN_U0_M, 0x0, 0);
+        PCNT.conf_unit[unit].conf0.thr_l_lim_en = 0;
     } else if(evt_type == PCNT_EVT_H_LIM) {
-        SETFIELD(PCNT.conf0[unit], PCNT_THR_H_LIM_EN_U0_M, 0x0, 0);
+        PCNT.conf_unit[unit].conf0.thr_h_lim_en = 0;
     } else if(evt_type == PCNT_EVT_THRES_0) {
-        SETFIELD(PCNT.conf0[unit], PCNT_THR_THRES0_EN_U0_M, 0x0, 0);
+        PCNT.conf_unit[unit].conf0.thr_thres0_en = 0;
     } else if(evt_type == PCNT_EVT_THRES_1) {
-        SETFIELD(PCNT.conf0[unit], PCNT_THR_THRES1_EN_U0_M, 0x0, 0);
+        PCNT.conf_unit[unit].conf0.thr_thres1_en = 0;
     } else if(evt_type == PCNT_EVT_ZERO) {
-        SETFIELD(PCNT.conf0[unit], PCNT_THR_ZERO_EN_U0_M, 0x0, 0);
+        PCNT.conf_unit[unit].conf0.thr_zero_en = 0;
     }
+    pcntptr->update();
     return ESP_OK;
 }
 
@@ -257,18 +263,15 @@ esp_err_t pcnt_set_event_value(pcnt_unit_t unit, pcnt_evt_type_t evt_type, int16
     PCNT_CHECK(!(evt_type == PCNT_EVT_L_LIM && value > 0), PCNT_LIMT_VAL_ERR_STR, ESP_ERR_INVALID_ARG);
     PCNT_CHECK(!(evt_type == PCNT_EVT_H_LIM && value < 0), PCNT_LIMT_VAL_ERR_STR, ESP_ERR_INVALID_ARG);
     if(evt_type == PCNT_EVT_L_LIM) {
-        SETFIELD(PCNT.conf2[unit], PCNT_CNT_L_LIM_U0, value,
-           PCNT_CNT_L_LIM_U0_S);
+        PCNT.conf_unit[unit].conf2.cnt_l_lim = value;
     } else if(evt_type == PCNT_EVT_H_LIM) {
-        SETFIELD(PCNT.conf2[unit], PCNT_CNT_H_LIM_U0, value,
-           PCNT_CNT_H_LIM_U0_S);
+        PCNT.conf_unit[unit].conf2.cnt_h_lim = value;
     } else if(evt_type == PCNT_EVT_THRES_0) {
-        SETFIELD(PCNT.conf1[unit], PCNT_CNT_THRES0_U0, value,
-           PCNT_CNT_THRES0_U1_S);
+        PCNT.conf_unit[unit].conf1.cnt_thres0 = value;
     } else if(evt_type == PCNT_EVT_THRES_1) {
-        SETFIELD(PCNT.conf1[unit], PCNT_CNT_THRES1_U0, value,
-           PCNT_CNT_THRES1_U1_S);
+        PCNT.conf_unit[unit].conf1.cnt_thres1 = value;
     }
+    pcntptr->update();
     return ESP_OK;
 }
 
@@ -279,20 +282,17 @@ esp_err_t pcnt_get_event_value(pcnt_unit_t unit, pcnt_evt_type_t evt_type, int16
     PCNT_CHECK(value != NULL, PCNT_ADDRESS_ERR_STR, ESP_ERR_INVALID_ARG);
 
     if(evt_type == PCNT_EVT_L_LIM) {
-        *value = (int16_t) RDFIELD(PCNT.conf2[unit], PCNT_CNT_L_LIM_U1_M,
-           PCNT_CNT_L_LIM_U1_S);
+        *value = (int16_t) PCNT.conf_unit[unit].conf2.cnt_l_lim;
     } else if(evt_type == PCNT_EVT_H_LIM) {
-        *value = (int16_t) RDFIELD(PCNT.conf2[unit], PCNT_CNT_H_LIM_U1_M,
-           PCNT_CNT_H_LIM_U1_S);
+        *value = (int16_t) PCNT.conf_unit[unit].conf2.cnt_h_lim;
     } else if(evt_type == PCNT_EVT_THRES_0) {
-        *value = (int16_t) RDFIELD(PCNT.conf1[unit], PCNT_CNT_THRES0_U0_M,
-           PCNT_CNT_THRES0_U1_S);
+        *value = (int16_t) PCNT.conf_unit[unit].conf1.cnt_thres0;
     } else if(evt_type == PCNT_EVT_THRES_1) {
-        *value = (int16_t) RDFIELD(PCNT.conf1[unit], PCNT_CNT_THRES1_U0_M,
-           PCNT_CNT_THRES1_U1_S);
+        *value = (int16_t) PCNT.conf_unit[unit].conf1.cnt_thres1;
     } else {
         *value = 0;
     }
+    pcntptr->update();
     return ESP_OK;
 }
 
@@ -300,8 +300,8 @@ esp_err_t pcnt_set_filter_value(pcnt_unit_t unit, uint16_t filter_val)
 {
     PCNT_CHECK(unit < PCNT_UNIT_MAX, PCNT_UNIT_ERR_STR, ESP_ERR_INVALID_ARG);
     PCNT_CHECK(filter_val < 1024, PCNT_PARAM_ERR_STR, ESP_ERR_INVALID_ARG);
-    SETFIELD(PCNT.conf0[unit], PCNT_FILTER_THRES_U0_M, filter_val,
-       PCNT_FILTER_THRES_U0_S);
+    PCNT.conf_unit[unit].conf0.filter_thres = filter_val;
+    pcntptr->update();
     return ESP_OK;
 }
 
@@ -310,35 +310,35 @@ esp_err_t pcnt_get_filter_value(pcnt_unit_t unit, uint16_t *filter_val)
     PCNT_CHECK(unit < PCNT_UNIT_MAX, PCNT_UNIT_ERR_STR, ESP_ERR_INVALID_ARG);
     PCNT_CHECK(filter_val != NULL, PCNT_ADDRESS_ERR_STR, ESP_ERR_INVALID_ARG);
 
-    *filter_val = (uint16_t) RDFIELD(PCNT.conf0[unit], PCNT_FILTER_THRES_U0_M,
-       PCNT_FILTER_THRES_U0_S);
+    *filter_val = PCNT.conf_unit[unit].conf0.filter_thres;
     return ESP_OK;
 }
 
 esp_err_t pcnt_filter_enable(pcnt_unit_t unit)
 {
     PCNT_CHECK(unit < PCNT_UNIT_MAX, PCNT_UNIT_ERR_STR, ESP_ERR_INVALID_ARG);
-    SETFIELD(PCNT.conf0[unit], PCNT_FILTER_EN_U0_M, 0xffffffff, 0);
+    PCNT.conf_unit[unit].conf0.filter_en = 1;
     return ESP_OK;
 }
 
 esp_err_t pcnt_filter_disable(pcnt_unit_t unit)
 {
     PCNT_CHECK(unit < PCNT_UNIT_MAX, PCNT_UNIT_ERR_STR, ESP_ERR_INVALID_ARG);
-    SETFIELD(PCNT.conf0[unit], PCNT_FILTER_EN_U0_M, 0x0, 0);
+    PCNT.conf_unit[unit].conf0.filter_en = 0;
     return ESP_OK;
 }
 
 esp_err_t pcnt_isr_register(void (*fun)(void*), void * arg, int intr_alloc_flags, pcnt_isr_handle_t *handle)
 {
     PCNT_CHECK(fun != NULL, PCNT_ADDRESS_ERR_STR, ESP_ERR_INVALID_ARG);
-    return esp_intr_alloc(ETS_PCNT_INTR_SOURCE, intr_alloc_flags, fun, arg, handle);
+    //return esp_intr_alloc(ETS_PCNT_INTR_SOURCE, intr_alloc_flags, fun, arg, handle);
+    return ESP_OK;
 }
 
 // pcnt interrupt service
 static void IRAM_ATTR pcnt_intr_service(void* arg)
 {
-    const uint32_t intr_status = PCNT.int_st;
+    const uint32_t intr_status = PCNT.int_st.val;
     uint32_t status = intr_status;
     while (status) {
         int unit = __builtin_ffs(status) - 1;
@@ -347,7 +347,7 @@ static void IRAM_ATTR pcnt_intr_service(void* arg)
             (pcnt_isr_func[unit].fn)(pcnt_isr_func[unit].args);
         }
     }
-    PCNT.int_clr = intr_status;
+    PCNT.int_clr.val = intr_status;
 }
 
 esp_err_t pcnt_isr_handler_add(pcnt_unit_t unit, void(*isr_handler)(void *), void *args)
@@ -400,8 +400,8 @@ void pcnt_isr_service_uninstall(void)
         return;
     }
     PCNT_ENTER_CRITICAL(&pcnt_spinlock);
-    esp_intr_free(pcnt_isr_service);
-    free(pcnt_isr_func);
+    //esp_intr_free(pcnt_isr_service);
+    //free(pcnt_isr_func);
     pcnt_isr_func = NULL;
     pcnt_isr_service = NULL;
     PCNT_EXIT_CRITICAL(&pcnt_spinlock);

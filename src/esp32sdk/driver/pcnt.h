@@ -38,7 +38,7 @@
 
 #ifdef __cplusplus
 #include "adc_types.h"
-#define PCNT (*pcntptr)
+#define PCNT (pcntptr->sv)
 #endif
 
 #ifdef __cplusplus
