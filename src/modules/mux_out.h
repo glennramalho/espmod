@@ -1,8 +1,8 @@
 /*******************************************************************************
- * gpioset.h -- Copyright 2019 Glenn Ramalho - RFIDo Design
+ * mux_out.h -- Copyright 2019 (c) Glenn Ramalho - RFIDo Design
  *******************************************************************************
  * Description:
- *   Connects the GPIO SystemC library with the ESP Model GPIO functions.
+ * Model for the input signal mux for the GPIO Matrix.
  *******************************************************************************
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,17 +18,31 @@
  *******************************************************************************
  */
 
-#ifndef _GPIOSET_H
-#define _GPIOSET_H
+#ifndef _MUX_OUT_H
+#define _MUX_OUT_H
 
-#include "gpio_simple.h"
-#include "gpio_mf.h"
+#include <systemc.h>
 
-void pinset(int pin, void *ngpioptr);
-gpio *getgpio(int pin);
-#define GETFUNC(x) ((x)>>5)
+SC_MODULE(mux_out) {
+   sc_out<bool> min_o {"min_o"};
+   sc_out<bool> men_o {"men_o"};
+   sc_in<bool> uart0tx_i{"uart0tx_i"};
+   sc_in<bool> uart1tx_i{"uart1tx_i"};
+   sc_in<bool> uart2tx_i{"uart2tx_i"};
 
-typedef enum {UWARN, UGPIO, UALT} functypes_t;
-extern functypes_t funcmatrix[40][6];
+   int function;
+   sc_event fchange_ev;
+
+   /* Functions */
+   void mux(int funcsel);
+
+   /* Threads */
+   void transfer(void);
+
+   SC_CTOR(mux_out) {
+      function = -1;
+      SC_THREAD(transfer);
+   }
+};
 
 #endif

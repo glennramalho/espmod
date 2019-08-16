@@ -1,8 +1,8 @@
 /*******************************************************************************
- * gpioset.h -- Copyright 2019 Glenn Ramalho - RFIDo Design
+ * mux_in.h -- Copyright 2019 (c) Glenn Ramalho - RFIDo Design
  *******************************************************************************
  * Description:
- *   Connects the GPIO SystemC library with the ESP Model GPIO functions.
+ * Model for the input signal mux for the GPIO Matrix.
  *******************************************************************************
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,17 +18,29 @@
  *******************************************************************************
  */
 
-#ifndef _GPIOSET_H
-#define _GPIOSET_H
+#ifndef _MUX_IN_H
+#define _MUX_IN_H
 
-#include "gpio_simple.h"
-#include "gpio_mf.h"
+#include <systemc.h>
 
-void pinset(int pin, void *ngpioptr);
-gpio *getgpio(int pin);
-#define GETFUNC(x) ((x)>>5)
+SC_MODULE(mux_in) {
+   sc_out<bool> out_o {"out_o"};
+   sc_port<sc_signal_in_if<bool>,0> mout_i {"mout_i"};
 
-typedef enum {UWARN, UGPIO, UALT} functypes_t;
-extern functypes_t funcmatrix[40][6];
+   int function;
+   sc_event fchange_ev;
+
+   /* Functions */
+   void mux(int gpiosel);
+
+   /* Threads */
+   void transfer(void);
+
+   mux_in(sc_module_name name, int initialfunc) {
+      function = initialfunc;
+      SC_THREAD(transfer);
+   }
+   SC_HAS_PROCESS(mux_in);
+};
 
 #endif

@@ -1,8 +1,8 @@
 /*******************************************************************************
- * gpioset.h -- Copyright 2019 Glenn Ramalho - RFIDo Design
+ * mux_in.cpp -- Copyright 2019 (c) Glenn Ramalho - RFIDo Design
  *******************************************************************************
  * Description:
- *   Connects the GPIO SystemC library with the ESP Model GPIO functions.
+ * Model for the PCNT mux in the GPIO matrix.
  *******************************************************************************
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,17 +18,26 @@
  *******************************************************************************
  */
 
-#ifndef _GPIOSET_H
-#define _GPIOSET_H
+#include <systemc.h>
+#include "info.h"
+#include "mux_in.h"
 
-#include "gpio_simple.h"
-#include "gpio_mf.h"
+void mux_in::mux(int gpiosel) {
+   if (gpiosel >= mout_i.size()) {
+      PRINTF_WARN("MUXPCNT",
+        "Attempting to set GPIO Matrix to illegal pin %d.", gpiosel);
+      return;
+   }
+   function = gpiosel;
+   fchange_ev.notify();
+}
 
-void pinset(int pin, void *ngpioptr);
-gpio *getgpio(int pin);
-#define GETFUNC(x) ((x)>>5)
+void mux_in::transfer() {
+   while(true) {
+      /* We simply copy the input onto the output. */
+      out_o.write(mout_i[function]->read());
 
-typedef enum {UWARN, UGPIO, UALT} functypes_t;
-extern functypes_t funcmatrix[40][6];
-
-#endif
+      /* We wait for a function change or a signal change. */
+      wait(fchange_ev | mout_i[function]->value_changed_event());
+   }
+}

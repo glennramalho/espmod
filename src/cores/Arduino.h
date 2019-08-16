@@ -30,8 +30,8 @@
     Lesser General Public License for more details.
  */
 
-#ifndef Arduino_h
-#define Arduino_h
+#ifndef _ARDUINO_H
+#define _ARDUINO_H
 
 #include <stdbool.h>
 #include <stdint.h>

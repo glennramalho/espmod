@@ -30,10 +30,10 @@
     Lesser General Public License for more details.
  */
 
+#include <systemc.h>
 #include "Arduino.h"
 #include <sys/time.h>
 #include <string.h>
-#include <systemc.h>
 
 uint16_t makeWord(uint16_t w) { return w; }
 uint16_t makeWord(byte h, byte l) { return ((h&0xff)<<8)|l&0xff; }
@@ -64,8 +64,6 @@ unsigned int xt_rsil(unsigned int lvl) {
 bool interruptsEnabled() {
    return interruptsenabled < 15;
 }
-
-gpio_dev_t GPIO;
 
 long map(long value, long fromMin, long fromMax, long toMin, long toMax) {
    return (value - fromMin) * (toMax - toMin) / (fromMax - fromMin) + toMin;

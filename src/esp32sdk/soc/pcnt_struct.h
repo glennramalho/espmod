@@ -174,9 +174,21 @@ typedef struct {
     uint32_t reserved_f8;
     uint32_t date;*/                                /**/
 } pcnt_dev_t;
-//extern pcnt_dev_t PCNT;
 
 #ifdef __cplusplus
+}
+#endif
+
+#ifdef __cplusplus
+extern "C++" {
+/* We define the struct to actually point to the class. Note, this will only
+ * work in C++. For C, we might come up with some copying mechanism but for
+ * now this will work.
+ */
+#include <systemc.h>
+#include "pcntmod.h"
+extern pcntmod *pcntptr;
+#define PCNT (pcntptr->sv)
 }
 #endif
 

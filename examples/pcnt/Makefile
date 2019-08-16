@@ -79,7 +79,10 @@ $(PROJECT).x: $(OBJS) $(SYSTEMC_LIB_DIR)/libsystemc.a $(ESPLIB)
 	g++ -o$@ $(CPPFLAGS) $(OBJS) $(ESPLIBINC) $(SYSTEMC_LDFLAGS) \
            $(SYSTEMC_LIBS)
 
-# And the remaining files use the generic options
+
+$(ESPLIB):
+	cd $(ESPMOD)/.. && make
+
 $(OBJDIR)/%.o: %.cpp $(DEPDIR)/%.d | $(DEPDIR) $(OBJDIR)
 	$(COMPILE.cpp) $(OUTPUT_OPTION) $<
 

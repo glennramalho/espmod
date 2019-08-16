@@ -22,6 +22,8 @@
 #define _PCNTMOD_H
 
 #include <systemc.h>
+#include "pcntbus.h"
+struct pcntmod;
 #include "soc/pcnt_struct.h"
 
 SC_MODULE(pcntmod) {
@@ -38,13 +40,10 @@ SC_MODULE(pcntmod) {
    sc_signal<uint32_t> ctrl {"ctrl"};
    pcnt_dev_t sv;
    
-   sc_port<sc_signal_in_if<bool>,0> ctrl_ch0_un;
-   sc_port<sc_signal_in_if<bool>,0> sig_ch0_un;
-   sc_port<sc_signal_in_if<bool>,0> ctrl_ch1_un;
-   sc_port<sc_signal_in_if<bool>,0> sig_ch1_un;
+   sc_port<sc_signal_in_if<pcntbus_t>,0> pcntbus_i;
 
    /* Functions */
-   void docnt(int un, bool ctrllvl, int ch);
+   void docnt(int un, bool siglvl, bool ctrllvl, int ch);
    void update();
 
    /* Threads */

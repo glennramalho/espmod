@@ -27,6 +27,11 @@
 #include "Wire.h"
 #include "driver/adc.h"
 
+gpio_matrix *gpiomatrixptr;
+pcntmod *pcntptr;
+adc1 *adc1ptr;
+adc2 *adc2ptr;
+
 void doitesp32devkitv1::dut(void) {
    wait(125, SC_NS);
    /* We start running the Arduino Setup Function. */
@@ -39,7 +44,6 @@ void doitesp32devkitv1::dut(void) {
 }
 
 void doitesp32devkitv1::start_of_simulation() {
-   logic_0.write(false);
    /* Before we simulate, we initialize the sockets so that they are ready to
     * be used.
     */
@@ -48,34 +52,34 @@ void doitesp32devkitv1::start_of_simulation() {
 
 void doitesp32devkitv1::pininit() {
    /* We set each GPIO to be connected to a pin number in the ESPMOD library. */
-   pinset(0, &i_gpio_d0);
-   pinset(1, &i_gpio_d1);
-   pinset(2, &i_gpio_d2);
-   pinset(3, &i_gpio_d3);
-   pinset(4, &i_gpio_d4);
-   pinset(5, &i_gpio_d5);
-   pinset(12, &i_gpio_d12);
-   pinset(13, &i_gpio_d13);
-   pinset(14, &i_gpio_d14);
-   pinset(15, &i_gpio_d15);
-   pinset(16, &i_gpio_d16);
-   pinset(17, &i_gpio_d17);
-   pinset(18, &i_gpio_d18);
-   pinset(19, &i_gpio_d19);
-   pinset(21, &i_gpio_d21);
-   pinset(23, &i_gpio_d22);
-   pinset(23, &i_gpio_d23);
-   pinset(25, &i_gpio_d25);
-   pinset(26, &i_gpio_d26);
-   pinset(27, &i_gpio_d27);
-   pinset(32, &i_gpio_d32);
-   pinset(33, &i_gpio_d33);
-   pinset(34, &i_gpio_d34);
-   pinset(35, &i_gpio_d35);
-   pinset(36, &i_gpio_d36);
-   pinset(37, &i_gpio_d37);
-   pinset(38, &i_gpio_d38);
-   pinset(39, &i_gpio_d39);
+   pinset(0, &i_gpio_matrix.i_gpio_d0);
+   pinset(1, &i_gpio_matrix.i_gpio_d1);
+   pinset(2, &i_gpio_matrix.i_gpio_d2);
+   pinset(3, &i_gpio_matrix.i_gpio_d3);
+   pinset(4, &i_gpio_matrix.i_gpio_d4);
+   pinset(5, &i_gpio_matrix.i_gpio_d5);
+   pinset(12, &i_gpio_matrix.i_gpio_d12);
+   pinset(13, &i_gpio_matrix.i_gpio_d13);
+   pinset(14, &i_gpio_matrix.i_gpio_d14);
+   pinset(15, &i_gpio_matrix.i_gpio_d15);
+   pinset(16, &i_gpio_matrix.i_gpio_d16);
+   pinset(17, &i_gpio_matrix.i_gpio_d17);
+   pinset(18, &i_gpio_matrix.i_gpio_d18);
+   pinset(19, &i_gpio_matrix.i_gpio_d19);
+   pinset(21, &i_gpio_matrix.i_gpio_d21);
+   pinset(23, &i_gpio_matrix.i_gpio_d22);
+   pinset(23, &i_gpio_matrix.i_gpio_d23);
+   pinset(25, &i_gpio_matrix.i_gpio_d25);
+   pinset(26, &i_gpio_matrix.i_gpio_d26);
+   pinset(27, &i_gpio_matrix.i_gpio_d27);
+   pinset(32, &i_gpio_matrix.i_gpio_d32);
+   pinset(33, &i_gpio_matrix.i_gpio_d33);
+   pinset(34, &i_gpio_matrix.i_gpio_d34);
+   pinset(35, &i_gpio_matrix.i_gpio_d35);
+   pinset(36, &i_gpio_matrix.i_gpio_d36);
+   pinset(37, &i_gpio_matrix.i_gpio_d37);
+   pinset(38, &i_gpio_matrix.i_gpio_d38);
+   pinset(39, &i_gpio_matrix.i_gpio_d39);
 
    /* We do the same for the ADC units. */
    adc1ptr = &i_adc1;
@@ -83,6 +87,7 @@ void doitesp32devkitv1::pininit() {
 
    /* Other modules. */
    pcntptr = &i_pcnt;
+   gpiomatrixptr = &i_gpio_matrix;
 
    /* We configure the serial protocols. Each TestSerial needs to be connected
     * to the channel it controls.

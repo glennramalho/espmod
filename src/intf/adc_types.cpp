@@ -17,10 +17,3 @@
  * limitations under the License.
  *******************************************************************************
  */
-
-#include <systemc.h>
-#include "adc_types.h"
-
-adc1 *adc1ptr;
-adc2 *adc2ptr;
-pcntmod *pcntptr;

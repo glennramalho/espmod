@@ -31,8 +31,8 @@
     Lesser General Public License for more details.
  */
 
-#ifndef _ESP32PINS_H
-#define _ESP32PINS_H
+#ifndef _ESP32_HAL_GPIO_H
+#define _ESP32_HAL_GPIO_H
 
 #include <stdint.h>
 

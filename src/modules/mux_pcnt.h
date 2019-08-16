@@ -1,8 +1,8 @@
 /*******************************************************************************
- * gpioset.h -- Copyright 2019 Glenn Ramalho - RFIDo Design
+ * mux_pcnt.h -- Copyright 2019 (c) Glenn Ramalho - RFIDo Design
  *******************************************************************************
  * Description:
- *   Connects the GPIO SystemC library with the ESP Model GPIO functions.
+ * Model for the PCNT mux in the GPIO matrix.
  *******************************************************************************
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,17 +18,27 @@
  *******************************************************************************
  */
 
-#ifndef _GPIOSET_H
-#define _GPIOSET_H
+#ifndef _MUX_PCNT_H
+#define _MUX_PCNT_H
 
-#include "gpio_simple.h"
-#include "gpio_mf.h"
+#include <systemc.h>
+#include "pcntbus.h"
 
-void pinset(int pin, void *ngpioptr);
-gpio *getgpio(int pin);
-#define GETFUNC(x) ((x)>>5)
+SC_MODULE(mux_pcnt) {
+   sc_port<sc_signal_in_if<bool>,0> mout_i {"mout_i"};
+   sc_port<sc_signal_out_if<pcntbus_t>,8> pcntbus_o {"pcntbus_o"};
 
-typedef enum {UWARN, UGPIO, UALT} functypes_t;
-extern functypes_t funcmatrix[40][6];
+   int function[8][4];
+   sc_event fchange_ev;
+
+   /* Functions */
+   void mux(int bit, int gpiosel);
+   void initialize();
+
+   /* Threads */
+   void transfer(int function);
+
+   SC_CTOR(mux_pcnt) { initialize(); }
+};
 
 #endif

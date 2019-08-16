@@ -11,6 +11,11 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// Modified by Glenn Ramalho on 16/Aug/2019
+//    - removed volatile keywords and replaced the extern struct with a
+//      macro to a SystemC module.
+
 #ifndef _SOC_GPIO_STRUCT_H_
 #define _SOC_GPIO_STRUCT_H_
 
@@ -21,7 +26,7 @@
 extern "C" {
 #endif
 
-typedef volatile struct {
+typedef struct {
     uint32_t bt_select;                             /*NA*/
     uint32_t out;                                   /*GPIO0~31 output value*/
     uint32_t out_w1ts;                              /*GPIO0~31 output value write 1 to set*/
@@ -208,12 +213,24 @@ typedef volatile struct {
         uint32_t val;
     } func_out_sel_cfg[40];
 } gpio_dev_t;
-extern gpio_dev_t GPIO;
 
 #ifdef __cplusplus
 }
 #endif
 
 #pragma GCC diagnostic pop
+
+#ifdef __cplusplus
+/* We define the struct to actually point to the class. Note, this will only
+ * work in C++. For C, we might come up with some copying mechanism but for
+ * now this will work.
+ */
+extern "C++" {
+#include <systemc.h>
+#include "gpio_matrix.h"
+extern gpio_matrix *gpiomatrixptr;
+#define GPIO() (gpiomatrixptr->sv)
+}
+#endif
 
 #endif  /* _SOC_GPIO_STRUCT_H_ */

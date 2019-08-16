@@ -27,19 +27,14 @@
 #include "freertos/semphr.h"
 #include "freertos/xtensa_api.h"
 #include "soc/soc.h"
+*/
 #include "soc/pcnt_reg.h"
 #include "soc/pcnt_struct.h"
+/*
 #include "soc/gpio_sig_map.h"
 #include "driver/gpio.h"
 #include "esp_intr_alloc.h"
 */
-#include "soc/pcnt_reg.h"
-#include "soc/pcnt_struct.h"
-
-#ifdef __cplusplus
-#include "adc_types.h"
-#define PCNT (pcntptr->sv)
-#endif
 
 #ifdef __cplusplus
 extern "C" {

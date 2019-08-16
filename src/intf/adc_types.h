@@ -24,11 +24,9 @@
 #include <systemc.h>
 #include "esp32adc1.h"
 #include "esp32adc2.h"
-#include "pcntmod.h"
 typedef esp32adc1 adc1;
 typedef esp32adc2 adc2;
 extern adc1 *adc1ptr;
 extern adc2 *adc2ptr;
-extern pcntmod *pcntptr;
 
 #endif

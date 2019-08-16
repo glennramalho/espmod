@@ -83,23 +83,31 @@ void pcntmod::update() {
 }
 
 void pcntmod::capture() {
-   std::vector<bool> lastsig0(sig_ch0_un.size(), false);
-   std::vector<bool> lastctrl0(ctrl_ch0_un.size(), false);
-   std::vector<bool> lastsig1(sig_ch1_un.size(), false);
-   std::vector<bool> lastctrl1(ctrl_ch1_un.size(), false);
-   std::vector<bool> ctrl0_del(ctrl_ch0_un.size(), false);
-   std::vector<bool> ctrl1_del(ctrl_ch1_un.size(), false);
-   std::vector<int> fctrl0(ctrl_ch0_un.size(), 0);
-   std::vector<int> fctrl1(ctrl_ch1_un.size(), 0);
-   std::vector<int> fsig0(sig_ch0_un.size(), 0);
-   std::vector<int> fsig1(sig_ch1_un.size(), 0);
    int un;
+   bool ctrl0_del[8];
+   bool ctrl1_del[8];
+   int fctrl0[8];
+   int fctrl1[8];
+   int fsig0[8];
+   int fsig1[8];
+   pcntbus_t lvl[8];
+   pcntbus_t lastlvl[8];
+
+   for(un = 0; un < pcntbus_i.size(); un = un + 1) {
+      lastlvl[un].sig_ch0 = false;
+      lastlvl[un].sig_ch1 = false;
+      lastlvl[un].ctrl_ch0 = false;
+      lastlvl[un].ctrl_ch1 = false;
+   }
 
    while(true) {
       wait();
 
-      /* First we calculate the control signal levels. */
-      for(un = 0; un < ctrl_ch0_un.size(); un = un + 1) {
+      /* First we need to get the new inputs. */
+      for(un = 0; un < pcntbus_i.size(); un = un + 1)
+         lvl[un] = pcntbus_i[un]->read();
+
+      for(un = 0; un < pcntbus_i.size(); un = un + 1) {
          if (RDFIELD(conf0[un], PCNT_FILTER_EN_U0_M, PCNT_FILTER_EN_U0_S)>0
                && RDFIELD(conf0[un], PCNT_FILTER_THRES_U0_M,
                   PCNT_FILTER_THRES_U0_S)>0) {
@@ -107,7 +115,7 @@ void pcntmod::capture() {
             /* If the signal has changed, we store the value of edges we
              * want to see.
              */
-            if (ctrl_ch0_un[un]->read() != lastctrl0[un])
+            if (lvl[un].ctrl_ch0 != lastlvl[un].ctrl_ch0)
                fctrl0[un] = RDFIELD(conf0[un], PCNT_FILTER_THRES_U0_M,
                   PCNT_FILTER_THRES_U0_S);
             /* If it did not change, we check that the remaining edges. If it is
@@ -117,41 +125,41 @@ void pcntmod::capture() {
             else if (fctrl0[un] > 2) fctrl0[un] = fctrl0[un] - 1;
             /* And we update the internal level. */
             else if (fctrl0[un] == 1) {
-               ctrl0_del[un] = ctrl_ch0_un[un]->read();
+               ctrl0_del[un] = lvl[un].ctrl_ch0;
                fctrl0[un] = 0;
             }
          }
          /* If filtering is disabled, we simply copy the value. */
-         else ctrl0_del[un] = ctrl0_del[un];
+         else ctrl0_del[un] = lvl[un].ctrl_ch0;
          /* And we record the signal level so we can do edge detection. */
-         lastctrl0[un] = ctrl_ch0_un[un];
+         lastlvl[un].ctrl_ch0 = lvl[un].ctrl_ch0;
       }
       /* And we redo it for the other channel. */
-      for(un = 0; un < ctrl_ch1_un.size(); un = un + 1) {
+      for(un = 0; un < pcntbus_i.size(); un = un + 1) {
          if (RDFIELD(conf0[un], PCNT_FILTER_EN_U0_M, PCNT_FILTER_EN_U0_S)>0
                && RDFIELD(conf0[un], PCNT_FILTER_THRES_U0_M,
                   PCNT_FILTER_THRES_U0_S)>0) {
             /* Filtering is enabled. */
-            if (ctrl_ch1_un[un]->read() != lastctrl1[un])
+            if (lvl[un].ctrl_ch1 != lastlvl[un].ctrl_ch1)
                fctrl1[un] = RDFIELD(conf0[un], PCNT_FILTER_THRES_U0_M,
                PCNT_FILTER_THRES_U0_S);
             else if (fctrl1[un] > 2) fctrl1[un] = fctrl1[un] - 1;
             else if (fctrl1[un] == 1) {
-               ctrl1_del[un] = ctrl_ch1_un[un];
+               ctrl1_del[un] = lvl[un].ctrl_ch1;
                fctrl1[un] = 0;
             }
          }
          /* If filtering is disabled, we simply copy the value. */
-         else ctrl1_del[un] = ctrl_ch1_un[un];
+         else ctrl1_del[un] = lvl[un].ctrl_ch1;
          /* And we record the signal level so we can do edge detection. */
-         lastctrl1[un] = ctrl_ch1_un[un];
+         lastlvl[un].ctrl_ch1 = lvl[un].ctrl_ch1;
       }
 
       /* Now we can do the signals. These are edge detected, so when we pass
        * the filtering, we can already handle them. Besides that, it is the
        * same.
        */
-      for(un = 0; un < sig_ch0_un.size(); un = un + 1) {
+      for(un = 0; un < pcntbus_i.size(); un = un + 1) {
          /* We first check to see if the channel is in reset or pause. If it
           * is in reset, we clear it. If it is in pause we do nothing.
           */
@@ -166,7 +174,7 @@ void pcntmod::capture() {
             /* If the signal has changed, we store the value of edges we
              * want to see.
              */
-            if (sig_ch0_un[un]->read() != lastsig0[un])
+            if (lvl[un].sig_ch0 != lastlvl[un].sig_ch0)
                fsig0[un] = RDFIELD(conf0[un], PCNT_FILTER_THRES_U0_M,
                   PCNT_FILTER_THRES_U0_S);
             /* If it did not change, we check that the remaining edges. If it is
@@ -175,15 +183,16 @@ void pcntmod::capture() {
              */
             else if (fsig0[un] > 2) fsig0[un] = fsig0[un] - 1;
             /* And we update the internal level. */
-            else if (fsig0[un] == 1) docnt(un, ctrl0_del[un], 0);
+            else if (fsig0[un] == 1)
+               docnt(un, lvl[un].sig_ch0, ctrl0_del[un], 0);
          }
          /* If filtering is disabled, we simply copy the value. */
-         else if (lastsig0[un] != sig_ch0_un[un]->read())
-            docnt(un, ctrl0_del[un], 0);
+         else if (lastlvl[un].sig_ch0 != lvl[un].sig_ch0)
+            docnt(un, lvl[un].sig_ch0, ctrl0_del[un], 0);
          /* And we record the signal level so we can do edge detection. */
-         lastsig0[un] = sig_ch0_un[un]->read();
+         lastlvl[un].sig_ch0 = lvl[un].sig_ch0;
       }
-      for(un = 0; un < sig_ch1_un.size(); un = un + 1) {
+      for(un = 0; un < pcntbus_i.size(); un = un + 1) {
          /* Reset is handled above. This one just follows, so we do nothing. */
          if ((ctrl.read() & (PCNT_PLUS_CNT_RST_U0_M<<un*2))>0) {
          }
@@ -191,25 +200,25 @@ void pcntmod::capture() {
                && RDFIELD(conf0[un], PCNT_FILTER_THRES_U0_M,
                   PCNT_FILTER_THRES_U0_S)>0) {
             /* Filtering is enabled. */
-            if (sig_ch1_un[un]->read() != lastsig1[un])
+            if (lvl[un].sig_ch1 != lastlvl[un].sig_ch1)
                fsig1[un] = RDFIELD(conf0[un], PCNT_FILTER_THRES_U0_M,
                   PCNT_FILTER_THRES_U0_S);
             else if (fsig1[un] > 2) fsig1[un] = fsig1[un] - 1;
             /* And we update the internal level. */
-            else if (fsig1[un] == 1) docnt(un, ctrl1_del[un], 0);
+            else if (fsig1[un] == 1)
+               docnt(un, lvl[un].sig_ch1, ctrl1_del[un], 0);
          }
          /* If filtering is disabled, we simply copy the value. */
-         else if (lastsig1[un] != sig_ch1_un[un]->read())
-            docnt(un, ctrl1_del[un], 1);
+         else if (lastlvl[un].sig_ch1 != lvl[un].sig_ch1)
+            docnt(un, lvl[un].sig_ch1, ctrl1_del[un], 1);
          /* And we record the signal level so we can do edge detection. */
-         lastsig1[un] = sig_ch1_un[un]->read();
+         lastlvl[un].sig_ch1 = lvl[un].sig_ch1;
       }
    }
 }
 
-void pcntmod::docnt(int un, bool ctrllvl, int ch) {
+void pcntmod::docnt(int un, bool siglvl, bool ctrllvl, int ch) {
    int mode, lctrl, hctrl;
-   bool siglvl;
    int16_t nc;
 
    /* If it is paused or in reset, we do nothing. */
@@ -217,7 +226,6 @@ void pcntmod::docnt(int un, bool ctrllvl, int ch) {
       return;
 
    if (ch == 0) {
-      siglvl = sig_ch0_un[un]->read();
       if (siglvl) mode =
          RDFIELD(conf0[un], PCNT_CH0_POS_MODE_U0_M, PCNT_CH0_POS_MODE_U0_S);
       else mode =
@@ -228,7 +236,6 @@ void pcntmod::docnt(int un, bool ctrllvl, int ch) {
          RDFIELD(conf0[un], PCNT_CH0_HCTRL_MODE_U0_M, PCNT_CH0_HCTRL_MODE_U0_S);
    }
    else {
-      siglvl = sig_ch1_un[un]->read();
       if (siglvl) mode =
          RDFIELD(conf0[un], PCNT_CH0_POS_MODE_U0_M, PCNT_CH0_POS_MODE_U0_S);
       else mode =
@@ -262,9 +269,9 @@ void pcntmod::docnt(int un, bool ctrllvl, int ch) {
    if (RDFIELD(conf0[un], PCNT_THR_L_LIM_EN_U0_M, PCNT_THR_L_LIM_EN_U0_S) &&
          nc <= (int16_t)RDFIELD(conf2[un], PCNT_CNT_L_LIM_U0_M,
             PCNT_CNT_L_LIM_U0_S)
-      || RDFIELD(conf0[un], PCNT_THR_H_LIM_EN_U0_M, PCNT_THR_L_LIM_EN_U0_S) &&
-         nc >= (int16_t)RDFIELD(conf2[un], PCNT_CNT_L_LIM_U0_M,
-            PCNT_CNT_L_LIM_U0_S)) {
+      || RDFIELD(conf0[un], PCNT_THR_H_LIM_EN_U0_M, PCNT_THR_H_LIM_EN_U0_S) &&
+         nc >= (int16_t)RDFIELD(conf2[un], PCNT_CNT_H_LIM_U0_M,
+            PCNT_CNT_H_LIM_U0_S)) {
       nc = 0;
       int_raw.write(int_raw.read() | (1 << un));
    }
