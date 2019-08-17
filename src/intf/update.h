@@ -1,8 +1,9 @@
 /*******************************************************************************
- * mux_out.h -- Copyright 2019 (c) Glenn Ramalho - RFIDo Design
+ * update.h -- Copyright 2019 Glenn Ramalho - RFIDo Design
  *******************************************************************************
  * Description:
- * Model for the input signal mux for the GPIO Matrix.
+ *   Functions to notify the modules that the IO structures have changed. This
+ *   allowes also C programs to talk to the SystemC C++ model.
  *******************************************************************************
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,31 +19,23 @@
  *******************************************************************************
  */
 
-#ifndef _MUX_OUT_H
-#define _MUX_OUT_H
+#ifndef _UPDATE_H
+#define _UPDATE_H
 
-#include <systemc.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-SC_MODULE(mux_out) {
-   sc_out<bool> min_o {"min_o"};
-   sc_out<bool> men_o {"men_o"};
-   sc_in<bool> uart0tx_i{"uart0tx_i"};
-   sc_in<bool> uart1tx_i{"uart1tx_i"};
-   sc_in<bool> uart2tx_i{"uart2tx_i"};
+/* After changing PCNT you must call this function to update the model. */
+void update_pcnt();
+/* After changing GPIO you must call one of these functions to update the model.
+ */
+void update_gpio();
+void update_gpio_reg();
+void update_gpio_oe();
 
-   int function;
-   sc_event fchange_ev;
-
-   /* Functions */
-   void mux(int funcsel);
-
-   /* Threads */
-   void transfer(void);
-
-   SC_CTOR(mux_out) {
-      function = 256;
-      SC_THREAD(transfer);
-   }
-};
+#ifdef __cplusplus
+}
+#endif
 
 #endif

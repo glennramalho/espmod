@@ -30,15 +30,15 @@
     Lesser General Public License for more details.
  */
 
-#ifndef _ARDUINO_H
-#define _ARDUINO_H
+#ifndef __ARDUINO_H
+#define __ARDUINO_H
 
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdarg.h>
+#include <stdlib.h>
 #include <stddef.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
 
@@ -140,7 +140,7 @@ typedef unsigned int word;
 void setup(void);
 void loop(void);
 
-long random(long, long);
+extern "C++" long random(long, long);
 void randomSeed(unsigned long);
 long map(long, long, long, long, long);
 

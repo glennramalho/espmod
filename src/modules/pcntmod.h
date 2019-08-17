@@ -45,6 +45,7 @@ SC_MODULE(pcntmod) {
    /* Functions */
    void docnt(int un, bool siglvl, bool ctrllvl, int ch);
    void update();
+   void initstruct();
 
    /* Threads */
    void capture(void);
@@ -55,6 +56,7 @@ SC_MODULE(pcntmod) {
 
    /* Sets initial drive condition. */
    SC_CTOR(pcntmod) {
+      initstruct();
       SC_THREAD(capture);
       sensitive << apb_clk.pos();
 
@@ -66,5 +68,6 @@ SC_MODULE(pcntmod) {
 
    void trace(sc_trace_file *tf);
 };
+extern pcntmod *pcntptr;
 
 #endif

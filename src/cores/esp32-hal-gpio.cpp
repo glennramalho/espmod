@@ -135,8 +135,18 @@ void pinMode_nodel(uint8_t pin, uint8_t mode) {
    /* We ignore the driver strength */
 
    /* OD */
-   if(mode & OPEN_DRAIN) gpin->set_od();
-   else gpin->clr_od();
+   if(mode & OPEN_DRAIN) {
+      /* We set the field in the GPIO reg */
+      GPIO.pin[pin].pad_driver = 1;
+      /* And go ahead and call the function. */
+      gpin->set_od();
+   }
+   else {
+      /* We set the field in the GPIO reg */
+      GPIO.pin[pin].pad_driver = 0;
+      /* And go ahead and call the function. */
+      gpin->clr_od();
+   }
 }
 
 /* Sets the mode of a pin, with a delay. */
@@ -149,24 +159,23 @@ void pinMode(uint8_t pin, uint8_t mode) {
  * or it fails.
  */
 void digitalWrite_nodel(uint8_t pin, uint8_t val) {
-   char buffer[64];
-   gpio *gpin = getgpio(pin);
-
    /* If the pin passes the valid pins or if there is no GPIO assigned, we
     * issue a warning.
     */
-   if (gpin == NULL) {
-      sprintf(buffer, "No gpio defined for pin %d", pin);
-      SC_REPORT_WARNING("HALGPIO", buffer);
+   if(val) {
+      if(pin < 32) {
+         GPIO.out_w1ts = ((uint32_t)1 << pin);
+      } else if(pin < 34) {
+         GPIO.out1_w1ts.val = ((uint32_t)1 << (pin - 32));
+      }
+   } else {
+      if(pin < 32) {
+         GPIO.out_w1tc = ((uint32_t)1 << pin);
+      } else if(pin < 34) {
+         GPIO.out1_w1tc.val = ((uint32_t)1 << (pin - 32));
+      }
    }
-   else if (val != HIGH && val != LOW) {
-      sprintf(buffer, "Only HIGH or LOW can be driven on D%d", pin);
-      SC_REPORT_WARNING("HALGPIO", buffer);
-   }
-   else {
-      /* We now drive a pin high or low. */
-      gpin->set_val((val == HIGH)?true:false);
-   }
+   update_gpio();
 }
 
 /* Same but adds a 1cycle delay. */

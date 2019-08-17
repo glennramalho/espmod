@@ -30,8 +30,6 @@ void mux_out::mux(int funcsel) {
 }
 
 void mux_out::transfer() {
-   bool lin, len;
-
    /* These default to low. */
    min_o.write(false);
    men_o.write(false);
@@ -39,23 +37,33 @@ void mux_out::transfer() {
    while(true) {
       switch(function) {
          case U0TXD_OUT_IDX:
+            min_o.write(uart0tx_i.read()); men_o.write(true);
             wait(fchange_ev | uart0tx_i.default_event());
-            lin = uart0tx_i.read(); len = true;
             break;
          case U1TXD_OUT_IDX:
+            min_o.write(uart1tx_i.read()); men_o.write(true);
             wait(fchange_ev | uart1tx_i.default_event());
-            lin = uart1tx_i.read(); len = true;
             break;
          case U2TXD_OUT_IDX:
+            min_o.write(uart2tx_i.read()); men_o.write(true);
             wait(fchange_ev | uart2tx_i.default_event());
-            lin = uart2tx_i.read(); len = true;
             break;
-         default:
-            wait(fchange_ev); lin = false; len = true; break;;
+         /* function 256 is logic 0 and function 257 is logic 1. This is
+          * different from the spec, so the GPIO matrix selects the correct
+          * one depending on the value to drive.
+          */
+         case 257:
+            min_o.write(true); men_o.write(true);
+            wait(fchange_ev);
+            break;
+         case 258:
+            min_o.write(false); men_o.write(false);
+            wait(fchange_ev);
+            break;
+         default: /* Function unknown and function 256 */
+            min_o.write(false); men_o.write(true);
+            wait(fchange_ev);
+            break;
       }
-
-      /* Not all signals have an output enable. These always output high. */
-      min_o.write(lin);
-      men_o.write(len);
    }
 }

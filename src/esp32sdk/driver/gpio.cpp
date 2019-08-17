@@ -37,6 +37,8 @@
 #include "soc/gpio_periph.h"
 #include "info.h"
 #include "esp_log.h"
+#include "soc/gpio_struct.h"
+#include "update.h"
 
 static const char* GPIO_TAG = "GPIODRV";
 #define GPIO_CHECK(a, str, ret_val) \
@@ -236,14 +238,25 @@ esp_err_t gpio_intr_disable(gpio_num_t gpio_num) {
  *
  */
 esp_err_t gpio_set_level(gpio_num_t gpio_num, uint32_t level) {
-   GPIO_CHECK(GPIO_IS_VALID_OUTPUT_GPIO(gpio_num), "GPIO output gpio_num error", ESP_ERR_INVALID_ARG);
    gpio *gpin = getgpio(gpio_num);
    if (gpin == NULL) {
       PRINTF_WARN("GPIODRV", "No gpio defined for pin %d", gpio_num);
       return ESP_ERR_INVALID_ARG;
    }
-   gpin->set_val((level != 0)?true:false);
-   del1cycle();
+   if (level) {
+      if (gpio_num < 32) {
+         GPIO.out_w1ts = (1 << gpio_num);
+      } else {
+         GPIO.out1_w1ts.data = (1 << (gpio_num - 32));
+      }
+   } else {
+      if (gpio_num < 32) {
+         GPIO.out_w1tc = (1 << gpio_num);
+      } else {
+         GPIO.out1_w1tc.data = (1 << (gpio_num - 32));
+      }
+   }
+   update_gpio_reg();
    return ESP_OK;
 }
 
@@ -299,28 +312,33 @@ esp_err_t gpio_set_direction(gpio_num_t gpio_num, gpio_mode_t mode) {
    }
    switch(mode) {
       case GPIO_MODE_DISABLE:
+         GPIO.pin[gpio_num].pad_driver = false;
          resp=gpin->set_dir(GPIODIR_NONE); break;
       case GPIO_MODE_INPUT:
+         GPIO.pin[gpio_num].pad_driver = false;
          resp=gpin->set_dir(GPIODIR_INPUT); break;
       case GPIO_MODE_OUTPUT:
+         GPIO.pin[gpio_num].pad_driver = false;
          resp=gpin->set_dir(GPIODIR_OUTPUT);
          resp=resp & gpin->clr_od();
          break;
       case GPIO_MODE_OUTPUT_OD:
+         GPIO.pin[gpio_num].pad_driver = true;
          resp=gpin->set_dir(GPIODIR_OUTPUT);
          resp=resp & gpin->set_od();
          break;
       case GPIO_MODE_INPUT_OUTPUT:
+         GPIO.pin[gpio_num].pad_driver = false;
          resp=gpin->set_dir(GPIODIR_INOUT);
          resp=resp & gpin->clr_od();
          break;
       case GPIO_MODE_INPUT_OUTPUT_OD:
+         GPIO.pin[gpio_num].pad_driver = true;
          resp=gpin->set_dir(GPIODIR_INOUT);
          resp=resp & gpin->set_od();
          break;
       default: resp = false;
    }
-
    del1cycle();
 
    if (resp) return ESP_OK;
@@ -799,8 +817,9 @@ void gpio_deep_sleep_hold_dis(void) { /* no deep sleep yet. */ }
   * @param signal_idx Peripheral signal id to input. One of the ``*_IN_IDX`` signals in ``soc/gpio_sig_map.h``.
   */
 void gpio_iomux_in(uint32_t gpio_num, uint32_t signal_idx) {
-   PRINTF_WARN("GPIODRV",
-      "gpio_iomux_in not yet implemented, use gpio_iomux_out for both");
+   GPIO.func_in_sel_cfg[signal_idx].sig_in_sel = 0;
+   update_gpio();
+   PIN_INPUT_ENABLE((gpio_num_t)GPIO_PIN_MUX_REG[gpio_num]);
 }
 
 /**
@@ -815,11 +834,15 @@ void gpio_iomux_out(uint8_t gpio_num, int func, bool oen_inv) {
    if (gpin == NULL) return;
    if (oen_inv)
       PRINTF_WARN("GPIODRV", "GPIO func Output invert is not yet supported.")
+   if (func < 0 || func > 5) {
+      PRINTF_WARN("GPIODRV", "GPIO func %d is illegal", func)
+   }
    /* Illegal functions we discard as there is no way to inform the user. */
-   if (func < 0 || func > 5) return;
-   /* Note: both input and output are changed together! */
+   /* GPIOs sometmes show up on two locations but in the model it is always
+    * in position 3. We then need to adjust the value. Note: the macros from
+    * the library go vrom 0-5 instead of 1-6.
+    */
    if (funcmatrix[gpio_num][func] == UGPIO)
-      gpin->set_function(GPIOMF_GPIO);
-   else if (funcmatrix[gpio_num][func] == UALT)
-      gpin->set_function(func+1);
+      gpin->set_function(3);
+   else gpin->set_function(func+1);
 }

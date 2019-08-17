@@ -27,11 +27,6 @@
 #include "Wire.h"
 #include "driver/adc.h"
 
-gpio_matrix *gpiomatrixptr;
-pcntmod *pcntptr;
-adc1 *adc1ptr;
-adc2 *adc2ptr;
-
 void doitesp32devkitv1::dut(void) {
    wait(125, SC_NS);
    /* We start running the Arduino Setup Function. */

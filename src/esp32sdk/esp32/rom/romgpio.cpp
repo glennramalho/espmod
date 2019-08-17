@@ -35,6 +35,8 @@
 #include "Arduino.h"
 #include "esp32-hal-gpio.h"
 #include "gpioset.h"
+#include "soc/gpio_struct.h"
+#include "gpio_matrix.h"
 #include "info.h"
 
 /**
@@ -65,22 +67,11 @@ void gpio_init(void) {}
   */
 void gpio_output_set(uint32_t set_mask, uint32_t clear_mask, uint32_t enable_mask, uint32_t disable_mask) {
 
-   uint32_t mask;
-   int g;
-   for (g = (int)GPIO_NUM_0, mask = 0x1UL; g < (int)GPIO_NUM_32;
-         g = g + 1, mask = mask << 1) {
-
-      if ((set_mask & mask & enable_mask)>0) {
-         digitalWrite_nodel(g, HIGH);
-      }
-      else if ((clear_mask & mask & enable_mask)>0) {
-         digitalWrite_nodel(g, LOW);
-      }
-      else if ((disable_mask & mask)>0) {
-         pinMode_nodel(g, INPUT);
-      }
-   }
-   del1cycle();
+   GPIO.out_w1ts = set_mask & enable_mask;
+   GPIO.out_w1tc = clear_mask & enable_mask;
+   GPIO.enable_w1tc = disable_mask;
+   update_gpio_reg();
+   update_gpio_oe();
 }
 
 /**
@@ -99,23 +90,11 @@ void gpio_output_set(uint32_t set_mask, uint32_t clear_mask, uint32_t enable_mas
   * @return None
   */
 void gpio_output_set_high(uint32_t set_mask, uint32_t clear_mask, uint32_t enable_mask, uint32_t disable_mask) {
-
-   int g;
-   uint32_t mask;
-   for (g = (int)GPIO_NUM_32, mask = 0x1UL; g < (int)GPIO_NUM_MAX;
-         g = g + 1, mask = mask << 1) {
-
-      if ((set_mask & mask & enable_mask)>0) {
-         digitalWrite_nodel(g, HIGH);
-      }
-      else if ((clear_mask & mask & enable_mask)>0) {
-         digitalWrite_nodel(g, LOW);
-      }
-      else if ((disable_mask & mask)>0) {
-         pinMode_nodel(g, INPUT);
-      }
-   }
-   del1cycle();
+   GPIO.out1_w1ts.data = set_mask & enable_mask;
+   GPIO.out1_w1tc.data = clear_mask & enable_mask;
+   GPIO.enable1_w1tc.data = disable_mask;
+   update_gpio_reg();
+   update_gpio_oe();
 }
 
 /**
@@ -251,7 +230,20 @@ void gpio_pin_wakeup_disable(void);
   *
   * @return None
   */
-void gpio_matrix_in(uint32_t gpio, uint32_t signal_idx, bool inv);
+void gpio_matrix_in(uint32_t gpio, uint32_t signal_idx, bool inv) {
+   if (gpio >= GPIO_PIN_COUNT) {
+      PRINTF_WARN("ROMGPIO", "Attempting to set illegal GPIO %d", gpio);
+      return;
+   }
+   if (signal_idx >= 256) {
+      PRINTF_WARN("ROMGPIO", "Attempting to set illegal signal %d", signal_idx);
+      return;
+   }
+   GPIO.func_in_sel_cfg[signal_idx].func_sel = gpio;
+   GPIO.func_in_sel_cfg[signal_idx].sig_in_sel = 1;
+   GPIO.func_in_sel_cfg[signal_idx].sig_in_inv = inv;
+   update_gpio();
+}
 
 /**
   * @brief set signal output to gpio, one signal can output to several gpios.
@@ -267,7 +259,17 @@ void gpio_matrix_in(uint32_t gpio, uint32_t signal_idx, bool inv);
   *
   * @return None
   */
-void gpio_matrix_out(uint32_t gpio, uint32_t signal_idx, bool out_inv, bool oen_inv);
+void gpio_matrix_out(uint32_t gpio, uint32_t signal_idx, bool out_inv, bool oen_inv) {
+   if (gpio >= GPIO_PIN_COUNT) {
+      PRINTF_WARN("ROMGPIO", "Attempting to set illegal GPIO %d", gpio);
+      return;
+   }
+   GPIO.func_out_sel_cfg[gpio].func_sel = signal_idx;
+   GPIO.func_out_sel_cfg[gpio].inv_sel = out_inv;
+   GPIO.func_out_sel_cfg[gpio].oen_sel = 0;
+   GPIO.func_out_sel_cfg[gpio].oen_inv_sel = oen_inv;
+   update_gpio();
+}
 
 /**
   * @brief Select pad as a gpio function from IOMUX.
@@ -283,7 +285,7 @@ void gpio_pad_select_gpio(uint8_t gpio_num) {
          gpio_num);
       return;
    }
-   gpin->set_function(GPIOMF_GPIO);
+   gpin->set_function(2);
 }
 
 /**
@@ -295,7 +297,9 @@ void gpio_pad_select_gpio(uint8_t gpio_num) {
   *
   * @return None
   */
-void gpio_pad_set_drv(uint8_t gpio_num, uint8_t drv);
+void gpio_pad_set_drv(uint8_t gpio_num, uint8_t drv) {
+   gpio_set_drive_capability((gpio_num_t)gpio_num, (gpio_drive_cap_t)drv);
+}
 
 /**
   * @brief Pull up the pad from gpio number.
@@ -304,7 +308,9 @@ void gpio_pad_set_drv(uint8_t gpio_num, uint8_t drv);
   *
   * @return None
   */
-void gpio_pad_pullup(uint8_t gpio_num);
+void gpio_pad_pullup(uint8_t gpio_num) {
+   gpio_pullup_en((gpio_num_t)gpio_num);
+}
 
 /**
   * @brief Pull down the pad from gpio number.
@@ -313,7 +319,9 @@ void gpio_pad_pullup(uint8_t gpio_num);
   *
   * @return None
   */
-void gpio_pad_pulldown(uint8_t gpio_num);
+void gpio_pad_pulldown(uint8_t gpio_num) {
+   gpio_pulldown_en((gpio_num_t)gpio_num);
+}
 
 /**
   * @brief Unhold the pad from gpio number.
@@ -322,7 +330,9 @@ void gpio_pad_pulldown(uint8_t gpio_num);
   *
   * @return None
   */
-void gpio_pad_unhold(uint8_t gpio_num);
+void gpio_pad_unhold(uint8_t gpio_num) {
+   gpio_hold_dis((gpio_num_t)gpio_num);
+}
 
 /**
   * @brief Hold the pad from gpio number.
@@ -331,7 +341,9 @@ void gpio_pad_unhold(uint8_t gpio_num);
   *
   * @return None
   */
-void gpio_pad_hold(uint8_t gpio_num);
+void gpio_pad_hold(uint8_t gpio_num) {
+   gpio_hold_en((gpio_num_t)gpio_num);
+}
 
 /**
   * @}

@@ -19,8 +19,10 @@
  */
 
 #include <systemc.h>
+#include <string.h>
 #include "pcntmod.h"
 #include "setfield.h"
+#include "soc/pcnt_struct.h"
 #include "soc/pcnt_reg.h"
 #include "Arduino.h"
 
@@ -29,12 +31,12 @@ void pcntmod::updateth() {
    while(true) {
       wait();
       for(un = 0; un < 8; un = un + 1) {
-         conf0[un].write(sv.conf_unit[un].conf0.val);
-         conf1[un].write(sv.conf_unit[un].conf1.val);
-         conf2[un].write(sv.conf_unit[un].conf2.val);
+         conf0[un].write(PCNT.conf_unit[un].conf0.val);
+         conf1[un].write(PCNT.conf_unit[un].conf1.val);
+         conf2[un].write(PCNT.conf_unit[un].conf2.val);
       }
-      int_ena.write(sv.int_ena.val);
-      ctrl.write(sv.ctrl.val);
+      int_ena.write(PCNT.int_ena.val);
+      ctrl.write(PCNT.ctrl.val);
    }
 }
 
@@ -52,27 +54,27 @@ void pcntmod::returnth() {
          cnt_unit[6].value_changed_event() | cnt_unit[7].value_changed_event() |
          int_raw.value_changed_event());
 
-      sv.int_raw.val = int_raw.read();
-      sv.int_st.val = int_raw.read() & int_ena.read();
+      PCNT.int_raw.val = int_raw.read();
+      PCNT.int_st.val = int_raw.read() & int_ena.read();
       for(un = 0; un < 8; un = un + 1) {
-         sv.cnt_unit[un].val = cnt_unit[un].read();
-         sv.status_unit[un].thres0_lat =
-            sv.cnt_unit[un].val ==
+         PCNT.cnt_unit[un].val = cnt_unit[un].read();
+         PCNT.status_unit[un].thres0_lat =
+            PCNT.cnt_unit[un].val ==
             RDFIELD(conf1[un], PCNT_CNT_THRES0_U0_M,
             PCNT_CNT_THRES0_U0_S);
-         sv.status_unit[un].thres1_lat =
-            sv.cnt_unit[un].val ==
+         PCNT.status_unit[un].thres1_lat =
+            PCNT.cnt_unit[un].val ==
             RDFIELD(conf1[un], PCNT_CNT_THRES1_U0_M,
             PCNT_CNT_THRES1_U0_S);
-         sv.status_unit[un].l_lim_lat =
-            sv.cnt_unit[un].val <=
+         PCNT.status_unit[un].l_lim_lat =
+            PCNT.cnt_unit[un].val <=
             RDFIELD(conf2[un], PCNT_CNT_L_LIM_U0_M,
             PCNT_CNT_L_LIM_U0_S);
-         sv.status_unit[un].h_lim_lat =
-            sv.cnt_unit[un].val >=
+         PCNT.status_unit[un].h_lim_lat =
+            PCNT.cnt_unit[un].val >=
             RDFIELD(conf2[un], PCNT_CNT_H_LIM_U0_M,
             PCNT_CNT_H_LIM_U0_S);
-         sv.status_unit[un].zero_lat = sv.cnt_unit[un].val == 0;
+         PCNT.status_unit[un].zero_lat = PCNT.cnt_unit[un].val == 0;
       }
    }
 }
@@ -80,6 +82,10 @@ void pcntmod::returnth() {
 void pcntmod::update() {
    update_ev.notify();
    wait(apb_clk.posedge_event());
+}
+
+void pcntmod::initstruct() {
+   memset(&PCNT, 0, sizeof(pcnt_dev_t));
 }
 
 void pcntmod::capture() {

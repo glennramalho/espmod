@@ -13,14 +13,16 @@
 // limitations under the License.
 //
 // Modified by Glenn Ramalho on 16/Aug/2019
-//    - removed volatile keywords and replaced the extern struct with a
-//      macro to a SystemC module.
+//    - removed volatile keywords and added an include to the update functions.
+//      They must be called after changing the GPIO struct.
 
 #ifndef _SOC_GPIO_STRUCT_H_
 #define _SOC_GPIO_STRUCT_H_
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
+
+#include "update.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -213,24 +215,12 @@ typedef struct {
         uint32_t val;
     } func_out_sel_cfg[40];
 } gpio_dev_t;
+extern gpio_dev_t GPIO;
 
 #ifdef __cplusplus
 }
 #endif
 
 #pragma GCC diagnostic pop
-
-#ifdef __cplusplus
-/* We define the struct to actually point to the class. Note, this will only
- * work in C++. For C, we might come up with some copying mechanism but for
- * now this will work.
- */
-extern "C++" {
-#include <systemc.h>
-#include "gpio_matrix.h"
-extern gpio_matrix *gpiomatrixptr;
-#define GPIO() (gpiomatrixptr->sv)
-}
-#endif
 
 #endif  /* _SOC_GPIO_STRUCT_H_ */

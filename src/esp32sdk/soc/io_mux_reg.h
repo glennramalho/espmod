@@ -77,7 +77,7 @@
 #define PIN_INPUT_DISABLE(PIN_NAME)  gpio_set_direction(PIN_NAME, GPIO_MODE_DISABLE)
 #define PIN_SET_DRV(PIN_NAME, drv)   gpio_set_drive_capability(PIN_NAME, drv)
 
-#define PIN_FUNC_SELECT(PIN_NAME, FUNC) gpio_iomux_out(gpio_num, func, false)
+#define PIN_FUNC_SELECT(PIN_NAME, FUNC) gpio_iomux_out(PIN_NAME, FUNC, false)
 
 #define PIN_FUNC_GPIO                               2
 

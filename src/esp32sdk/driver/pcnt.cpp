@@ -112,13 +112,13 @@ esp_err_t pcnt_set_mode(pcnt_unit_t unit, pcnt_channel_t channel, pcnt_count_mod
         PCNT.conf_unit[unit].conf0.ch0_neg_mode = neg_mode;
         PCNT.conf_unit[unit].conf0.ch0_hctrl_mode = hctrl_mode;
         PCNT.conf_unit[unit].conf0.ch0_lctrl_mode = lctrl_mode;
-        pcntptr->update();
+        update_pcnt();
     } else {
         PCNT.conf_unit[unit].conf0.ch1_pos_mode = pos_mode;
         PCNT.conf_unit[unit].conf0.ch1_neg_mode = neg_mode;
         PCNT.conf_unit[unit].conf0.ch1_hctrl_mode = hctrl_mode;
         PCNT.conf_unit[unit].conf0.ch1_lctrl_mode = lctrl_mode;
-        pcntptr->update();
+        update_pcnt();
     }
     return ESP_OK;
 }
@@ -140,18 +140,16 @@ esp_err_t pcnt_set_pin(pcnt_unit_t unit, pcnt_channel_t channel, int pulse_io, i
     int ctrl_sig_index  = ctrl_base + (4 * unit);
 
     if(pulse_io >= 0) {
-        //PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[pulse_io], PIN_FUNC_GPIO);
+        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[pulse_io], PIN_FUNC_GPIO);
         gpio_set_direction((gpio_num_t)pulse_io, GPIO_MODE_INPUT);
         gpio_set_pull_mode((gpio_num_t)pulse_io, GPIO_PULLUP_ONLY);
-        //gpio_matrix_in((gpio_num_t)pulse_io, input_sig_index, 0);
-        gpio_iomux_out(pulse_io, 1, 0);
+        gpio_matrix_in((gpio_num_t)pulse_io, input_sig_index, 0);
     }
     if(ctrl_io >= 0) {
-        //PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[ctrl_io], PIN_FUNC_GPIO);
+        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[ctrl_io], PIN_FUNC_GPIO);
         gpio_set_direction((gpio_num_t)ctrl_io, GPIO_MODE_INPUT);
         gpio_set_pull_mode((gpio_num_t)ctrl_io, GPIO_PULLUP_ONLY);
-        //gpio_matrix_in((gpio_num_t)ctrl_io, ctrl_sig_index, 0);
-        gpio_iomux_out(pulse_io, 1, 0);
+        gpio_matrix_in((gpio_num_t)ctrl_io, ctrl_sig_index, 0);
     }
     return ESP_OK;
 }
@@ -170,7 +168,7 @@ esp_err_t pcnt_counter_pause(pcnt_unit_t pcnt_unit)
     PCNT_CHECK(pcnt_unit < PCNT_UNIT_MAX, PCNT_UNIT_ERR_STR, ESP_ERR_INVALID_ARG);
     PCNT_ENTER_CRITICAL(&pcnt_spinlock);
     PCNT.ctrl.val |= BIT(PCNT_CNT_PAUSE_U0_S + (pcnt_unit * 2));
-    pcntptr->update();
+    update_pcnt();
     PCNT_EXIT_CRITICAL(&pcnt_spinlock);
     return ESP_OK;
 }
@@ -180,7 +178,7 @@ esp_err_t pcnt_counter_resume(pcnt_unit_t pcnt_unit)
     PCNT_CHECK(pcnt_unit < PCNT_UNIT_MAX, PCNT_UNIT_ERR_STR, ESP_ERR_INVALID_ARG);
     PCNT_ENTER_CRITICAL(&pcnt_spinlock);
     PCNT.ctrl.val &= (~(BIT(PCNT_CNT_PAUSE_U0_S + (pcnt_unit * 2))));
-    pcntptr->update();
+    update_pcnt();
     PCNT_EXIT_CRITICAL(&pcnt_spinlock);
     return ESP_OK;
 }
@@ -191,9 +189,9 @@ esp_err_t pcnt_counter_clear(pcnt_unit_t pcnt_unit)
     PCNT_ENTER_CRITICAL(&pcnt_spinlock);
     uint32_t reset_bit = BIT(PCNT_PLUS_CNT_RST_U0_S + (pcnt_unit * 2));
     PCNT.ctrl.val |= reset_bit;
-    pcntptr->update();
+    update_pcnt();
     PCNT.ctrl.val &= ~reset_bit;
-    pcntptr->update();
+    update_pcnt();
     PCNT_EXIT_CRITICAL(&pcnt_spinlock);
     return ESP_OK;
 }
@@ -203,7 +201,7 @@ esp_err_t pcnt_intr_enable(pcnt_unit_t pcnt_unit)
     PCNT_CHECK(pcnt_unit < PCNT_UNIT_MAX, PCNT_UNIT_ERR_STR, ESP_ERR_INVALID_ARG);
     PCNT_ENTER_CRITICAL(&pcnt_spinlock);
     PCNT.int_ena.val |= BIT(PCNT_CNT_THR_EVENT_U0_INT_ENA_S + pcnt_unit);
-    pcntptr->update();
+    update_pcnt();
     PCNT_EXIT_CRITICAL(&pcnt_spinlock);
     return ESP_OK;
 }
@@ -213,7 +211,7 @@ esp_err_t pcnt_intr_disable(pcnt_unit_t pcnt_unit)
     PCNT_CHECK(pcnt_unit < PCNT_UNIT_MAX, PCNT_UNIT_ERR_STR, ESP_ERR_INVALID_ARG);
     PCNT_ENTER_CRITICAL(&pcnt_spinlock);
     PCNT.int_ena.val &= (~(BIT(PCNT_CNT_THR_EVENT_U0_INT_ENA_S + pcnt_unit)));
-    pcntptr->update();
+    update_pcnt();
     PCNT_EXIT_CRITICAL(&pcnt_spinlock);
     return ESP_OK;
 }
@@ -233,7 +231,7 @@ esp_err_t pcnt_event_enable(pcnt_unit_t unit, pcnt_evt_type_t evt_type)
     } else if(evt_type == PCNT_EVT_ZERO) {
         PCNT.conf_unit[unit].conf0.thr_zero_en = 1;
     }
-    pcntptr->update();
+    update_pcnt();
     return ESP_OK;
 }
 
@@ -252,7 +250,7 @@ esp_err_t pcnt_event_disable(pcnt_unit_t unit, pcnt_evt_type_t evt_type)
     } else if(evt_type == PCNT_EVT_ZERO) {
         PCNT.conf_unit[unit].conf0.thr_zero_en = 0;
     }
-    pcntptr->update();
+    update_pcnt();
     return ESP_OK;
 }
 
@@ -271,7 +269,7 @@ esp_err_t pcnt_set_event_value(pcnt_unit_t unit, pcnt_evt_type_t evt_type, int16
     } else if(evt_type == PCNT_EVT_THRES_1) {
         PCNT.conf_unit[unit].conf1.cnt_thres1 = value;
     }
-    pcntptr->update();
+    update_pcnt();
     return ESP_OK;
 }
 
@@ -292,7 +290,7 @@ esp_err_t pcnt_get_event_value(pcnt_unit_t unit, pcnt_evt_type_t evt_type, int16
     } else {
         *value = 0;
     }
-    pcntptr->update();
+    update_pcnt();
     return ESP_OK;
 }
 
@@ -301,7 +299,7 @@ esp_err_t pcnt_set_filter_value(pcnt_unit_t unit, uint16_t filter_val)
     PCNT_CHECK(unit < PCNT_UNIT_MAX, PCNT_UNIT_ERR_STR, ESP_ERR_INVALID_ARG);
     PCNT_CHECK(filter_val < 1024, PCNT_PARAM_ERR_STR, ESP_ERR_INVALID_ARG);
     PCNT.conf_unit[unit].conf0.filter_thres = filter_val;
-    pcntptr->update();
+    update_pcnt();
     return ESP_OK;
 }
 
