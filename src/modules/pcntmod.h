@@ -27,12 +27,11 @@ struct pcntmod;
 #include "soc/pcnt_struct.h"
 
 SC_MODULE(pcntmod) {
-   sc_in<bool> apb_clk {"apb_clk"};
    sc_signal<uint32_t> conf0[8];
    sc_signal<uint32_t> conf1[8];
    sc_signal<uint32_t> conf2[8];
    sc_signal<uint16_t> cnt_unit[8];
-   sc_signal<uint32_t> int_raw {"int_raw"};
+   sc_signal<uint32_t> int_raw[8];
    sc_signal<uint32_t> int_st {"int_st"};
    sc_signal<uint32_t> int_ena {"int_ena"};
    sc_signal<uint32_t> int_clr {"int_clr"};
@@ -48,17 +47,21 @@ SC_MODULE(pcntmod) {
    void initstruct();
 
    /* Threads */
-   void capture(void);
+   void capture(int un);
+   void count(int un);
    void updateth(void);
    void returnth(void);
 
+   /* Variables */
+   sc_time fctrl0[8];
+   sc_time fctrl1[8];
+   sc_event filtered_sig0[8];
+   sc_event filtered_sig1[8];
    sc_event update_ev;
 
    /* Sets initial drive condition. */
    SC_CTOR(pcntmod) {
       initstruct();
-      SC_THREAD(capture);
-      sensitive << apb_clk.pos();
 
       SC_THREAD(updateth);
       sensitive << update_ev;
@@ -66,6 +69,7 @@ SC_MODULE(pcntmod) {
       SC_THREAD(returnth);
    }
 
+   void start_of_simulation();
    void trace(sc_trace_file *tf);
 };
 extern pcntmod *pcntptr;

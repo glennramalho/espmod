@@ -33,7 +33,12 @@ SC_MODULE(pcnttest) {
    sc_signal<unsigned int> fromwifi {"fromwifi"};
    sc_signal<unsigned int> towifi {"towifi"};
    gn_signal_mix pwm0 {"pwm0"};
+   gn_signal_mix pwm1 {"pwm1"};
+   gn_signal_mix pwm2 {"pwm2"};
+   gn_signal_mix pwm3 {"pwm3"};
    gn_signal_mix ctrl0 {"ctrl0"};
+   gn_signal_mix ctrl1 {"ctrl1"};
+   gn_signal_mix ctrl2 {"ctrl2"};
 
    /* Note: these will soon be replaced with better interfaces. */
    sc_signal<unsigned int> fromflash {"fromflash"};
@@ -75,6 +80,11 @@ SC_MODULE(pcnttest) {
       /* We connect the waveform to these. */
       i_esp.d12_a15(pwm0);
       i_esp.d13_a14(ctrl0);
+      i_esp.d21(pwm1);
+      i_esp.d22(ctrl1);
+      i_esp.d26_a19(pwm2);
+      i_esp.d27_a17(pwm3);
+      i_esp.d32_a4(ctrl2);
 
       /* Other interfaces, none are used so they are just left floating. */
       i_esp.wrx(fromwifi); i_esp.wtx(towifi);
@@ -89,9 +99,9 @@ SC_MODULE(pcnttest) {
       i_esp.d14_a16(logic_0);
       i_esp.d15_a13(logic_0); i_esp.d16(logic_0);
       i_esp.d17(logic_0); i_esp.d18(logic_0); i_esp.d19(logic_0);
-      i_esp.d21(logic_0); i_esp.d22(logic_0); i_esp.d23(logic_0);
-      i_esp.d25_a18(logic_0); i_esp.d26_a19(logic_0); i_esp.d27_a17(logic_0);
-      i_esp.d32_a4(logic_0); i_esp.d33_a5(logic_0); i_esp.d34_a6(logic_0);
+      i_esp.d23(logic_0);
+      i_esp.d25_a18(logic_0);
+      i_esp.d33_a5(logic_0); i_esp.d34_a6(logic_0);
       i_esp.d35_a7(logic_0); i_esp.d36_a0(logic_0); i_esp.d37_a1(logic_0);
       i_esp.d38_a2(logic_0); i_esp.d39_a3(logic_0);
 

@@ -18,6 +18,7 @@
  *******************************************************************************
  */
 
+#define SC_INCLUDE_DYNAMIC_PROCESSES
 #include <systemc.h>
 #include <string.h>
 #include "pcntmod.h"
@@ -52,10 +53,21 @@ void pcntmod::returnth() {
          cnt_unit[2].value_changed_event() | cnt_unit[3].value_changed_event() |
          cnt_unit[4].value_changed_event() | cnt_unit[5].value_changed_event() |
          cnt_unit[6].value_changed_event() | cnt_unit[7].value_changed_event() |
-         int_raw.value_changed_event());
+         int_raw[0].value_changed_event() | int_raw[1].value_changed_event() |
+         int_raw[2].value_changed_event() | int_raw[3].value_changed_event() |
+         int_raw[4].value_changed_event() | int_raw[5].value_changed_event() |
+         int_raw[6].value_changed_event() | int_raw[7].value_changed_event());
 
-      PCNT.int_raw.val = int_raw.read();
-      PCNT.int_st.val = int_raw.read() & int_ena.read();
+      PCNT.int_raw.val =
+         ((int_raw[7].read())?0x80:0x0) |
+         ((int_raw[6].read())?0x40:0x0) |
+         ((int_raw[5].read())?0x20:0x0) |
+         ((int_raw[4].read())?0x10:0x0) |
+         ((int_raw[3].read())?0x08:0x0) |
+         ((int_raw[2].read())?0x04:0x0) |
+         ((int_raw[1].read())?0x02:0x0) |
+         ((int_raw[0].read())?0x01:0x0);
+      PCNT.int_st.val = PCNT.int_raw.val & int_ena.read();
       for(un = 0; un < 8; un = un + 1) {
          PCNT.cnt_unit[un].val = cnt_unit[un].read();
          PCNT.status_unit[un].thres0_lat =
@@ -80,145 +92,127 @@ void pcntmod::returnth() {
 }
 
 void pcntmod::update() {
+   long unsigned int nanoseconds;
    update_ev.notify();
-   wait(apb_clk.posedge_event());
+   nanoseconds = (long int)floor(sc_time_stamp().to_seconds() * 1e9);
+   wait(APB_CLOCK_PERIOD - nanoseconds % APB_CLOCK_PERIOD, SC_NS);
 }
 
 void pcntmod::initstruct() {
    memset(&PCNT, 0, sizeof(pcnt_dev_t));
 }
 
-void pcntmod::capture() {
+void pcntmod::start_of_simulation() {
+   /* We spawn a thread for each channel. */
    int un;
-   bool ctrl0_del[8];
-   bool ctrl1_del[8];
-   int fctrl0[8];
-   int fctrl1[8];
-   int fsig0[8];
-   int fsig1[8];
-   pcntbus_t lvl[8];
-   pcntbus_t lastlvl[8];
-
    for(un = 0; un < pcntbus_i.size(); un = un + 1) {
-      lastlvl[un].sig_ch0 = false;
-      lastlvl[un].sig_ch1 = false;
-      lastlvl[un].ctrl_ch0 = false;
-      lastlvl[un].ctrl_ch1 = false;
+      sc_spawn(sc_bind(&pcntmod::capture, this, un));
+      sc_spawn(sc_bind(&pcntmod::count, this, un));
    }
+}
+
+void pcntmod::capture(int un) {
+   long int nanoseconds;
+   pcntbus_t lvl;
+   pcntbus_t lastlvl;
+
+   lastlvl.sig_ch0 = false;
+   lastlvl.sig_ch1 = false;
+   lastlvl.ctrl_ch0 = false;
+   lastlvl.ctrl_ch1 = false;
+   fctrl0[un] = sc_time(0, SC_NS);
+   fctrl1[un] = sc_time(0, SC_NS);
 
    while(true) {
-      wait();
+      /* We wait until an input changed. */
+      wait(pcntbus_i[un]->default_event());
 
-      /* First we need to get the new inputs. */
-      for(un = 0; un < pcntbus_i.size(); un = un + 1)
-         lvl[un] = pcntbus_i[un]->read();
+      /* We wait until the next clock edge. */
+      nanoseconds = (long int)floor(sc_time_stamp().to_seconds() * 1e9);
+      wait(APB_CLOCK_PERIOD - nanoseconds % APB_CLOCK_PERIOD, SC_NS);
 
-      for(un = 0; un < pcntbus_i.size(); un = un + 1) {
-         if (RDFIELD(conf0[un], PCNT_FILTER_EN_U0_M, PCNT_FILTER_EN_U0_S)>0
-               && RDFIELD(conf0[un], PCNT_FILTER_THRES_U0_M,
-                  PCNT_FILTER_THRES_U0_S)>0) {
-            /* Filtering is enabled. */
-            /* If the signal has changed, we store the value of edges we
-             * want to see.
+      /* Now we sample the inputs. Note that we might have lost some thing
+       * but that is expected as this is a sampled protocol.
+       */
+      lvl = pcntbus_i[un]->read();
+
+      /* Now we need to look at each signal and find out if it should go high
+       * now or if it should go high only when filtered.
+       */
+      if (lvl.ctrl_ch0 != lastlvl.ctrl_ch0) {
+         if (PCNT.conf_unit[un].conf0.filter_en &&
+               PCNT.conf_unit[un].conf0.filter_thres >0) {
+            /* Filtering is enabled we record its rise at the specified time.
+             * Note that we keep only the last change made, so if a signal
+             * changes multiple times before the filter expires, we dump it.
              */
-            if (lvl[un].ctrl_ch0 != lastlvl[un].ctrl_ch0)
-               fctrl0[un] = RDFIELD(conf0[un], PCNT_FILTER_THRES_U0_M,
-                  PCNT_FILTER_THRES_U0_S);
-            /* If it did not change, we check that the remaining edges. If it is
-             * 0, no edge change has been seen. If it is 1, we are ready to
-             * detect a signal change. If it is more than 1, then we cound down.
-             */
-            else if (fctrl0[un] > 2) fctrl0[un] = fctrl0[un] - 1;
-            /* And we update the internal level. */
-            else if (fctrl0[un] == 1) {
-               ctrl0_del[un] = lvl[un].ctrl_ch0;
-               fctrl0[un] = 0;
-            }
+            fctrl0[un] = sc_time_stamp() +
+               sc_time(PCNT.conf_unit[un].conf0.filter_thres
+               * APB_CLOCK_PERIOD, SC_NS);
          }
-         /* If filtering is disabled, we simply copy the value. */
-         else ctrl0_del[un] = lvl[un].ctrl_ch0;
-         /* And we record the signal level so we can do edge detection. */
-         lastlvl[un].ctrl_ch0 = lvl[un].ctrl_ch0;
+         /* If no filtering was specified, we raise the signal now. */
+         else fctrl0[un] = sc_time_stamp();
       }
       /* And we redo it for the other channel. */
-      for(un = 0; un < pcntbus_i.size(); un = un + 1) {
-         if (RDFIELD(conf0[un], PCNT_FILTER_EN_U0_M, PCNT_FILTER_EN_U0_S)>0
-               && RDFIELD(conf0[un], PCNT_FILTER_THRES_U0_M,
-                  PCNT_FILTER_THRES_U0_S)>0) {
-            /* Filtering is enabled. */
-            if (lvl[un].ctrl_ch1 != lastlvl[un].ctrl_ch1)
-               fctrl1[un] = RDFIELD(conf0[un], PCNT_FILTER_THRES_U0_M,
-               PCNT_FILTER_THRES_U0_S);
-            else if (fctrl1[un] > 2) fctrl1[un] = fctrl1[un] - 1;
-            else if (fctrl1[un] == 1) {
-               ctrl1_del[un] = lvl[un].ctrl_ch1;
-               fctrl1[un] = 0;
-            }
+      if (lvl.ctrl_ch1 != lastlvl.ctrl_ch1) {
+         if (PCNT.conf_unit[un].conf0.filter_en &&
+               PCNT.conf_unit[un].conf0.filter_thres >0) {
+            /* Again we check when it rises or falls. */
+            if (lvl.ctrl_ch0) fctrl1[un] = sc_time_stamp() +
+               sc_time(PCNT.conf_unit[un].conf0.filter_thres
+               * APB_CLOCK_PERIOD, SC_NS);
          }
-         /* If filtering is disabled, we simply copy the value. */
-         else ctrl1_del[un] = lvl[un].ctrl_ch1;
-         /* And we record the signal level so we can do edge detection. */
-         lastlvl[un].ctrl_ch1 = lvl[un].ctrl_ch1;
+         /* If no filtering was specified, we raise the signal now. */
+         else fctrl1[un] = sc_time_stamp();
       }
 
-      /* Now we can do the signals. These are edge detected, so when we pass
-       * the filtering, we can already handle them. Besides that, it is the
-       * same.
+      /* Now we can do the signals. We also look at the signal to see when it
+       * should be triggered. For this one, we raise a notification when the
+       * signal should go high or low.
        */
-      for(un = 0; un < pcntbus_i.size(); un = un + 1) {
-         /* We first check to see if the channel is in reset or pause. If it
-          * is in reset, we clear it. If it is in pause we do nothing.
+      /* First we check, if we are in reset, we do nothing. */
+      if ((ctrl.read() & (PCNT_PLUS_CNT_RST_U0_M<<un*2))>0) continue;
+
+      /* If it is ok, we can check the filtering. */
+      if (PCNT.conf_unit[un].conf0.filter_en &&
+            PCNT.conf_unit[un].conf0.filter_thres > 0) {
+         /* Filtering is enabled so we notify the doit function when
+          * the signal should change value.
           */
-         if ((ctrl.read() & (PCNT_PLUS_CNT_RST_U0_M<<un*2))>0) {
-            cnt_unit[un].write(0);
-         }
-         /* If it is ok, we can check the filtering. */
-         else if (RDFIELD(conf0[un], PCNT_FILTER_EN_U0_M, PCNT_FILTER_EN_U0_S)>0
-               && RDFIELD(conf0[un], PCNT_FILTER_THRES_U0_M,
-                  PCNT_FILTER_THRES_U0_S)>0) {
-            /* Filtering is enabled. */
-            /* If the signal has changed, we store the value of edges we
-             * want to see.
-             */
-            if (lvl[un].sig_ch0 != lastlvl[un].sig_ch0)
-               fsig0[un] = RDFIELD(conf0[un], PCNT_FILTER_THRES_U0_M,
-                  PCNT_FILTER_THRES_U0_S);
-            /* If it did not change, we check that the remaining edges. If it is
-             * 0, no edge change has been seen. If it is 1, we are ready to
-             * detect a signal change. If it is more than 1, then we cound down.
-             */
-            else if (fsig0[un] > 2) fsig0[un] = fsig0[un] - 1;
-            /* And we update the internal level. */
-            else if (fsig0[un] == 1)
-               docnt(un, lvl[un].sig_ch0, ctrl0_del[un], 0);
-         }
-         /* If filtering is disabled, we simply copy the value. */
-         else if (lastlvl[un].sig_ch0 != lvl[un].sig_ch0)
-            docnt(un, lvl[un].sig_ch0, ctrl0_del[un], 0);
-         /* And we record the signal level so we can do edge detection. */
-         lastlvl[un].sig_ch0 = lvl[un].sig_ch0;
+         filtered_sig0[un].notify(APB_CLOCK_PERIOD *
+               PCNT.conf_unit[un].conf0.filter_thres, SC_NS);
       }
-      for(un = 0; un < pcntbus_i.size(); un = un + 1) {
-         /* Reset is handled above. This one just follows, so we do nothing. */
-         if ((ctrl.read() & (PCNT_PLUS_CNT_RST_U0_M<<un*2))>0) {
-         }
-         else if (RDFIELD(conf0[un], PCNT_FILTER_EN_U0_M, PCNT_FILTER_EN_U0_S)>0
-               && RDFIELD(conf0[un], PCNT_FILTER_THRES_U0_M,
-                  PCNT_FILTER_THRES_U0_S)>0) {
-            /* Filtering is enabled. */
-            if (lvl[un].sig_ch1 != lastlvl[un].sig_ch1)
-               fsig1[un] = RDFIELD(conf0[un], PCNT_FILTER_THRES_U0_M,
-                  PCNT_FILTER_THRES_U0_S);
-            else if (fsig1[un] > 2) fsig1[un] = fsig1[un] - 1;
-            /* And we update the internal level. */
-            else if (fsig1[un] == 1)
-               docnt(un, lvl[un].sig_ch1, ctrl1_del[un], 0);
-         }
-         /* If filtering is disabled, we simply copy the value. */
-         else if (lastlvl[un].sig_ch1 != lvl[un].sig_ch1)
-            docnt(un, lvl[un].sig_ch1, ctrl1_del[un], 1);
-         /* And we record the signal level so we can do edge detection. */
-         lastlvl[un].sig_ch1 = lvl[un].sig_ch1;
+      /* If fitering is off, we notify it immediately. */
+      else filtered_sig0[un].notify();
+
+      /* And we repeat for the other signal. */
+      if (PCNT.conf_unit[un].conf0.filter_en &&
+            PCNT.conf_unit[un].conf0.filter_thres > 0) {
+         /* Filtering is enabled so we notify the doit function when
+          * the signal should change value.
+          */
+         filtered_sig1[un].notify(APB_CLOCK_PERIOD *
+               PCNT.conf_unit[un].conf0.filter_thres, SC_NS);
+      }
+      /* If fitering is off, we notify it immediately. */
+      else filtered_sig1[un].notify();
+   }
+}
+
+void pcntmod::count(int un) {
+   pcntbus_t p;
+   while(true) {
+      wait(filtered_sig0[un] | filtered_sig1[un]);
+      p = pcntbus_i[un]->read();
+      if (filtered_sig0[un].triggered()) {
+         if (sc_time_stamp() < fctrl0[un]) 
+            docnt(un, p.sig_ch0, !p.ctrl_ch0, 0);
+         else docnt(un, p.sig_ch0, p.ctrl_ch0, 0);
+      }
+      else {
+         if (sc_time_stamp() < fctrl1[un]) 
+            docnt(un, p.sig_ch1, !p.ctrl_ch1, 1);
+         else docnt(un, p.sig_ch1, p.ctrl_ch1, 1);
       }
    }
 }
@@ -279,23 +273,23 @@ void pcntmod::docnt(int un, bool siglvl, bool ctrllvl, int ch) {
          nc >= (int16_t)RDFIELD(conf2[un], PCNT_CNT_H_LIM_U0_M,
             PCNT_CNT_H_LIM_U0_S)) {
       nc = 0;
-      int_raw.write(int_raw.read() | (1 << un));
+      int_raw[un].write(true);
    }
    /* Now the thresholds. */
    if (RDFIELD(conf0[un], PCNT_THR_THRES0_EN_U0_M, PCNT_THR_THRES0_EN_U0_S) &&
          nc == (int16_t)RDFIELD(conf1[un], PCNT_CNT_THRES0_U0_M,
             PCNT_CNT_THRES0_U0_S)) {
-      int_raw.write(int_raw.read() | (1 << un));
+      int_raw[un].write(true);
    }
    if (RDFIELD(conf0[un], PCNT_THR_THRES1_EN_U0_M, PCNT_THR_THRES1_EN_U0_S) &&
          nc == (int16_t)RDFIELD(conf1[un], PCNT_CNT_THRES1_U0_M,
             PCNT_CNT_THRES1_U0_S)) {
-      int_raw.write(int_raw.read() | (1 << un));
+      int_raw[un].write(true);
    }
    /* And finally the zero. */
    if (nc == 0 && RDFIELD(conf0[un], PCNT_THR_ZERO_EN_U0_M,
          PCNT_THR_ZERO_EN_U0_S)) {
-      int_raw.write(int_raw.read() | (1 << un));
+      int_raw[un].write(true);
    }
 
    /* And we commit the new value. */
@@ -332,6 +326,11 @@ void pcntmod::trace(sc_trace_file *tf) {
    for(un = 0; un < 8; un = un + 1) {
       sign[digit] = '0' + un; sc_trace(tf, status_unit[un], sign.c_str());
    }
-   sc_trace(tf, int_raw, int_raw.name());
+
+   sign = sigb + ".int_raw_0";
+   digit = sign.length() - 1;
+   for(un = 0; un < 8; un = un + 1) {
+      sign[digit] = '0' + un; sc_trace(tf, int_raw[un], sign.c_str());
+   }
    sc_trace(tf, ctrl, ctrl.name());
 }

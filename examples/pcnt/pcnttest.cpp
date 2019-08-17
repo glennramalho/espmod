@@ -18,6 +18,7 @@
  *******************************************************************************
  */
 
+#include <systemc.h>
 #include "pcnttest.h"
 #include <string>
 #include <vector>
@@ -38,7 +39,12 @@ void pcnttest::trace(sc_trace_file *tf) {
    sc_trace(tf, rx, rx.name());
    sc_trace(tf, tx, tx.name());
    sc_trace(tf, pwm0, pwm0.name());
+   sc_trace(tf, pwm1, pwm1.name());
+   sc_trace(tf, pwm2, pwm2.name());
+   sc_trace(tf, pwm3, pwm3.name());
    sc_trace(tf, ctrl0, ctrl0.name());
+   sc_trace(tf, ctrl1, ctrl1.name());
+   sc_trace(tf, ctrl2, ctrl2.name());
    i_esp.trace(tf);
 }
 
@@ -66,12 +72,25 @@ void pcnttest::serflush() {
  */
 void pcnttest::drivewave() {
    pwm0.write(false);
+   pwm1.write(false);
+   pwm2.write(false);
+   pwm3.write(false);
 
    while(true) {
       wait(1, SC_MS);
       pwm0.write(true);
+      wait(300, SC_NS);
+      pwm1.write(true);
+      pwm2.write(true);
+      wait(200, SC_NS);
+      pwm3.write(true);
       wait(1, SC_MS);
       pwm0.write(false);
+      wait(300, SC_NS);
+      pwm1.write(false);
+      pwm2.write(false);
+      wait(200, SC_NS);
+      pwm3.write(false);
    }
 }
 
@@ -84,6 +103,8 @@ void pcnttest::t0(void) {
 
    PRINTF_INFO("TEST", "Waiting for power-up");
    ctrl0.write(false);
+   ctrl1.write(false);
+   ctrl2.write(false);
    wait(500, SC_MS);
 }
 

@@ -27,7 +27,6 @@
 #include "cchan.h"
 #include "pcntbus.h"
 #include "gpio_matrix.h"
-#include "clkgen.h"
 #include "pcntmod.h"
 #include "adc_types.h"
 #include "gn_mixed.h"
@@ -73,7 +72,6 @@ SC_MODULE(doitesp32devkitv1) {
    sc_out<bool> itx {"itx"};
 
    /* Submodules */
-   clkgen i_clkgen{"i_clkgen"};
    gpio_matrix i_gpio_matrix {"i_gpio_matrix"};
    pcntmod i_pcnt{"i_pcnt"};
    adc1 i_adc1{"i_adc1"};
@@ -96,7 +94,6 @@ SC_MODULE(doitesp32devkitv1) {
    sc_signal<bool> uart1tx {"uart1tx"};
    sc_signal<bool> uart2rx {"uart2rx"};
    sc_signal<bool> uart2tx {"uart2tx"};
-   sc_signal<bool> apb_clk {"apb_clk"};
    sc_signal<pcntbus_t> pcntbus_0 {"pcntbus_0"};
    sc_signal<pcntbus_t> pcntbus_1 {"pcntbus_1"};
    sc_signal<pcntbus_t> pcntbus_2 {"pcntbus_2"};
@@ -178,11 +175,7 @@ SC_MODULE(doitesp32devkitv1) {
       i_adc2.channel_8(d26_a19);
       i_adc2.channel_9(d25_a18);
 
-      /* The clock gen */
-      i_clkgen.apb_clk(apb_clk);
-
       /* And we connect the PCNT. */
-      i_pcnt.apb_clk(apb_clk);
       i_pcnt.pcntbus_i(pcntbus_0);
       i_pcnt.pcntbus_i(pcntbus_1);
       i_pcnt.pcntbus_i(pcntbus_2);
