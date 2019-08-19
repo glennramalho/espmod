@@ -279,7 +279,7 @@ void gpio_matrix_out(uint32_t gpio, uint32_t signal_idx, bool out_inv, bool oen_
   * @return None
   */
 void gpio_pad_select_gpio(uint8_t gpio_num) {
-   gpio* gpin = getgpio(gpio_num);
+   io_mux* gpin = getgpio(gpio_num);
    if (gpin == NULL) {
       PRINTF_ERROR("GPIO", "Attemping to set mode to non existant GPIO%d",
          gpio_num);

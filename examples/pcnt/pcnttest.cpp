@@ -71,26 +71,39 @@ void pcnttest::serflush() {
  * Drives a waveform onto the pwm0 pin.
  */
 void pcnttest::drivewave() {
+   int c;
    pwm0.write(false);
    pwm1.write(false);
    pwm2.write(false);
    pwm3.write(false);
 
    while(true) {
-      wait(1, SC_MS);
-      pwm0.write(true);
-      wait(300, SC_NS);
-      pwm1.write(true);
-      pwm2.write(true);
-      wait(200, SC_NS);
-      pwm3.write(true);
-      wait(1, SC_MS);
-      pwm0.write(false);
-      wait(300, SC_NS);
-      pwm1.write(false);
-      pwm2.write(false);
-      wait(200, SC_NS);
-      pwm3.write(false);
+      ctrl1.write(false);
+      for(c = 0; c < 20; c = c + 1) {
+         wait(1, SC_MS);
+         pwm0.write(true);
+         wait(300, SC_NS);
+         pwm1.write(true);
+         pwm2.write(true);
+         wait(200, SC_NS);
+         pwm0.write(false);
+         wait(300, SC_NS);
+         pwm1.write(false);
+         pwm2.write(false);
+      }
+      ctrl1.write(true);
+      for(c = 0; c < 20; c = c + 1) {
+         wait(1, SC_MS);
+         pwm0.write(true);
+         wait(300, SC_NS);
+         pwm1.write(true);
+         pwm3.write(true);
+         wait(200, SC_NS);
+         pwm0.write(false);
+         wait(300, SC_NS);
+         pwm1.write(false);
+         pwm3.write(false);
+      }
    }
 }
 
@@ -103,7 +116,6 @@ void pcnttest::t0(void) {
 
    PRINTF_INFO("TEST", "Waiting for power-up");
    ctrl0.write(false);
-   ctrl1.write(false);
    ctrl2.write(false);
    wait(500, SC_MS);
 }

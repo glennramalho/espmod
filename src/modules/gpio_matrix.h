@@ -28,7 +28,7 @@
 #include "pcntbus.h"
 #include "mux_pcnt.h"
 #include "gn_mixed.h"
-#include "gpio_mfmix.h"
+#include "io_mux.h"
 
 struct gpio_matrix;
 #include "soc/gpio_struct.h"
@@ -42,10 +42,10 @@ struct gpio_matrix;
 /* To make the functions easier to read, we make a shortcut to connecting
  * a function.
  */
-#define CONNECTFUNC(gpiodg,fins,fens,fouts) { \
-   gpiodg.fin(fins); \
-   gpiodg.fen(fens); \
-   gpiodg.fout(fouts); \
+#define CONNECTFUNC(iomuxdg,fins,fens,fouts) { \
+   iomuxdg.fin(fins); \
+   iomuxdg.fen(fens); \
+   iomuxdg.fout(fouts); \
 }
 /* The out muxes too must have the exact same inputs in and each is connected
  * to one GPIO.
@@ -132,85 +132,85 @@ SC_MODULE(gpio_matrix) {
    mux_out *muxptr[40];
 
    /* GPIOs */
-   gpio_mfmix i_gpio_d0 {"i_gpio_d0",
+   io_mux i_mux_d0 {"i_mux_d0",
             GPIOMODE_NONE | GPIOMODE_INPUT | GPIOMODE_OUTPUT | GPIOMODE_INOUT |
             GPIOMODE_WPU | GPIOMODE_WPD | GPIOMODE_OD,
             GPIOMODE_INPUT | GPIOMODE_WPU, false, 3};
-   gpio_mfmix i_gpio_d1 {"i_gpio_d1",
+   io_mux i_mux_d1 {"i_mux_d1",
             GPIOMODE_NONE | GPIOMODE_INPUT | GPIOMODE_OUTPUT | GPIOMODE_INOUT |
             GPIOMODE_WPU | GPIOMODE_WPD | GPIOMODE_OD,
             GPIOMODE_INPUT | GPIOMODE_WPU, false, 3};
-   gpio_mfmix i_gpio_d2 {"i_gpio_d2",
+   io_mux i_mux_d2 {"i_mux_d2",
             GPIOMODE_NONE | GPIOMODE_INPUT | GPIOMODE_OUTPUT | GPIOMODE_INOUT |
             GPIOMODE_WPU | GPIOMODE_WPD | GPIOMODE_OD,
             GPIOMODE_INPUT | GPIOMODE_WPD, false, 3};
-   gpio_mfmix i_gpio_d3 {"i_gpio_d3",
+   io_mux i_mux_d3 {"i_mux_d3",
             GPIOMODE_NONE | GPIOMODE_INPUT | GPIOMODE_OUTPUT | GPIOMODE_INOUT |
             GPIOMODE_WPU | GPIOMODE_WPD | GPIOMODE_OD,
             GPIOMODE_INPUT | GPIOMODE_WPU, false, 3};
-   gpio_mfmix i_gpio_d4 {"i_gpio_d4",
+   io_mux i_mux_d4 {"i_mux_d4",
             GPIOMODE_NONE | GPIOMODE_INPUT | GPIOMODE_OUTPUT | GPIOMODE_INOUT |
             GPIOMODE_WPU | GPIOMODE_WPD | GPIOMODE_OD,
             GPIOMODE_INPUT | GPIOMODE_WPD, false, 3};
-   gpio_mfmix i_gpio_d5 {"i_gpio_d5",
+   io_mux i_mux_d5 {"i_mux_d5",
             GPIOMODE_NONE | GPIOMODE_INPUT | GPIOMODE_OUTPUT | GPIOMODE_INOUT |
             GPIOMODE_WPU | GPIOMODE_WPD | GPIOMODE_OD,
             GPIOMODE_NONE, false, 3};
-   gpio_mfmix i_gpio_d12 {"i_gpio_d12",
+   io_mux i_mux_d12 {"i_mux_d12",
             GPIOMODE_NONE | GPIOMODE_INPUT | GPIOMODE_OUTPUT | GPIOMODE_INOUT |
             GPIOMODE_WPU | GPIOMODE_WPD | GPIOMODE_OD,
             GPIOMODE_INPUT | GPIOMODE_WPD, false, 3};
-   gpio_mfmix i_gpio_d13{"i_gpio_d13",
+   io_mux i_mux_d13{"i_mux_d13",
             GPIOMODE_NONE | GPIOMODE_INPUT | GPIOMODE_OUTPUT | GPIOMODE_INOUT |
             GPIOMODE_WPU | GPIOMODE_WPD | GPIOMODE_OD,
             GPIOMODE_INPUT | GPIOMODE_WPU, false, 3}; /* Not quite, but ok for now */
-   gpio_mfmix i_gpio_d14 {"i_gpio_d14",
+   io_mux i_mux_d14 {"i_mux_d14",
             GPIOMODE_NONE | GPIOMODE_INPUT | GPIOMODE_OUTPUT | GPIOMODE_INOUT |
             GPIOMODE_WPU | GPIOMODE_WPD | GPIOMODE_OD,
             GPIOMODE_INPUT | GPIOMODE_WPD, false, 3}; /* Not quite, but ok for now */
-   gpio_mfmix i_gpio_d15 {"i_gpio_d15",
+   io_mux i_mux_d15 {"i_mux_d15",
             GPIOMODE_NONE | GPIOMODE_INPUT | GPIOMODE_OUTPUT | GPIOMODE_INOUT |
             GPIOMODE_WPU | GPIOMODE_WPD | GPIOMODE_OD,
             GPIOMODE_INPUT | GPIOMODE_WPU, false, 3};
-   gpio_mfmix i_gpio_d16 {"i_gpio_d16",
-            GPIOMODE_NONE | GPIOMODE_INPUT | GPIOMODE_OUTPUT | GPIOMODE_INOUT |
-            GPIOMODE_WPU | GPIOMODE_WPD | GPIOMODE_OD,
-            GPIOMODE_NONE};
-   gpio_mfmix i_gpio_d17 {"i_gpio_d17",
+   io_mux i_mux_d16 {"i_mux_d16",
             GPIOMODE_NONE | GPIOMODE_INPUT | GPIOMODE_OUTPUT | GPIOMODE_INOUT |
             GPIOMODE_WPU | GPIOMODE_WPD | GPIOMODE_OD,
             GPIOMODE_NONE, false, 3};
-   gpio_mfmix i_gpio_d18 {"i_gpio_d18",
+   io_mux i_mux_d17 {"i_mux_d17",
+            GPIOMODE_NONE | GPIOMODE_INPUT | GPIOMODE_OUTPUT | GPIOMODE_INOUT |
+            GPIOMODE_WPU | GPIOMODE_WPD | GPIOMODE_OD,
+            GPIOMODE_NONE, false, 3};
+   io_mux i_mux_d18 {"i_mux_d18",
             GPIOMODE_NONE | GPIOMODE_INPUT | GPIOMODE_OUTPUT | GPIOMODE_INOUT |
             GPIOMODE_WPU | GPIOMODE_WPD | GPIOMODE_OD,
             GPIOMODE_INPUT, false, 3};
-   gpio_mfmix i_gpio_d19 {"i_gpio_d19",
+   io_mux i_mux_d19 {"i_mux_d19",
             GPIOMODE_NONE | GPIOMODE_INPUT | GPIOMODE_OUTPUT | GPIOMODE_INOUT |
             GPIOMODE_WPU | GPIOMODE_WPD | GPIOMODE_OD,
             GPIOMODE_INPUT, false, 3};
    /* There is no GPIO D20 */
-   gpio_mfmix i_gpio_d21 {"i_gpio_d21",
+   io_mux i_mux_d21 {"i_mux_d21",
             GPIOMODE_NONE | GPIOMODE_INPUT | GPIOMODE_OUTPUT | GPIOMODE_INOUT |
             GPIOMODE_WPU | GPIOMODE_WPD | GPIOMODE_OD,
             GPIOMODE_INPUT, false, 3};
-   gpio_mfmix i_gpio_d22 {"i_gpio_d22",
+   io_mux i_mux_d22 {"i_mux_d22",
             GPIOMODE_NONE | GPIOMODE_INPUT | GPIOMODE_OUTPUT | GPIOMODE_INOUT |
             GPIOMODE_WPU | GPIOMODE_WPD | GPIOMODE_OD,
             GPIOMODE_INPUT, false, 3};
-   gpio_mfmix i_gpio_d23 {"i_gpio_d23",
+   io_mux i_mux_d23 {"i_mux_d23",
             GPIOMODE_NONE | GPIOMODE_INPUT | GPIOMODE_OUTPUT | GPIOMODE_INOUT |
             GPIOMODE_WPU | GPIOMODE_WPD | GPIOMODE_OD,
             GPIOMODE_INPUT, false, 3};
    /* There is no GPIO D24 */
-   gpio_mfmix i_gpio_d25 {"i_gpio_d25",
+   io_mux i_mux_d25 {"i_mux_d25",
             GPIOMODE_NONE | GPIOMODE_INPUT | GPIOMODE_OUTPUT | GPIOMODE_INOUT |
             GPIOMODE_WPU | GPIOMODE_WPD | GPIOMODE_OD,
             GPIOMODE_NONE, false, 3};
-   gpio_mfmix i_gpio_d26 {"i_gpio_d26",
+   io_mux i_mux_d26 {"i_mux_d26",
             GPIOMODE_NONE | GPIOMODE_INPUT | GPIOMODE_OUTPUT | GPIOMODE_INOUT |
             GPIOMODE_WPU | GPIOMODE_WPD | GPIOMODE_OD,
             GPIOMODE_NONE, false, 3};
-   gpio_mfmix i_gpio_d27 {"i_gpio_d27",
+   io_mux i_mux_d27 {"i_mux_d27",
             GPIOMODE_NONE | GPIOMODE_INPUT | GPIOMODE_OUTPUT | GPIOMODE_INOUT |
             GPIOMODE_WPU | GPIOMODE_WPD | GPIOMODE_OD,
             GPIOMODE_INPUT, false, 3};
@@ -218,25 +218,25 @@ SC_MODULE(gpio_matrix) {
    /* There is no GPIO d29 */
    /* There is no GPIO d30 */
    /* There is no GPIO d31 */
-   gpio_mfmix i_gpio_d32 {"i_gpio_d32",
+   io_mux i_mux_d32 {"i_mux_d32",
             GPIOMODE_NONE | GPIOMODE_INPUT | GPIOMODE_OUTPUT | GPIOMODE_INOUT |
             GPIOMODE_WPU | GPIOMODE_WPD | GPIOMODE_OD,
             GPIOMODE_NONE, true, 3};
-   gpio_mfmix i_gpio_d33 {"i_gpio_d33",
+   io_mux i_mux_d33 {"i_mux_d33",
             GPIOMODE_NONE | GPIOMODE_INPUT | GPIOMODE_OUTPUT | GPIOMODE_INOUT |
             GPIOMODE_WPU | GPIOMODE_WPD | GPIOMODE_OD,
             GPIOMODE_NONE, true, 3};
-   gpio_mfmix i_gpio_d34 {"i_gpio_d34",
+   io_mux i_mux_d34 {"i_mux_d34",
       GPIOMODE_NONE | GPIOMODE_INPUT, GPIOMODE_NONE, true, 3};
-   gpio_mfmix i_gpio_d35 {"i_gpio_d35",
+   io_mux i_mux_d35 {"i_mux_d35",
       GPIOMODE_NONE | GPIOMODE_INPUT, GPIOMODE_NONE, true, 3};
-   gpio_mfmix i_gpio_d36 {"i_gpio_d36",
+   io_mux i_mux_d36 {"i_mux_d36",
       GPIOMODE_NONE | GPIOMODE_INPUT, GPIOMODE_NONE, true, 3};
-   gpio_mfmix i_gpio_d37 {"i_gpio_d37",
+   io_mux i_mux_d37 {"i_mux_d37",
       GPIOMODE_NONE | GPIOMODE_INPUT, GPIOMODE_NONE, true, 3};
-   gpio_mfmix i_gpio_d38 {"i_gpio_d38",
+   io_mux i_mux_d38 {"i_mux_d38",
       GPIOMODE_NONE | GPIOMODE_INPUT, GPIOMODE_NONE, true, 3};
-   gpio_mfmix i_gpio_d39 {"i_gpio_d39",
+   io_mux i_mux_d39 {"i_mux_d39",
       GPIOMODE_NONE | GPIOMODE_INPUT, GPIOMODE_NONE, true, 3};
 
    /* Signals */
@@ -288,28 +288,28 @@ SC_MODULE(gpio_matrix) {
       int g;
       /* Pin Hookups */
       /* GPIO 0 */
-      i_gpio_d0.pin(d0_a11);
-      CONNECTFUNC(i_gpio_d0,  l0_f1, l1_f1, sig_open);        /* F1 GPIO */
-      CONNECTFUNC(i_gpio_d0,  l0_f2, l1_f2, sig_open);        /* F2 CLK_OUT1 */
-      CONNECTFUNC(i_gpio_d0,min_s[0],men_s[0],mout_s[0]);     /* F3 GPIO */
-      CONNECTFUNC(i_gpio_d0,  l0_f4, l1_f4, sig_open);        /* F4 not used */
-      CONNECTFUNC(i_gpio_d0,  l0_f5, l1_f5, sig_open);        /* F5 not used */
-      CONNECTFUNC(i_gpio_d0,  l0_f6, l1_f6, sig_open);        /*F6 EMAC_TX_CLR*/
+      i_mux_d0.pin(d0_a11);
+      CONNECTFUNC(i_mux_d0,  l0_f1, l1_f1, sig_open);        /* F1 GPIO */
+      CONNECTFUNC(i_mux_d0,  l0_f2, l1_f2, sig_open);        /* F2 CLK_OUT1 */
+      CONNECTFUNC(i_mux_d0,min_s[0],men_s[0],mout_s[0]);     /* F3 GPIO */
+      CONNECTFUNC(i_mux_d0,  l0_f4, l1_f4, sig_open);        /* F4 not used */
+      CONNECTFUNC(i_mux_d0,  l0_f5, l1_f5, sig_open);        /* F5 not used */
+      CONNECTFUNC(i_mux_d0,  l0_f6, l1_f6, sig_open);        /*F6 EMAC_TX_CLR*/
       /* Commented out for now as the I2C is still using a CCHAN. */
-      CONNECTFUNC(i_gpio_d0,  l0_f7, l1_f7, sig_open); /* RTCF2 -- I2C_SDA */
-      //CONNECTFUNC(i_gpio_d0, l1_f7, i2c_sda_tx, i2c_sda_rx); /* F7 */
+      CONNECTFUNC(i_mux_d0,  l0_f7, l1_f7, sig_open); /* RTCF2 -- I2C_SDA */
+      //CONNECTFUNC(i_mux_d0, l1_f7, i2c_sda_tx, i2c_sda_rx); /* F7 */
       CONNECTOUTMUX(0);
       /* GPIO 1 */
-      i_gpio_d1.pin(d1);
-      CONNECTFUNC(i_gpio_d1, uart0tx_i, l1_f1, sig_open);     /* F1 GPIO */
-      CONNECTFUNC(i_gpio_d1, l0_f2,     l1_f2, sig_open);     /* F2 CLK_OUT2 */
-      CONNECTFUNC(i_gpio_d1,min_s[1],men_s[1],mout_s[1]);     /* F3 GPIO */
+      i_mux_d1.pin(d1);
+      CONNECTFUNC(i_mux_d1, uart0tx_i, l1_f1, sig_open);     /* F1 T0RX */
+      CONNECTFUNC(i_mux_d1, l0_f2,     l1_f2, sig_open);     /* F2 CLK_OUT2 */
+      CONNECTFUNC(i_mux_d1,min_s[1],men_s[1],mout_s[1]);     /* F3 GPIO */
       CONNECTOUTMUX(1);
       /* GPIO 2 */
-      i_gpio_d2.pin(d2_a12);
-      CONNECTFUNC(i_gpio_d2, l0_f1,     l1_f1, sig_open);     /* F1 GPIO */
-      CONNECTFUNC(i_gpio_d2, l0_f2,     l1_f2, sig_open);     /* F2 HSPI-WP*/
-      CONNECTFUNC(i_gpio_d2,min_s[2],men_s[2],mout_s[2]);     /* F3 GPIO */
+      i_mux_d2.pin(d2_a12);
+      CONNECTFUNC(i_mux_d2, l0_f1,     l1_f1, sig_open);     /* F1 GPIO */
+      CONNECTFUNC(i_mux_d2, l0_f2,     l1_f2, sig_open);     /* F2 HSPI-WP*/
+      CONNECTFUNC(i_mux_d2,min_s[2],men_s[2],mout_s[2]);     /* F3 GPIO */
       /* F1: GPIO -- built-in */
       /* F2: HSPIWP -- not yet supported */
       /* F3: GPIO -- built-in */
@@ -317,30 +317,30 @@ SC_MODULE(gpio_matrix) {
       /* F5: SD_DATA0 -- not yet supported */
       CONNECTOUTMUX(2);
       /* GPIO 3 */
-      i_gpio_d3.pin(d3);
-      CONNECTFUNC(i_gpio_d3, l0_f1, l1_f1, d_u0rx_s);         /* F1 U0RX */
-      CONNECTFUNC(i_gpio_d3, l0_f2, l1_f2, sig_open);         /* F2 CLK_OUT2*/
-      CONNECTFUNC(i_gpio_d3, min_s[3], men_s[3], mout_s[3]);  /* F3 GPIO */
+      i_mux_d3.pin(d3);
+      CONNECTFUNC(i_mux_d3, l0_f1, l0_f1, d_u0rx_s);         /* F1 U0RX */
+      CONNECTFUNC(i_mux_d3, l0_f2, l1_f2, sig_open);         /* F2 CLK_OUT2*/
+      CONNECTFUNC(i_mux_d3, min_s[3], men_s[3], mout_s[3]);  /* F3 GPIO */
       /* F2: CLK_OUT2 -- not supported. */
       /* F3: GPIO -- built-in to GPIO. */
       CONNECTOUTMUX(3);
       /* GPIO 4 */
-      i_gpio_d4.pin(d4_a10);
-      CONNECTFUNC(i_gpio_d4,  l0_f1, l1_f1, sig_open);        /* F1 skipped */
-      CONNECTFUNC(i_gpio_d4,  l0_f2, l1_f2, sig_open);        /* F2 HSPID */
-      CONNECTFUNC(i_gpio_d4,min_s[4],men_s[4],mout_s[4]);     /* F3 GPIO */
-      CONNECTFUNC(i_gpio_d4,  l0_f4, l1_f4, sig_open);        /* F4 HS2_DATA1 */
-      CONNECTFUNC(i_gpio_d4,  l0_f5, l1_f5, sig_open);        /* F5 SD_DATA1 */
-      CONNECTFUNC(i_gpio_d4,  l0_f6, l1_f6, sig_open);        /* F6 EMAC_TX_ER*/
+      i_mux_d4.pin(d4_a10);
+      CONNECTFUNC(i_mux_d4,  l0_f1, l1_f1, sig_open);        /* F1 skipped */
+      CONNECTFUNC(i_mux_d4,  l0_f2, l1_f2, sig_open);        /* F2 HSPID */
+      CONNECTFUNC(i_mux_d4,min_s[4],men_s[4],mout_s[4]);     /* F3 GPIO */
+      CONNECTFUNC(i_mux_d4,  l0_f4, l1_f4, sig_open);        /* F4 HS2_DATA1 */
+      CONNECTFUNC(i_mux_d4,  l0_f5, l1_f5, sig_open);        /* F5 SD_DATA1 */
+      CONNECTFUNC(i_mux_d4,  l0_f6, l1_f6, sig_open);        /* F6 EMAC_TX_ER*/
       /* Commented out for now as the I2C is still using a CCHAN. */
       /* RTC FUNC 1: RTC_GPIO10 */
-      CONNECTFUNC(i_gpio_d4,  l0_f7, l1_f7, sig_open); /* RTC FUNC 2: I2CSCL */
-      //CONNECTFUNC(i_gpio_d4, l0_f7, i2c_sda_tx, i2c_sda_rx); /* F7 */
+      CONNECTFUNC(i_mux_d4,  l0_f7, l1_f7, sig_open); /* RTC FUNC 2: I2CSCL */
+      //CONNECTFUNC(i_mux_d4, l0_f7, i2c_sda_tx, i2c_sda_rx); /* F7 */
       CONNECTOUTMUX(4);
-      i_gpio_d5.pin(d5);
-      CONNECTFUNC(i_gpio_d5,  l0_f1, l1_f1, sig_open);        /* F1 skipped */
-      CONNECTFUNC(i_gpio_d5,  l0_f2, l1_f2, sig_open);        /* F2 VSPICS0 */
-      CONNECTFUNC(i_gpio_d5,min_s[5],men_s[5],mout_s[5]);     /* F3 GPIO */
+      i_mux_d5.pin(d5);
+      CONNECTFUNC(i_mux_d5,  l0_f1, l1_f1, sig_open);        /* F1 skipped */
+      CONNECTFUNC(i_mux_d5,  l0_f2, l1_f2, sig_open);        /* F2 VSPICS0 */
+      CONNECTFUNC(i_mux_d5,min_s[5],men_s[5],mout_s[5]);     /* F3 GPIO */
       /* F4: HS1_DATA6 -- not supported. */
       CONNECTOUTMUX(5);
       /* GPIO  6 -- not yet supported, implemented via the flash channel. */
@@ -350,113 +350,113 @@ SC_MODULE(gpio_matrix) {
       /* GPIO 10 -- not yet supported, implemented via the flash channel. */
       /* GPIO 11 -- not yet supported, implemented via the flash channel. */
       /* GPIO 12 */
-      i_gpio_d12.pin(d12_a15);
-      CONNECTFUNC(i_gpio_d12,  l0_f1, l1_f1, sig_open);       /* F1 MTDO */
-      CONNECTFUNC(i_gpio_d12,  l0_f2, l1_f2, sig_open);       /* F2 HSPIQ */
-      CONNECTFUNC(i_gpio_d12,min_s[12],men_s[12],mout_s[12]); /* F3 GPIO */
+      i_mux_d12.pin(d12_a15);
+      CONNECTFUNC(i_mux_d12,  l0_f1, l1_f1, sig_open);       /* F1 MTDO */
+      CONNECTFUNC(i_mux_d12,  l0_f2, l1_f2, sig_open);       /* F2 HSPIQ */
+      CONNECTFUNC(i_mux_d12,min_s[12],men_s[12],mout_s[12]); /* F3 GPIO */
       /* F4: HS2_DATA2 -- not supported. */
       /* F5: SD_DATA2 -- not supported. */
       /* F6: EMAC_TXD3 */
       CONNECTOUTMUX(12);
-      i_gpio_d13.pin(d13_a14);
-      CONNECTFUNC(i_gpio_d13,  l0_f1, l1_f1, sig_open);       /* F1 MTCK */
-      CONNECTFUNC(i_gpio_d13,  l0_f2, l1_f2, sig_open);       /* F2 HSPID */
-      CONNECTFUNC(i_gpio_d13,min_s[13],men_s[13],mout_s[13]); /* F3 GPIO */
+      i_mux_d13.pin(d13_a14);
+      CONNECTFUNC(i_mux_d13,  l0_f1, l1_f1, sig_open);       /* F1 MTCK */
+      CONNECTFUNC(i_mux_d13,  l0_f2, l1_f2, sig_open);       /* F2 HSPID */
+      CONNECTFUNC(i_mux_d13,min_s[13],men_s[13],mout_s[13]); /* F3 GPIO */
       /* F4: HS2_DATA3 -- not supported. */
       /* F5: SD_DATA3 -- not supported. */
       /* F6: EMAC_RX_ER */
       CONNECTOUTMUX(13);
-      i_gpio_d14.pin(d14_a16);
-      CONNECTFUNC(i_gpio_d14, l0_f1, l1_f1, sig_open);        /* F1 MTMS */
-      CONNECTFUNC(i_gpio_d14, l0_f2, l1_f2, sig_open);        /* F2 HSPICLK */
-      CONNECTFUNC(i_gpio_d14,min_s[14],men_s[14],mout_s[14]); /* F3 GPIO */
+      i_mux_d14.pin(d14_a16);
+      CONNECTFUNC(i_mux_d14, l0_f1, l1_f1, sig_open);        /* F1 MTMS */
+      CONNECTFUNC(i_mux_d14, l0_f2, l1_f2, sig_open);        /* F2 HSPICLK */
+      CONNECTFUNC(i_mux_d14,min_s[14],men_s[14],mout_s[14]); /* F3 GPIO */
       /* F4: HS2_CLK -- not supported. */
       /* F5: SD_CLK -- not supported. */
       /* F6: EMAC_TXD2 */
       CONNECTOUTMUX(14);
-      i_gpio_d15(d15_a13);
-      CONNECTFUNC(i_gpio_d15, l0_f1, l1_f1, sig_open);        /* F1 MTDO */
-      CONNECTFUNC(i_gpio_d15, l0_f2, l1_f2, sig_open);        /* F2 HSPICS0 */
-      CONNECTFUNC(i_gpio_d15,min_s[15],men_s[15],mout_s[15]); /* F3 GPIO */
+      i_mux_d15(d15_a13);
+      CONNECTFUNC(i_mux_d15, l0_f1, l1_f1, sig_open);        /* F1 MTDO */
+      CONNECTFUNC(i_mux_d15, l0_f2, l1_f2, sig_open);        /* F2 HSPICS0 */
+      CONNECTFUNC(i_mux_d15,min_s[15],men_s[15],mout_s[15]); /* F3 GPIO */
       /* F4: HS2_CMD -- not supported. */
       /* F5: SD_CMD -- not supported. */
       /* F6: EMAC_RXD3 */
       CONNECTOUTMUX(15);
-      i_gpio_d16.pin(d16);
-      CONNECTFUNC(i_gpio_d16, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
-      CONNECTFUNC(i_gpio_d16, l0_f2, l1_f2, sig_open);        /* F2 not used */
-      CONNECTFUNC(i_gpio_d16,min_s[16],men_s[16],mout_s[16]); /* F3 GPIO */
-      CONNECTFUNC(i_gpio_d16, l0_f4, l1_f4, sig_open);        /* F4 HS1_DATA4 */
-      CONNECTFUNC(i_gpio_d16, l0_f5, l1_f5, d_u2rx_s);        /* F5 U2RXD */
+      i_mux_d16.pin(d16);
+      CONNECTFUNC(i_mux_d16, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
+      CONNECTFUNC(i_mux_d16, l0_f2, l1_f2, sig_open);        /* F2 not used */
+      CONNECTFUNC(i_mux_d16,min_s[16],men_s[16],mout_s[16]); /* F3 GPIO */
+      CONNECTFUNC(i_mux_d16, l0_f4, l1_f4, sig_open);        /* F4 HS1_DATA4 */
+      CONNECTFUNC(i_mux_d16, l0_f5, l1_f5, d_u2rx_s);        /* F5 U2RXD */
       /* F6: EMAC_CLK_OUT */
       CONNECTOUTMUX(16);
       /* GPIO 17 */
-      i_gpio_d17.pin(d17);
-      CONNECTFUNC(i_gpio_d17, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
-      CONNECTFUNC(i_gpio_d17, l0_f2, l1_f2, sig_open);        /* F2 not used*/
-      CONNECTFUNC(i_gpio_d17,min_s[17],men_s[17],mout_s[17]); /* F3 GPIO */
-      CONNECTFUNC(i_gpio_d17, l0_f4, l1_f4, sig_open);        /* F4 HS1_DATA5 */
-      CONNECTFUNC(i_gpio_d17, uart2tx_i,l1_f5,sig_open);      /* F5 U2TXD */
+      i_mux_d17.pin(d17);
+      CONNECTFUNC(i_mux_d17, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
+      CONNECTFUNC(i_mux_d17, l0_f2, l1_f2, sig_open);        /* F2 not used*/
+      CONNECTFUNC(i_mux_d17,min_s[17],men_s[17],mout_s[17]); /* F3 GPIO */
+      CONNECTFUNC(i_mux_d17, l0_f4, l1_f4, sig_open);        /* F4 HS1_DATA5 */
+      CONNECTFUNC(i_mux_d17, uart2tx_i,l1_f5,sig_open);      /* F5 U2TXD */
       /* F6: EMAC_CLK_OUT_180 */
       CONNECTOUTMUX(17);
-      i_gpio_d18.pin(d18);
-      CONNECTFUNC(i_gpio_d18, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
-      CONNECTFUNC(i_gpio_d18, l0_f2, l1_f2, sig_open);        /* F2: VSPICLK */
-      CONNECTFUNC(i_gpio_d18,min_s[18],men_s[18],mout_s[18]); /* F3: GPIO */
+      i_mux_d18.pin(d18);
+      CONNECTFUNC(i_mux_d18, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
+      CONNECTFUNC(i_mux_d18, l0_f2, l1_f2, sig_open);        /* F2: VSPICLK */
+      CONNECTFUNC(i_mux_d18,min_s[18],men_s[18],mout_s[18]); /* F3: GPIO */
       /* F4: HS1_DATA7 -- not supported. */
       CONNECTOUTMUX(18);
-      i_gpio_d19.pin(d19);
-      CONNECTFUNC(i_gpio_d19, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
-      CONNECTFUNC(i_gpio_d19, l0_f2, l1_f2, sig_open);        /* F2 VSPIQ */
-      CONNECTFUNC(i_gpio_d19,min_s[19],men_s[19],mout_s[19]); /* F3 GPIO */
+      i_mux_d19.pin(d19);
+      CONNECTFUNC(i_mux_d19, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
+      CONNECTFUNC(i_mux_d19, l0_f2, l1_f2, sig_open);        /* F2 VSPIQ */
+      CONNECTFUNC(i_mux_d19,min_s[19],men_s[19],mout_s[19]); /* F3 GPIO */
       /* F4: U0CTS -- not supported. */
       /* F5: -- not used. */
       /* F6: EMAC TXDO */
       CONNECTOUTMUX(19);
-      i_gpio_d21.pin(d21);
-      CONNECTFUNC(i_gpio_d21, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
-      CONNECTFUNC(i_gpio_d21, l0_f2, l1_f2, sig_open);        /* F2 VSPIHD */
-      CONNECTFUNC(i_gpio_d21,min_s[21],men_s[21],mout_s[21]); /* F3 GPIO */
+      i_mux_d21.pin(d21);
+      CONNECTFUNC(i_mux_d21, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
+      CONNECTFUNC(i_mux_d21, l0_f2, l1_f2, sig_open);        /* F2 VSPIHD */
+      CONNECTFUNC(i_mux_d21,min_s[21],men_s[21],mout_s[21]); /* F3 GPIO */
       /* F4: -- not used. */
       /* F5: -- not used. */
       /* F6: EMAC TX EN */
       CONNECTOUTMUX(21);
-      i_gpio_d22.pin(d22);
-      CONNECTFUNC(i_gpio_d22, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
-      CONNECTFUNC(i_gpio_d22, l0_f2, l1_f2, sig_open);        /* F2 VSPIWP */
-      CONNECTFUNC(i_gpio_d22,min_s[22],men_s[22],mout_s[22]); /* F3 GPIO */
+      i_mux_d22.pin(d22);
+      CONNECTFUNC(i_mux_d22, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
+      CONNECTFUNC(i_mux_d22, l0_f2, l1_f2, sig_open);        /* F2 VSPIWP */
+      CONNECTFUNC(i_mux_d22,min_s[22],men_s[22],mout_s[22]); /* F3 GPIO */
       /* F4: U0RTS -- not supported. */
       /* F5: -- not used. */
       /* F6: EMAC TXD1 */
       CONNECTOUTMUX(22);
-      i_gpio_d23.pin(d23);
-      CONNECTFUNC(i_gpio_d23, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
-      CONNECTFUNC(i_gpio_d23, l0_f2, l1_f2, sig_open);        /* F2 VSPID */
-      CONNECTFUNC(i_gpio_d23,min_s[23],men_s[23],mout_s[23]); /* F3 GPIO */
+      i_mux_d23.pin(d23);
+      CONNECTFUNC(i_mux_d23, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
+      CONNECTFUNC(i_mux_d23, l0_f2, l1_f2, sig_open);        /* F2 VSPID */
+      CONNECTFUNC(i_mux_d23,min_s[23],men_s[23],mout_s[23]); /* F3 GPIO */
       /* F4: HS1_STROBE -- not supported. */
       /* F5: -- not used. */
       /* F6: -- not used. */
       CONNECTOUTMUX(23);
-      i_gpio_d25.pin(d25_a18);
-      CONNECTFUNC(i_gpio_d25, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
-      CONNECTFUNC(i_gpio_d25, l0_f2, l1_f2, sig_open);        /* F2 not used */
-      CONNECTFUNC(i_gpio_d25,min_s[25],men_s[25],mout_s[25]); /* F3 GPIO */
+      i_mux_d25.pin(d25_a18);
+      CONNECTFUNC(i_mux_d25, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
+      CONNECTFUNC(i_mux_d25, l0_f2, l1_f2, sig_open);        /* F2 not used */
+      CONNECTFUNC(i_mux_d25,min_s[25],men_s[25],mout_s[25]); /* F3 GPIO */
       /* F4: -- not used. */
       /* F5: -- not used. */
       /* F6: EMAC RXD0 */
       CONNECTOUTMUX(25);
-      i_gpio_d26.pin(d26_a19);
-      CONNECTFUNC(i_gpio_d26, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
-      CONNECTFUNC(i_gpio_d26, l0_f2, l1_f2, sig_open);        /* F2 not used */
-      CONNECTFUNC(i_gpio_d26,min_s[26],men_s[26],mout_s[26]); /* F3 GPIO */
+      i_mux_d26.pin(d26_a19);
+      CONNECTFUNC(i_mux_d26, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
+      CONNECTFUNC(i_mux_d26, l0_f2, l1_f2, sig_open);        /* F2 not used */
+      CONNECTFUNC(i_mux_d26,min_s[26],men_s[26],mout_s[26]); /* F3 GPIO */
       /* F4: -- not used. */
       /* F5: -- not used. */
       /* F6: EMAC RXD1 */
       CONNECTOUTMUX(26);
-      i_gpio_d27.pin(d27_a17);
-      CONNECTFUNC(i_gpio_d27, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
-      CONNECTFUNC(i_gpio_d27, l0_f2, l1_f2, sig_open);        /* F2 not used */
-      CONNECTFUNC(i_gpio_d27,min_s[27],men_s[27],mout_s[27]); /* F3 GPIO */
+      i_mux_d27.pin(d27_a17);
+      CONNECTFUNC(i_mux_d27, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
+      CONNECTFUNC(i_mux_d27, l0_f2, l1_f2, sig_open);        /* F2 not used */
+      CONNECTFUNC(i_mux_d27,min_s[27],men_s[27],mout_s[27]); /* F3 GPIO */
       /* F4: -- not used. */
       /* F5: -- not used. */
       /* F6: EMAC RX_DV */
@@ -464,45 +464,45 @@ SC_MODULE(gpio_matrix) {
       /* These below, asside from the ADC do not have any supported additional
        * functions.
        */
-      i_gpio_d32.pin(d32_a4);
-      CONNECTFUNC(i_gpio_d32, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
-      CONNECTFUNC(i_gpio_d32, l0_f2, l1_f2, sig_open);        /* F2 not used */
-      CONNECTFUNC(i_gpio_d32,min_s[32],men_s[32],mout_s[32]); /* F3 GPIO */
+      i_mux_d32.pin(d32_a4);
+      CONNECTFUNC(i_mux_d32, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
+      CONNECTFUNC(i_mux_d32, l0_f2, l1_f2, sig_open);        /* F2 not used */
+      CONNECTFUNC(i_mux_d32,min_s[32],men_s[32],mout_s[32]); /* F3 GPIO */
       CONNECTOUTMUX(32);
-      i_gpio_d33.pin(d33_a5);
-      CONNECTFUNC(i_gpio_d33, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
-      CONNECTFUNC(i_gpio_d33, l0_f2, l1_f2, sig_open);        /* F2 not used */
-      CONNECTFUNC(i_gpio_d33,min_s[33],men_s[33],mout_s[33]); /* F3 GPIO */
+      i_mux_d33.pin(d33_a5);
+      CONNECTFUNC(i_mux_d33, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
+      CONNECTFUNC(i_mux_d33, l0_f2, l1_f2, sig_open);        /* F2 not used */
+      CONNECTFUNC(i_mux_d33,min_s[33],men_s[33],mout_s[33]); /* F3 GPIO */
       CONNECTOUTMUX(33);
-      i_gpio_d34.pin(d34_a6);
-      CONNECTFUNC(i_gpio_d34, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
-      CONNECTFUNC(i_gpio_d34, l0_f2, l1_f2, sig_open);        /* F2 not used */
-      CONNECTFUNC(i_gpio_d34,min_s[34],men_s[34],mout_s[34]); /* F3 GPIO */
+      i_mux_d34.pin(d34_a6);
+      CONNECTFUNC(i_mux_d34, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
+      CONNECTFUNC(i_mux_d34, l0_f2, l1_f2, sig_open);        /* F2 not used */
+      CONNECTFUNC(i_mux_d34,min_s[34],men_s[34],mout_s[34]); /* F3 GPIO */
       CONNECTOUTMUX(34);
-      i_gpio_d35.pin(d35_a7);
-      CONNECTFUNC(i_gpio_d35, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
-      CONNECTFUNC(i_gpio_d35, l0_f2, l1_f2, sig_open);        /* F2 not used */
-      CONNECTFUNC(i_gpio_d35,min_s[35],men_s[35],mout_s[35]); /* F3 GPIO */
+      i_mux_d35.pin(d35_a7);
+      CONNECTFUNC(i_mux_d35, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
+      CONNECTFUNC(i_mux_d35, l0_f2, l1_f2, sig_open);        /* F2 not used */
+      CONNECTFUNC(i_mux_d35,min_s[35],men_s[35],mout_s[35]); /* F3 GPIO */
       CONNECTOUTMUX(35);
-      i_gpio_d36.pin(d36_a0);
-      CONNECTFUNC(i_gpio_d36, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
-      CONNECTFUNC(i_gpio_d36, l0_f2, l1_f2, sig_open);        /* F2 not used */
-      CONNECTFUNC(i_gpio_d36,min_s[36],men_s[36],mout_s[36]); /* F3 GPIO */
+      i_mux_d36.pin(d36_a0);
+      CONNECTFUNC(i_mux_d36, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
+      CONNECTFUNC(i_mux_d36, l0_f2, l1_f2, sig_open);        /* F2 not used */
+      CONNECTFUNC(i_mux_d36,min_s[36],men_s[36],mout_s[36]); /* F3 GPIO */
       CONNECTOUTMUX(36);
-      i_gpio_d37.pin(d37_a1);
-      CONNECTFUNC(i_gpio_d37, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
-      CONNECTFUNC(i_gpio_d37, l0_f2, l1_f2, sig_open);        /* F2 not used */
-      CONNECTFUNC(i_gpio_d37,min_s[37],men_s[37],mout_s[37]); /* F3 GPIO */
+      i_mux_d37.pin(d37_a1);
+      CONNECTFUNC(i_mux_d37, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
+      CONNECTFUNC(i_mux_d37, l0_f2, l1_f2, sig_open);        /* F2 not used */
+      CONNECTFUNC(i_mux_d37,min_s[37],men_s[37],mout_s[37]); /* F3 GPIO */
       CONNECTOUTMUX(37);
-      i_gpio_d38.pin(d38_a2);
-      CONNECTFUNC(i_gpio_d38, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
-      CONNECTFUNC(i_gpio_d38, l0_f2, l1_f2, sig_open);        /* F2 not used */
-      CONNECTFUNC(i_gpio_d38,min_s[38],men_s[38],mout_s[38]); /* F3 GPIO */
+      i_mux_d38.pin(d38_a2);
+      CONNECTFUNC(i_mux_d38, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
+      CONNECTFUNC(i_mux_d38, l0_f2, l1_f2, sig_open);        /* F2 not used */
+      CONNECTFUNC(i_mux_d38,min_s[38],men_s[38],mout_s[38]); /* F3 GPIO */
       CONNECTOUTMUX(38);
-      i_gpio_d39.pin(d39_a3);
-      CONNECTFUNC(i_gpio_d39, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
-      CONNECTFUNC(i_gpio_d39, l0_f2, l1_f2, sig_open);        /* F2 not used */
-      CONNECTFUNC(i_gpio_d39,min_s[39],men_s[39],mout_s[39]); /* F3 GPIO */
+      i_mux_d39.pin(d39_a3);
+      CONNECTFUNC(i_mux_d39, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
+      CONNECTFUNC(i_mux_d39, l0_f2, l1_f2, sig_open);        /* F2 not used */
+      CONNECTFUNC(i_mux_d39,min_s[39],men_s[39],mout_s[39]); /* F3 GPIO */
       CONNECTOUTMUX(39);
 
       /* PCNT Mux */

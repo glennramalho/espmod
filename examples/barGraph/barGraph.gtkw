@@ -1,0 +1,30 @@
+[*]
+[*] GTKWave Analyzer v3.3.67 (w)1999-2015 BSI
+[*] Mon Aug 19 20:57:45 2019
+[*]
+[dumpfile] "/home/glennramalho/work/espmod/examples/barGraph/waves.vcd"
+[dumpfile_mtime] "Mon Aug 19 20:51:42 2019"
+[dumpfile_size] 8455
+[savefile] "/home/glennramalho/work/espmod/examples/barGraph/barGraph.gtkw"
+[timestart] 0
+[size] 1000 600
+[pos] -1 -1
+*-37.000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] SystemC.
+[sst_width] 211
+[signals_width] 86
+[sst_expanded] 1
+[sst_vpaned_height] 145
+@28
+SystemC.i_bargraphtest.led1_d
+SystemC.i_bargraphtest.led2_d
+SystemC.i_bargraphtest.led3_d
+SystemC.i_bargraphtest.led4_d
+SystemC.i_bargraphtest.led5_d
+SystemC.i_bargraphtest.led6_d
+SystemC.i_bargraphtest.led7_d
+SystemC.i_bargraphtest.led8_d
+SystemC.i_bargraphtest.led9_d
+SystemC.i_bargraphtest.led10_d
+[pattern_trace] 1
+[pattern_trace] 0

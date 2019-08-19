@@ -52,6 +52,11 @@ unsigned long int millis() {
 
 void yield() { wait(125, SC_NS); }
 void del1cycle() { wait(125, SC_NS); }
+void wait_next_apb_clock() {
+   long int nanoseconds;
+   nanoseconds = (long int)floor(sc_time_stamp().to_seconds() * 1e9);
+   wait(APB_CLOCK_PERIOD - nanoseconds % APB_CLOCK_PERIOD, SC_NS);
+}
 
 unsigned int interruptsenabled;
 unsigned int xt_rsil(unsigned int lvl) {

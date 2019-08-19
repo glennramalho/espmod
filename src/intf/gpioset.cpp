@@ -23,14 +23,14 @@
 #include "esp32-hal-gpio.h"
 #include "info.h"
 
-gpio *gpioptr[NUM_GPIOS];
+io_mux *gpioptr[NUM_GPIOS];
 
 void pinset(int pin, void *ngpioptr) {
-   if (pin < NUM_GPIOS) gpioptr[pin] = (gpio *)ngpioptr;
+   if (pin < NUM_GPIOS) gpioptr[pin] = (io_mux *)ngpioptr;
    else PRINTF_WARN("GPIOSET", "Pin %d does not have a GPIO associated", pin);
 }
 
-gpio *getgpio(int pin) {
+io_mux *getgpio(int pin) {
    if (pin >= NUM_GPIOS || gpioptr[pin] == NULL) return NULL;
    else return gpioptr[pin];
 }

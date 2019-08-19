@@ -92,10 +92,8 @@ void pcntmod::returnth() {
 }
 
 void pcntmod::update() {
-   long unsigned int nanoseconds;
    update_ev.notify();
-   nanoseconds = (long int)floor(sc_time_stamp().to_seconds() * 1e9);
-   wait(APB_CLOCK_PERIOD - nanoseconds % APB_CLOCK_PERIOD, SC_NS);
+   wait_next_apb_clock();
 }
 
 void pcntmod::initstruct() {
@@ -112,9 +110,9 @@ void pcntmod::start_of_simulation() {
 }
 
 void pcntmod::capture(int un) {
-   long int nanoseconds;
    pcntbus_t lvl;
    pcntbus_t lastlvl;
+   unsigned int filter_thres;
 
    lastlvl.sig_ch0 = false;
    lastlvl.sig_ch1 = false;
@@ -128,41 +126,44 @@ void pcntmod::capture(int un) {
       wait(pcntbus_i[un]->default_event());
 
       /* We wait until the next clock edge. */
-      nanoseconds = (long int)floor(sc_time_stamp().to_seconds() * 1e9);
-      wait(APB_CLOCK_PERIOD - nanoseconds % APB_CLOCK_PERIOD, SC_NS);
+      wait_next_apb_clock();
 
       /* Now we sample the inputs. Note that we might have lost some thing
        * but that is expected as this is a sampled protocol.
        */
       lvl = pcntbus_i[un]->read();
 
+      /* We get the filter enable and value. */
+      if (RDFIELD(conf0[un], PCNT_FILTER_EN_U0_M, PCNT_FILTER_EN_U0_S)>0)
+         filter_thres = RDFIELD(conf0[un], PCNT_FILTER_THRES_U0_M,
+             PCNT_FILTER_THRES_U0_S);
+      else filter_thres = 0;
+
       /* Now we need to look at each signal and find out if it should go high
        * now or if it should go high only when filtered.
        */
       if (lvl.ctrl_ch0 != lastlvl.ctrl_ch0) {
-         if (PCNT.conf_unit[un].conf0.filter_en &&
-               PCNT.conf_unit[un].conf0.filter_thres >0) {
-            /* Filtering is enabled we record its rise at the specified time.
-             * Note that we keep only the last change made, so if a signal
-             * changes multiple times before the filter expires, we dump it.
-             */
+         /* If the next transition is in the future, all we do is cancel the
+          * transition. It has been filtered out.
+          */
+         if (fctrl0[un] >= sc_time_stamp()) fctrl0[un] = sc_time(0, SC_NS);
+         /* If it is in the past, then we record it. We then check the
+          * filtering. If it is positive, we set it X clock cycles later.
+          */
+         else if (filter_thres > 0) {
             fctrl0[un] = sc_time_stamp() +
-               sc_time(PCNT.conf_unit[un].conf0.filter_thres
-               * APB_CLOCK_PERIOD, SC_NS);
+               sc_time(filter_thres * APB_CLOCK_PERIOD, SC_NS);
          }
-         /* If no filtering was specified, we raise the signal now. */
+         /* If no filtering was specified, we toggle the signal now. */
          else fctrl0[un] = sc_time_stamp();
       }
       /* And we redo it for the other channel. */
       if (lvl.ctrl_ch1 != lastlvl.ctrl_ch1) {
-         if (PCNT.conf_unit[un].conf0.filter_en &&
-               PCNT.conf_unit[un].conf0.filter_thres >0) {
-            /* Again we check when it rises or falls. */
-            if (lvl.ctrl_ch0) fctrl1[un] = sc_time_stamp() +
-               sc_time(PCNT.conf_unit[un].conf0.filter_thres
-               * APB_CLOCK_PERIOD, SC_NS);
+         if (fctrl0[un] >= sc_time_stamp()) fctrl0[un] = sc_time(0, SC_NS);
+         else if (filter_thres > 0) {
+            fctrl1[un] = sc_time_stamp() +
+               sc_time(filter_thres * APB_CLOCK_PERIOD, SC_NS);
          }
-         /* If no filtering was specified, we raise the signal now. */
          else fctrl1[un] = sc_time_stamp();
       }
 
@@ -174,28 +175,22 @@ void pcntmod::capture(int un) {
       if ((ctrl.read() & (PCNT_PLUS_CNT_RST_U0_M<<un*2))>0) continue;
 
       /* If it is ok, we can check the filtering. */
-      if (PCNT.conf_unit[un].conf0.filter_en &&
-            PCNT.conf_unit[un].conf0.filter_thres > 0) {
-         /* Filtering is enabled so we notify the doit function when
-          * the signal should change value.
+      if (lvl.sig_ch0 != lastlvl.sig_ch0) {
+         /* If filtering is enabled so we notify the doit function when
+          * the signal should change value. If filterig is off, we notify
+          * it immediatedly.
           */
-         filtered_sig0[un].notify(APB_CLOCK_PERIOD *
-               PCNT.conf_unit[un].conf0.filter_thres, SC_NS);
+         if (filter_thres > 0)
+            filtered_sig0[un].notify(APB_CLOCK_PERIOD * filter_thres, SC_NS);
+         else filtered_sig0[un].notify();
       }
-      /* If fitering is off, we notify it immediately. */
-      else filtered_sig0[un].notify();
 
       /* And we repeat for the other signal. */
-      if (PCNT.conf_unit[un].conf0.filter_en &&
-            PCNT.conf_unit[un].conf0.filter_thres > 0) {
-         /* Filtering is enabled so we notify the doit function when
-          * the signal should change value.
-          */
-         filtered_sig1[un].notify(APB_CLOCK_PERIOD *
-               PCNT.conf_unit[un].conf0.filter_thres, SC_NS);
+      if (lvl.sig_ch1 != lastlvl.sig_ch1) {
+         if (filter_thres > 0)
+            filtered_sig1[un].notify(APB_CLOCK_PERIOD * filter_thres, SC_NS);
+         else filtered_sig1[un].notify();
       }
-      /* If fitering is off, we notify it immediately. */
-      else filtered_sig1[un].notify();
    }
 }
 
@@ -237,17 +232,17 @@ void pcntmod::docnt(int un, bool siglvl, bool ctrllvl, int ch) {
    }
    else {
       if (siglvl) mode =
-         RDFIELD(conf0[un], PCNT_CH0_POS_MODE_U0_M, PCNT_CH0_POS_MODE_U0_S);
+         RDFIELD(conf0[un], PCNT_CH1_POS_MODE_U0_M, PCNT_CH1_POS_MODE_U0_S);
       else mode =
-         RDFIELD(conf0[un], PCNT_CH0_NEG_MODE_U0_M, PCNT_CH0_NEG_MODE_U0_S);
+         RDFIELD(conf0[un], PCNT_CH1_NEG_MODE_U0_M, PCNT_CH1_NEG_MODE_U0_S);
       lctrl =
-         RDFIELD(conf0[un], PCNT_CH0_LCTRL_MODE_U0_M, PCNT_CH0_LCTRL_MODE_U0_S);
+         RDFIELD(conf0[un], PCNT_CH1_LCTRL_MODE_U0_M, PCNT_CH1_LCTRL_MODE_U0_S);
       hctrl =
-         RDFIELD(conf0[un], PCNT_CH0_HCTRL_MODE_U0_M, PCNT_CH0_HCTRL_MODE_U0_S);
+         RDFIELD(conf0[un], PCNT_CH1_HCTRL_MODE_U0_M, PCNT_CH1_HCTRL_MODE_U0_S);
    }
 
    /* If not we keep going. */
-   if (ctrllvl == false) {
+   if (ctrllvl == true) {
       if (hctrl == 0 && mode == 1) nc = cnt_unit[un].read() + 1;
       else if (hctrl == 1 && mode == 2) nc = cnt_unit[un].read() + 1;
       else if (hctrl == 0 && mode == 2) nc = cnt_unit[un].read() - 1;

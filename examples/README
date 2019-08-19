@@ -1,0 +1,8 @@
+To run one of these examples, build the model. Then CD into any of them,
+run make to compile the test case. Then you can run it as following:
+
+   ./testname.x   (to run without waveforms)
+
+   or
+
+   ./testname.x +waveform (to run it with waveforms)

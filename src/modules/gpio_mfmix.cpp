@@ -119,6 +119,8 @@ void gpio_mfmix::drive_return() {
          sc_time_stamp().to_string().c_str());
       */
       pinsamp = pin.read();
+      if (pinsamp.logic.to_char() == 'X') printf(">%s : %s : %d/%d %c-\n", name(), sc_time_stamp().to_string().c_str(),
+         pin.default_event().triggered(), updatereturn.triggered(), pinsamp.to_char());
       /* If the sampling value is Z or X and we have a function set, we
        * then issue a warning. We also do not warn at time 0s or we get some
        * dummy initialization warnings.

@@ -23,6 +23,10 @@
 
 #include <systemc.h>
 
+#define MUXOUT_DRIVE_0 256
+#define MUXOUT_DRIVE_1 257
+#define MUXOUT_DRIVE_Z 258
+
 SC_MODULE(mux_out) {
    sc_out<bool> min_o {"min_o"};
    sc_out<bool> men_o {"men_o"};
@@ -40,7 +44,7 @@ SC_MODULE(mux_out) {
    void transfer(void);
 
    SC_CTOR(mux_out) {
-      function = 256;
+      function = MUXOUT_DRIVE_Z;
       SC_THREAD(transfer);
    }
 };

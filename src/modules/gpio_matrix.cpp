@@ -56,29 +56,22 @@ void gpio_matrix::setbits(uint32_t highbits, uint32_t lowbits) {
 
 void gpio_matrix::setoebits(uint32_t highbits, uint32_t lowbits) {
    int bit;
-   gpio *gpin;
+   mux_out *gmux;
    bool thisbit;
 
    for(bit = 0; bit < GPIOMATRIX_CNT; bit = bit + 1) {
-      gpin = getgpio(bit);
-      if (gpin == NULL) continue;
+      gmux = getmux(bit);
+      if (gmux == NULL) continue;
       if (bit < 32) thisbit = (lowbits & (1<<bit)) > 0;
       else thisbit = (highbits & (1<<(bit-32))) > 0;
 
-      switch (gpin->get_dir()) {
-         case GPIODIR_NONE:
-            if (thisbit) gpin->set_dir(GPIODIR_OUTPUT);
-            break;
-         case GPIODIR_INPUT:
-            if (thisbit) gpin->set_dir(GPIODIR_INOUT);
-            break;
-         case GPIODIR_OUTPUT:
-            if (!thisbit) gpin->set_dir(GPIODIR_NONE);
-            break;
-         default:
-            if (!thisbit) gpin->set_dir(GPIODIR_INPUT);
-            break;
+      if (gmux->function == 258 && thisbit) {
+         if(bit < 32 && (GPIO.out & (1<<bit)) > 0) gmux->mux(257);
+         else if(bit >= 32 && (GPIO.out1.data & (1<<bit-32))>0) gmux->mux(257);
+         else gmux->mux(256);
       }
+      else if ((gmux->function == 256 || gmux->function == 257) && !thisbit)
+         gmux->mux(258);
    }
 }
 
@@ -130,12 +123,12 @@ void gpio_matrix::initptr() {
    muxptr[38] = &i_mux_out38;
    muxptr[39] = &i_mux_out39;
 
-   /* We clear the GPIO struct and preset the functions to 257, meaning GPIO
-    * selected but driving High-Z.
+   /* We clear the GPIO struct and preset the functions to 256 and output enable
+    * low, meaning GPIO selected but driving High-Z.
     */
    memset(&GPIO, 0, sizeof(gpio_dev_t));
    for(g = 0; g < GPIOMATRIX_CNT; g = g + 1) {
-      GPIO.func_out_sel_cfg[g].func_sel = 257;
+      GPIO.func_out_sel_cfg[g].func_sel = 256;
    }
    for(g = 0; g < 255; g = g + 1) {
       GPIO.func_in_sel_cfg[g].func_sel = GPIOMATRIX_LOGIC0;
@@ -192,42 +185,17 @@ void gpio_matrix::updateth() {
       /* Strapping not yet implemented. */
       /* Interrupts not yet implemented. */
       /* RTC Out not yet implemented. */
-      gpio *gpin;
+      io_mux *gpin;
       i_mux_uart0.mux(GPIO.func_in_sel_cfg[U0RXD_IN_IDX].func_sel);
       i_mux_uart1.mux(GPIO.func_in_sel_cfg[U1RXD_IN_IDX].func_sel);
       i_mux_uart2.mux(GPIO.func_in_sel_cfg[U2RXD_IN_IDX].func_sel);
-      i_mux_pcnt.mux(PCNT_SIG_CH0_IN0_IDX,
-            GPIO.func_in_sel_cfg[PCNT_SIG_CH0_IN0_IDX].func_sel);
-      i_mux_pcnt.mux(PCNT_SIG_CH0_IN1_IDX,
-            GPIO.func_in_sel_cfg[PCNT_SIG_CH0_IN1_IDX].func_sel);
-      i_mux_pcnt.mux(PCNT_SIG_CH0_IN2_IDX,
-            GPIO.func_in_sel_cfg[PCNT_SIG_CH0_IN2_IDX].func_sel);
-      i_mux_pcnt.mux(PCNT_SIG_CH0_IN3_IDX,
-            GPIO.func_in_sel_cfg[PCNT_SIG_CH0_IN3_IDX].func_sel);
-      i_mux_pcnt.mux(PCNT_SIG_CH0_IN4_IDX,
-            GPIO.func_in_sel_cfg[PCNT_SIG_CH0_IN4_IDX].func_sel);
-      i_mux_pcnt.mux(PCNT_SIG_CH0_IN5_IDX,
-            GPIO.func_in_sel_cfg[PCNT_SIG_CH0_IN5_IDX].func_sel);
-      i_mux_pcnt.mux(PCNT_SIG_CH0_IN6_IDX,
-            GPIO.func_in_sel_cfg[PCNT_SIG_CH0_IN6_IDX].func_sel);
-      i_mux_pcnt.mux(PCNT_SIG_CH0_IN7_IDX,
-            GPIO.func_in_sel_cfg[PCNT_SIG_CH0_IN7_IDX].func_sel);
-      i_mux_pcnt.mux(PCNT_CTRL_CH0_IN0_IDX,
-            GPIO.func_in_sel_cfg[PCNT_CTRL_CH0_IN0_IDX].func_sel);
-      i_mux_pcnt.mux(PCNT_CTRL_CH0_IN1_IDX,
-            GPIO.func_in_sel_cfg[PCNT_CTRL_CH0_IN1_IDX].func_sel);
-      i_mux_pcnt.mux(PCNT_CTRL_CH0_IN2_IDX,
-            GPIO.func_in_sel_cfg[PCNT_CTRL_CH0_IN2_IDX].func_sel);
-      i_mux_pcnt.mux(PCNT_CTRL_CH0_IN3_IDX,
-            GPIO.func_in_sel_cfg[PCNT_CTRL_CH0_IN3_IDX].func_sel);
-      i_mux_pcnt.mux(PCNT_CTRL_CH0_IN4_IDX,
-            GPIO.func_in_sel_cfg[PCNT_CTRL_CH0_IN4_IDX].func_sel);
-      i_mux_pcnt.mux(PCNT_CTRL_CH0_IN5_IDX,
-            GPIO.func_in_sel_cfg[PCNT_CTRL_CH0_IN5_IDX].func_sel);
-      i_mux_pcnt.mux(PCNT_CTRL_CH0_IN6_IDX,
-            GPIO.func_in_sel_cfg[PCNT_CTRL_CH0_IN6_IDX].func_sel);
-      i_mux_pcnt.mux(PCNT_CTRL_CH0_IN7_IDX,
-            GPIO.func_in_sel_cfg[PCNT_CTRL_CH0_IN7_IDX].func_sel);
+      /* There is a gap in the indexes, so we skip it. */
+      for(bit = PCNT_SIG_CH0_IN0_IDX; bit < PCNT_CTRL_CH1_IN4_IDX; bit=bit+1) {
+         i_mux_pcnt.mux(bit, GPIO.func_in_sel_cfg[bit].func_sel);
+      }
+      for(bit = PCNT_SIG_CH0_IN5_IDX; bit < PCNT_CTRL_CH1_IN7_IDX; bit=bit+1) {
+         i_mux_pcnt.mux(bit, GPIO.func_in_sel_cfg[bit].func_sel);
+      }
       /* Matrix Outputs
        * For these we need to do some translation:
        * - if a direct bypass was requested, we select the corresponding ALT

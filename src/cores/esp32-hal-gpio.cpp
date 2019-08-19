@@ -104,7 +104,7 @@ void pinMode_nodel(uint8_t pin, uint8_t mode) {
    }
 
    /* We first need the GPIO pointer. */
-   gpio* gpin = getgpio(pin);
+   io_mux* gpin = getgpio(pin);
    if (gpin == NULL) {
       PRINTF_ERROR("HALGPIO",
          "Attemping to set mode to non existant GPIO%d", pin);
@@ -121,10 +121,10 @@ void pinMode_nodel(uint8_t pin, uint8_t mode) {
    }
 
    /* We set the direction. */
-   if((mode & (INPUT | OUTPUT)) == (INPUT|OUTPUT)) gpin->set_dir(GPIODIR_INOUT);
-   else if((mode & INPUT) == INPUT) gpin->set_dir(GPIODIR_INPUT);
-   else if((mode & OUTPUT) == OUTPUT) gpin->set_dir(GPIODIR_OUTPUT);
-   else gpin->set_dir(GPIODIR_NONE);
+   if((mode & INPUT)>0) gpio_set_input((gpio_num_t)pin);
+   else gpio_clr_input((gpio_num_t)pin);
+   if((mode & OUTPUT)>0) gpio_output_enable((gpio_num_t)pin);
+   else gpio_output_disable((gpio_num_t)pin);
 
    /* Pullup */
    if(mode & PULLUP) gpin->set_wpu();
@@ -187,7 +187,7 @@ void digitalWrite(uint8_t pin, uint8_t val) {
 /* Samples a pin. */
 int digitalRead_nodel(uint8_t pin) {
    char buffer[64];
-   gpio *gpin = getgpio(pin);
+   io_mux *gpin = getgpio(pin);
 
    /* If the pin passes the valid pins or if there is no GPIO assigned, we
     * issue a warning.

@@ -1,0 +1,36 @@
+[*]
+[*] GTKWave Analyzer v3.3.67 (w)1999-2015 BSI
+[*] Mon Aug 19 20:19:01 2019
+[*]
+[dumpfile] "/home/glennramalho/work/espmod/examples/pcnt/waves.vcd"
+[dumpfile_mtime] "Mon Aug 19 20:18:24 2019"
+[dumpfile_size] 1012013
+[savefile] "/home/glennramalho/work/espmod/examples/pcnt/pcnt.gtkw"
+[timestart] 0
+[size] 1000 600
+[pos] -1 -1
+*-35.918797 28022000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] SystemC.
+[treeopen] SystemC.i_pcnttest.
+[treeopen] SystemC.i_pcnttest.i_esp.
+[sst_width] 211
+[signals_width] 187
+[sst_expanded] 1
+[sst_vpaned_height] 145
+@8022
+SystemC.i_pcnttest.i_esp.i_pcnt.cntun_0[15:0]
+@28
+SystemC.i_pcnttest.i_esp.d12_a15_d
+SystemC.i_pcnttest.i_esp.d13_a14_d
+@8421
+SystemC.i_pcnttest.i_esp.i_pcnt.cntun_1[15:0]
+@28
+SystemC.i_pcnttest.i_esp.d21_d
+SystemC.i_pcnttest.i_esp.d22_d
+@8420
+SystemC.i_pcnttest.i_esp.i_pcnt.cntun_2[15:0]
+@28
+SystemC.i_pcnttest.i_esp.d26_a19_d
+SystemC.i_pcnttest.i_esp.d27_a17_d
+[pattern_trace] 1
+[pattern_trace] 0

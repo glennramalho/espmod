@@ -52,16 +52,16 @@ void mux_out::transfer() {
           * different from the spec, so the GPIO matrix selects the correct
           * one depending on the value to drive.
           */
-         case 257:
+         case MUXOUT_DRIVE_0: /* Function unknown and function 256 */
+            min_o.write(false); men_o.write(true);
+            wait(fchange_ev);
+            break;
+         case MUXOUT_DRIVE_1:
             min_o.write(true); men_o.write(true);
             wait(fchange_ev);
             break;
-         case 258:
-            min_o.write(false); men_o.write(false);
-            wait(fchange_ev);
-            break;
          default: /* Function unknown and function 256 */
-            min_o.write(false); men_o.write(true);
+            min_o.write(false); men_o.write(false);
             wait(fchange_ev);
             break;
       }

@@ -56,8 +56,8 @@ void setup() {
    pc.neg_mode = PCNT_COUNT_DIS;
    pc.lctrl_mode = PCNT_MODE_KEEP;
    pc.hctrl_mode = PCNT_MODE_KEEP;
-   pc.counter_h_lim = 10;
-   pc.counter_l_lim = -10;
+   pc.counter_h_lim = 25;
+   pc.counter_l_lim = -25;
    pc.unit = PCNT_UNIT_2;
    pc.channel = PCNT_CHANNEL_1;
    pcnt_unit_config(&pc);

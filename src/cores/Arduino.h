@@ -103,13 +103,6 @@
 #define bitClear(value, bit) ((value) &= ~(1UL << (bit)))
 #define bitWrite(value, bit, bitvalue) (bitvalue ? bitSet(value, bit) : bitClear(value, bit))
 
-/* We do not have a concept of a NOP in the model, so we do a del1cycle()
- * instead.
- */
-#ifndef _NOP
-#define _NOP() del1cycle()
-#endif
-
 /* The bit() macro was changed to a function because such macros can cause
  * problems with lots of code.
  */
@@ -210,6 +203,7 @@ long random(long);
  * like a serial interface but it is used to talk to the flash device. Later
  * this should probably be placed elsewhere.
  */
+#define APB_CLOCK_PERIOD 125
 #ifdef __cplusplus
 #include "TestSerial.h"
 extern TestSerial Flashport;

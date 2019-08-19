@@ -47,18 +47,6 @@ static const char* GPIO_TAG = "GPIODRV";
         return (ret_val); \
     }
 
-/**
- * @brief GPIO common configuration
- *
- *        Configure GPIO's Mode,pull-up,PullDown,IntrType
- *
- * @param  pGPIOConfig Pointer to GPIO configure struct
- *
- * @return
- *     - ESP_OK success
- *     - ESP_ERR_INVALID_ARG Parameter error
- *
- */
 esp_err_t gpio_config(const gpio_config_t *pGPIOConfig) {
    uint64_t gpio_pin_mask = (pGPIOConfig->pin_bit_mask);
    uint32_t io_reg = 0;
@@ -106,17 +94,20 @@ esp_err_t gpio_config(const gpio_config_t *pGPIOConfig) {
             output_en = 0;
          }
 
-         /* we can't use the macros so we instead call the other functions. */
-         if (input_en && output_en) {
-            if (od_en) gpio_set_direction(io_num, GPIO_MODE_INPUT_OUTPUT_OD);
-            else gpio_set_direction(io_num, GPIO_MODE_INPUT_OUTPUT);
+         if (input_en) gpio_set_input(io_num);
+         else gpio_clr_input(io_num);
+         if (output_en) gpio_output_enable(io_num);
+         else gpio_output_disable(io_num);
+         if (od_en) {
+            io_mux *gpin = getgpio(io_num);
+            GPIO.pin[io_num].pad_driver = 1;
+            gpin->set_oe();
          }
-         else if (input_en) gpio_set_direction(io_num, GPIO_MODE_INPUT);
-         else if (output_en) {
-            if (od_en) gpio_set_direction(io_num, GPIO_MODE_OUTPUT_OD);
-            else gpio_set_direction(io_num, GPIO_MODE_OUTPUT);
+         else {
+            io_mux *gpin = getgpio(io_num);
+            GPIO.pin[io_num].pad_driver = 0;
+            gpin->clr_od();
          }
-         else gpio_set_direction(io_num, GPIO_MODE_DISABLE);
 
          if (pGPIOConfig->pull_up_en) {
              gpio_pullup_en(io_num);
@@ -137,8 +128,7 @@ esp_err_t gpio_config(const gpio_config_t *pGPIOConfig) {
          }
          */
          /* We always set the function to the GPIO function. */
-         gpio *gpin = getgpio(io_num);
-         if (gpin != NULL) gpin->set_function(GPIOMF_GPIO);
+         PIN_FUNC_SELECT(io_reg, PIN_FUNC_GPIO);
       }
       io_num = (gpio_num_t)((int)io_num + 1);
    } while (io_num < GPIO_PIN_COUNT);
@@ -226,19 +216,8 @@ esp_err_t gpio_intr_disable(gpio_num_t gpio_num) {
    return ESP_OK;
 }
 
-/**
- * @brief  GPIO set output level
- *
- * @param  gpio_num GPIO number. If you want to set the output level of e.g. GPIO16, gpio_num should be GPIO_NUM_16 (16);
- * @param  level Output level. 0: low ; 1: high
- *
- * @return
- *     - ESP_OK Success
- *     - ESP_ERR_INVALID_ARG GPIO number error
- *
- */
 esp_err_t gpio_set_level(gpio_num_t gpio_num, uint32_t level) {
-   gpio *gpin = getgpio(gpio_num);
+   io_mux *gpin = getgpio(gpio_num);
    if (gpin == NULL) {
       PRINTF_WARN("GPIODRV", "No gpio defined for pin %d", gpio_num);
       return ESP_ERR_INVALID_ARG;
@@ -260,21 +239,9 @@ esp_err_t gpio_set_level(gpio_num_t gpio_num, uint32_t level) {
    return ESP_OK;
 }
 
-/**
- * @brief  GPIO get input level
- *
- * @warning If the pad is not configured for input (or input and output) the returned value is always 0.
- *
- * @param  gpio_num GPIO number. If you want to get the logic level of e.g. pin GPIO16, gpio_num should be GPIO_NUM_16 (16);
- *
- * @return
- *     - 0 the GPIO input level is 0
- *     - 1 the GPIO input level is 1
- *
- */
 int gpio_get_level(gpio_num_t gpio_num) {
    bool resp;
-   gpio *gpin = getgpio(gpio_num);
+   io_mux *gpin = getgpio(gpio_num);
    if (gpin == NULL) {
       PRINTF_WARN("GPIODRV", "No gpio defined for pin %d", gpio_num);
       return 0;
@@ -299,7 +266,7 @@ int gpio_get_level(gpio_num_t gpio_num) {
  */
 esp_err_t gpio_set_direction(gpio_num_t gpio_num, gpio_mode_t mode) {
    bool resp;
-   gpio *gpin;
+   io_mux *gpin;
    GPIO_CHECK(GPIO_IS_VALID_GPIO(gpio_num), "GPIO number error", ESP_ERR_INVALID_ARG);
    if (gpio_num >= 34 && (mode & GPIO_MODE_DEF_OUTPUT)) {
       ESP_LOGE(GPIO_TAG, "io_num=%d can only be input", gpio_num);
@@ -308,36 +275,20 @@ esp_err_t gpio_set_direction(gpio_num_t gpio_num, gpio_mode_t mode) {
    gpin = getgpio(gpio_num);
    if (gpin == NULL) {
       PRINTF_WARN("GPIODRV", "No gpio defined for pin %d", gpio_num);
-      return 0;
+      return ESP_ERR_INVALID_ARG;
    }
-   switch(mode) {
-      case GPIO_MODE_DISABLE:
-         GPIO.pin[gpio_num].pad_driver = false;
-         resp=gpin->set_dir(GPIODIR_NONE); break;
-      case GPIO_MODE_INPUT:
-         GPIO.pin[gpio_num].pad_driver = false;
-         resp=gpin->set_dir(GPIODIR_INPUT); break;
-      case GPIO_MODE_OUTPUT:
-         GPIO.pin[gpio_num].pad_driver = false;
-         resp=gpin->set_dir(GPIODIR_OUTPUT);
-         resp=resp & gpin->clr_od();
-         break;
-      case GPIO_MODE_OUTPUT_OD:
-         GPIO.pin[gpio_num].pad_driver = true;
-         resp=gpin->set_dir(GPIODIR_OUTPUT);
-         resp=resp & gpin->set_od();
-         break;
-      case GPIO_MODE_INPUT_OUTPUT:
-         GPIO.pin[gpio_num].pad_driver = false;
-         resp=gpin->set_dir(GPIODIR_INOUT);
-         resp=resp & gpin->clr_od();
-         break;
-      case GPIO_MODE_INPUT_OUTPUT_OD:
-         GPIO.pin[gpio_num].pad_driver = true;
-         resp=gpin->set_dir(GPIODIR_INOUT);
-         resp=resp & gpin->set_od();
-         break;
-      default: resp = false;
+   if (mode & GPIO_MODE_DEF_INPUT) resp = gpin->set_ie();
+   else resp = gpin->clr_ie();
+   if (mode & GPIO_MODE_DEF_OUTPUT)
+      resp = resp && (ESP_OK == gpio_output_enable(gpio_num));
+   else resp = resp && (ESP_OK == gpio_output_disable(gpio_num));
+   if (mode & GPIO_MODE_DEF_OD) {
+      GPIO.pin[gpio_num].pad_driver = 1;
+      resp = resp & gpin->set_od();
+   }
+   else {
+        GPIO.pin[gpio_num].pad_driver = 0;
+        resp = resp & gpin->clr_od();
    }
    del1cycle();
 
@@ -346,41 +297,56 @@ esp_err_t gpio_set_direction(gpio_num_t gpio_num, gpio_mode_t mode) {
 }
 
 esp_err_t gpio_set_input(gpio_num_t gpio_num) {
-   bool resp;
-   gpio *gpin;
-   gpio_dir_t d;
+   io_mux *gpin;
    GPIO_CHECK(GPIO_IS_VALID_GPIO(gpio_num), "GPIO number error", ESP_ERR_INVALID_ARG);
    gpin = getgpio(gpio_num);
    if (gpin == NULL) {
       PRINTF_WARN("GPIODRV", "No gpio defined for pin %d", gpio_num);
-      return 0;
+      return ESP_ERR_INVALID_ARG;
    }
-   d = gpin->get_dir();
-   switch(d) {
-      case GPIODIR_OUTPUT: resp = gpin->set_dir(GPIODIR_INOUT); break;
-      case GPIODIR_NONE: resp = gpin->set_dir(GPIODIR_INPUT); break;
-      default: return ESP_OK;
-   }
-   return (resp)?ESP_OK:ESP_ERR_INVALID_ARG;
+   if (gpin->set_ie()) return ESP_OK;
+   else return ESP_ERR_INVALID_ARG;
 }
 
 esp_err_t gpio_clr_input(gpio_num_t gpio_num) {
-   bool resp;
-   gpio *gpin;
-   gpio_dir_t d;
+   io_mux *gpin;
    GPIO_CHECK(GPIO_IS_VALID_GPIO(gpio_num), "GPIO number error", ESP_ERR_INVALID_ARG);
    gpin = getgpio(gpio_num);
    if (gpin == NULL) {
       PRINTF_WARN("GPIODRV", "No gpio defined for pin %d", gpio_num);
-      return 0;
+      return ESP_ERR_INVALID_ARG;
    }
-   d = gpin->get_dir();
-   switch(d) {
-      case GPIODIR_INOUT: resp = gpin->set_dir(GPIODIR_OUTPUT); break;
-      case GPIODIR_INPUT: resp = gpin->set_dir(GPIODIR_NONE); break;
-      default: return ESP_OK;
+   if (gpin->clr_ie()) return ESP_OK;
+   else return ESP_ERR_INVALID_ARG;
+}
+
+esp_err_t gpio_output_disable(gpio_num_t gpio_num)
+{
+   GPIO_CHECK(GPIO_IS_VALID_GPIO(gpio_num), "GPIO number error",
+      ESP_ERR_INVALID_ARG);
+   if (gpio_num < 32) {
+       GPIO.enable_w1tc = (0x1 << gpio_num);
+   } else {
+       GPIO.enable1_w1tc.data = (0x1 << (gpio_num - 32));
    }
-   return (resp)?ESP_OK:ESP_ERR_INVALID_ARG;
+   // Ensure no other output signal is routed via GPIO matrix to this pin
+   GPIO.func_out_sel_cfg[gpio_num].func_sel = SIG_GPIO_OUT_IDX;
+   update_gpio_oe();
+
+   return ESP_OK;
+}
+
+esp_err_t gpio_output_enable(gpio_num_t gpio_num)
+{
+   GPIO_CHECK(GPIO_IS_VALID_OUTPUT_GPIO(gpio_num), "GPIO output gpio_num error", ESP_ERR_INVALID_ARG);
+   if (gpio_num < 32) {
+      GPIO.enable_w1ts = (0x1 << gpio_num);
+   } else {
+      GPIO.enable1_w1ts.data = (0x1 << (gpio_num - 32));
+   }
+   update_gpio();
+   gpio_matrix_out(gpio_num, SIG_GPIO_OUT_IDX, false, false);
+   return ESP_OK;
 }
 
 /**
@@ -398,7 +364,7 @@ esp_err_t gpio_clr_input(gpio_num_t gpio_num) {
  */
 esp_err_t gpio_set_pull_mode(gpio_num_t gpio_num, gpio_pull_mode_t pull) {
    bool resp;
-   gpio *gpin = getgpio(gpio_num);
+   io_mux *gpin = getgpio(gpio_num);
    if (gpin == NULL) {
       PRINTF_WARN("GPIO", "No gpio defined for pin %d", gpio_num);
       return ESP_ERR_INVALID_ARG;
@@ -509,7 +475,7 @@ esp_err_t gpio_isr_register(void (*fn)(void*), void * arg, int intr_alloc_flags,
   *     - ESP_ERR_INVALID_ARG Parameter error
   */
 esp_err_t gpio_pullup_en(gpio_num_t gpio_num) {
-   gpio *gpin = getgpio(gpio_num);
+   io_mux *gpin = getgpio(gpio_num);
    if (gpin == NULL) {
       PRINTF_WARN("GPIO", "No gpio defined for pin %d", gpio_num);
       return ESP_ERR_INVALID_ARG;
@@ -528,7 +494,7 @@ esp_err_t gpio_pullup_en(gpio_num_t gpio_num) {
   *     - ESP_ERR_INVALID_ARG Parameter error
   */
 esp_err_t gpio_pullup_dis(gpio_num_t gpio_num) {
-   gpio *gpin = getgpio(gpio_num);
+   io_mux *gpin = getgpio(gpio_num);
    if (gpin == NULL) {
       PRINTF_WARN("GPIO", "No gpio defined for pin %d", gpio_num);
       return ESP_ERR_INVALID_ARG;
@@ -547,7 +513,7 @@ esp_err_t gpio_pullup_dis(gpio_num_t gpio_num) {
   *     - ESP_ERR_INVALID_ARG Parameter error
   */
 esp_err_t gpio_pulldown_en(gpio_num_t gpio_num) {
-   gpio *gpin = getgpio(gpio_num);
+   io_mux *gpin = getgpio(gpio_num);
    if (gpin == NULL) {
       PRINTF_WARN("GPIO", "No gpio defined for pin %d", gpio_num);
       return ESP_ERR_INVALID_ARG;
@@ -566,7 +532,7 @@ esp_err_t gpio_pulldown_en(gpio_num_t gpio_num) {
   *     - ESP_ERR_INVALID_ARG Parameter error
   */
 esp_err_t gpio_pulldown_dis(gpio_num_t gpio_num) {
-   gpio *gpin = getgpio(gpio_num);
+   io_mux *gpin = getgpio(gpio_num);
    if (gpin == NULL) {
       PRINTF_WARN("GPIO", "No gpio defined for pin %d", gpio_num);
       return ESP_ERR_INVALID_ARG;
@@ -830,7 +796,7 @@ void gpio_iomux_in(uint32_t gpio_num, uint32_t signal_idx) {
   * @param oen_inv True if the output enable needs to be inversed, otherwise False.
   */
 void gpio_iomux_out(uint8_t gpio_num, int func, bool oen_inv) {
-   gpio *gpin = getgpio(gpio_num);
+   io_mux *gpin = getgpio(gpio_num);
    if (gpin == NULL) return;
    if (oen_inv)
       PRINTF_WARN("GPIODRV", "GPIO func Output invert is not yet supported.")

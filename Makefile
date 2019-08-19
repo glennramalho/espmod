@@ -105,9 +105,7 @@ INTF=$(INTFDIR)/gpioset.cpp $(INTFDIR)/crccalc.cpp \
 MODULES=$(MODDIR)/cchan.cpp $(MODDIR)/cchanflash.cpp \
    $(MODDIR)/esp32adc1.cpp $(MODDIR)/esp32adc2.cpp \
    $(MODDIR)/doitesp32devkitv1.cpp \
-   $(MODDIR)/gn_mixed.cpp $(MODDIR)/ea_pullup.cpp \
-   $(MODDIR)/gpio_base.cpp $(MODDIR)/gpio_simple.cpp $(MODDIR)/gpio_mf.cpp \
-   $(MODDIR)/gpio_mix.cpp $(MODDIR)/gpio_mfmix.cpp \
+   $(MODDIR)/gn_mixed.cpp $(MODDIR)/ea_pullup.cpp $(MODDIR)/io_mux.cpp \
    $(MODDIR)/gpio_matrix.cpp $(MODDIR)/mux_pcnt.cpp $(MODDIR)/mux_in.cpp \
    $(MODDIR)/mux_out.cpp $(MODDIR)/pcntmod.cpp $(MODDIR)/clkgen.cpp \
    $(MODDIR)/netcon.cpp $(MODDIR)/uart.cpp

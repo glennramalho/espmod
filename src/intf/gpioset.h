@@ -21,11 +21,10 @@
 #ifndef _GPIOSET_H
 #define _GPIOSET_H
 
-#include "gpio_simple.h"
-#include "gpio_mf.h"
+#include "io_mux.h"
 
 void pinset(int pin, void *ngpioptr);
-gpio *getgpio(int pin);
+io_mux *getgpio(int pin);
 #define GETFUNC(x) ((x)>>5)
 
 typedef enum {UWARN, UGPIO, UALT} functypes_t;

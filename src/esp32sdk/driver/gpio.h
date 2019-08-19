@@ -610,6 +610,11 @@ void gpio_iomux_in(uint32_t gpio_num, uint32_t signal_idx);
   */
 void gpio_iomux_out(uint8_t gpio_num, int func, bool oen_inv);
 
+esp_err_t gpio_set_input(gpio_num_t gpio_num);
+esp_err_t gpio_clr_input(gpio_num_t gpio_num);
+esp_err_t gpio_output_disable(gpio_num_t gpio_num);
+esp_err_t gpio_output_enable(gpio_num_t gpio_num);
+
 #ifdef __cplusplus
 }
 #endif
