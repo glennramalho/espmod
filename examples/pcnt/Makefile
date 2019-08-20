@@ -79,7 +79,6 @@ $(PROJECT).x: $(OBJS) $(SYSTEMC_LIB_DIR)/libsystemc.a $(ESPLIB)
 	g++ -o$@ $(CPPFLAGS) $(OBJS) $(ESPLIBINC) $(SYSTEMC_LDFLAGS) \
            $(SYSTEMC_LIBS)
 
-
 $(ESPLIB):
 	cd $(ESPMOD)/.. && make
 

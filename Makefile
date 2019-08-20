@@ -94,7 +94,16 @@ ESPSDK=$(ESPSDKDIR)/esp32/esp_system.cpp \
    $(ESPSDKDIR)/driver/gpio.cpp $(ESPSDKDIR)/esp32/rom/romgpio.cpp \
    $(ESPSDKDIR)/lwip/sockets.cpp $(ESPSDKDIR)/driver/adc.cpp \
    $(ESPSDKDIR)/esp32/esp_wifi.cpp $(ESPSDKDIR)/esp32/esp_wifi.cpp \
-   $(ESPSDKDIR)/tcpip_adapter.cpp $(ESPSDKDIR)/simnetdb.c
+   $(ESPSDKDIR)/tcpip_adapter.cpp $(ESPSDKDIR)/simnetdb.c \
+   $(ESPSDKDIR)/esp32/panic.cpp \
+   $(ESPSDKDIR)/nvs_flash/src/nvs_api.cpp \
+   $(ESPSDKDIR)/nvs_flash/src/nvs_item_hash_list.cpp \
+   $(ESPSDKDIR)/nvs_flash/src/nvs_ops.cpp \
+   $(ESPSDKDIR)/nvs_flash/src/nvs_page.cpp \
+   $(ESPSDKDIR)/nvs_flash/src/nvs_pagemanager.cpp \
+   $(ESPSDKDIR)/nvs_flash/src/nvs_storage.cpp \
+   $(ESPSDKDIR)/nvs_flash/src/nvs_types.cpp \
+   $(ESPSDKDIR)/nvs_flash/test_nvs_host/crc.cpp
 
 # Generic C++ to SystemC interface support files
 INTF=$(INTFDIR)/gpioset.cpp $(INTFDIR)/crccalc.cpp \
@@ -143,6 +152,7 @@ VPATH=\
    $(LIBDIR)/WiFi:$(LIBDIR)/Wire:$(LIBDIR)/SPI:$(MODDIR):$(TBINTF):\
    $(ESPSDKDIR):$(ESPSDKDIR)/freertos:$(ESPSDKDIR)/esp32:$(ESPSDKDIR)/soc:\
    $(ESPSDKDIR)/tcp_transport:$(ESPSDKDIR)/spi_flash:\
+   $(ESPSDKDIR)/nvs_flash/src:$(ESPSDKDIR)/nvs_flash/test_nvs_host:\
    $(ESPSDKDIR)/esp-mqtt:$(ESPSDKDIR)/esp-mqtt/lib:\
    $(ESPSDKDIR)/driver:$(ESPSDKDIR)/mbedtls/library:\
    $(ESPSDKDIR)/esp32/rom:$(ESPSDKDIR)/lwip:$(ARDUINO):$(ARDUINO)/libb64

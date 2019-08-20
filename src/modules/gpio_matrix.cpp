@@ -123,6 +123,20 @@ void gpio_matrix::initptr() {
    muxptr[38] = &i_mux_out38;
    muxptr[39] = &i_mux_out39;
 
+   /* We need to get the powerup defaults of the GPIOs. */
+   io_mux *gpin;
+   GPIO.enable = 0;
+   GPIO.enable1.data = 0;
+   for(g = 0; g < GPIOMATRIX_CNT; g = g + 1) {
+      gpin = getgpio(g);
+      if (gpin != NULL) {
+         GPIO.pin[g].pad_driver = gpin->get_od();
+         if (gpin->get_ie() && g < 32) GPIO.enable = GPIO.enable | (1 << g);
+         else if (gpin->get_ie())
+            GPIO.enable1.data = GPIO.enable1.data | (1 << (g-32));
+      }
+   }
+
    /* We clear the GPIO struct and preset the functions to 256 and output enable
     * low, meaning GPIO selected but driving High-Z.
     */
