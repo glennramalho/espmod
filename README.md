@@ -150,38 +150,17 @@ The model has been tested successfully with the Arduino or ESP-IDF libraries:
 The system is not perfect. A model will imitate the real world but it is not
 a copy of it. Below are some of them.
 
- * For performance, the CPU has not been modeled. The firmware then is run
-   directly on the local computer just wrapped in the simulation.
- * There is no real way to tell how long a piece of firmware will run for.
-   So the only thing that will advance the simulation time is the delay()
-   or del1cycle() functions.
-   Usually, this is not a problem as in embedded systems, usually time is
-   dominated by delay of the delay commands. Plus this does not hinder the
-   main motivation in the model to help find and debug problems.
- * We do not have an SRAM model. All code is ran from inside the computer's
-   SRAM. So the model will not tell you if you are going to fill up limited
-   resources on very small CPUs. This perhaps can be improved later but the
-   limitation is still there.
- * The real ESP uses lots of memory mapped I/O (I/O operations are initiated
-   by the CPU reading or writing to a location, usually marked by the C
-   volatile keyword). This can't be done in the model. Therefore, those cases
-   were replaced with functions. Perhaps there is a better way to do them, but
-   for now it is a limitation.
- * Some of the interfaces are not yet modeled, just for lack of time. For
-   example the Flash QSPI, the I2C and the serial connected to the WiFi
-   module. For now, these are represented using what I called a cchan
-   interface. This is like a 8 bit wide UART interface that passes characters
-   each time. Then messages are being passed telling the model what to do.
-   This should be replaced later but for now it is there.
- * As said above, this is a model, it is not a copy of reality. Therefore there
-   are things that will have to be checked at the top level.
+* For performance, the CPU has not been modeled. The firmware then is run directly on the local computer just wrapped in the simulation.
+* There is no real way to tell how long a piece of firmware will run for. So the only thing that will advance the simulation time is the delay() or del1cycle() functions. Usually, this is not a problem as in embedded systems, usually time is dominated by delay of the delay commands. Plus this does not hinder the main motivation in the model to help find and debug problems.
+* We do not have an SRAM model. All code is ran from inside the computer's SRAM. So the model will not tell you if you are going to fill up limited resources on very small CPUs. This perhaps can be improved later but the limitation is still there.
+* Internally the ESP libraries use memory mapped I/O (i.e. GPIO and PCNT structs). In the model, anytime a memory mappeed I/O register is called, an update function needs to be called to notify the model. Either this or just stick with using library functions and leave this to the model developers.
+* Some of the interfaces are not yet modeled, just for lack of time. For example the Flash QSPI, the I2C and the serial connected to the WiFi module. For now, these are represented using what I called a cchan interface. This is like a 8 bit wide UART interface that passes characters each time. Then messages are being passed telling the model what to do. This should be replaced later but for now it is there.
+* As said above, this is a model, it is not a copy of reality. Therefore there are things that will have to be checked at the top level.
 
 # Future Development
 
 **Work in Progress**
-The project is far from ready. There is still lots to do. Several interfaces are
-not yet written. Some need to be ported as well. Others modeled. So
-contributions are welcome. Below are some big issues still missing:
+The project is far from ready. There is still lots to do. Several interfaces are not yet written. Some need to be ported as well. Others modeled. So contributions are welcome. Below are some big issues still missing:
 
  * Needing to put in a real I2C master/slave model
  * Needing to put in a QSPI Flash model. As of now the CCHAN works well so the
