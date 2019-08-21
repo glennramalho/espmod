@@ -149,52 +149,45 @@ void gpio_matrix::initptr() {
    }
 }
 
+void gpio_matrix::applycsbits() {
+   GPIO.out = GPIO.out & ~GPIO.out_w1tc | GPIO.out_w1ts;
+   GPIO.out1.data = GPIO.out1.data & ~GPIO.out1_w1tc.data | GPIO.out1_w1ts.data;
+   GPIO.out_w1ts = 0; GPIO.out_w1tc = 0;
+   GPIO.out1_w1ts.data = 0; GPIO.out1_w1tc.data = 0;
+}
+
+void gpio_matrix::applyoecsbits() {
+   GPIO.enable = GPIO.enable & ~GPIO.enable_w1tc | GPIO.enable_w1ts;
+   GPIO.enable1.data =
+      GPIO.enable1.data & ~GPIO.enable1_w1tc.data | GPIO.enable1_w1ts.data;
+   GPIO.enable_w1ts = 0; GPIO.enable_w1tc = 0;
+   GPIO.enable1_w1ts.data = 0; GPIO.enable1_w1tc.data = 0;
+}
+
 void gpio_matrix::updateth() {
    int bit;
    mux_out *gmux;
    while(true) {
       wait();
-      /* If one of these registers was changed, we need to set every pin to
-       * follow the setting, low or high.
+      /* If one of these registers was changed and the other fields are not
+       * checked.
        */
       if (updategpioreg_ev.triggered()) {
+         applycsbits();
          setbits(GPIO.out1.data, GPIO.out);
          continue;
       }
       if (updategpiooe_ev.triggered()) {
+         applyoecsbits();
          setoebits(GPIO.enable1.data, GPIO.enable);
          continue;
       }
 
-      /* The set and clear registers change the direct registers and then
-       * do the same operation. If a bit did not change it does not generate
-       * a notification, so no harm is done.
-       */
-      if (GPIO.out_w1ts>0 || GPIO.out_w1tc>0 || GPIO.out1_w1ts.data>0
-            || GPIO.out1_w1tc.data>0) {
-         GPIO.out = (GPIO.out | GPIO.out_w1ts) & ~GPIO.out_w1tc;
-         GPIO.out1.data =
-            (GPIO.out1.data | GPIO.out1_w1ts.data) & ~GPIO.out1_w1tc.data;
-         setbits(GPIO.out1.data, GPIO.out);
-         /* And we clear the set and clear regs as they should be w/o. Plus,
-          * this way we do not apply the flags multiple times.
-          */
-         GPIO.out_w1ts = 0; GPIO.out_w1tc = 0;
-         GPIO.out1_w1ts.data = 0; GPIO.out1_w1tc.data = 0;
-      }
-      /* For the enables we do the same. */
-      if (GPIO.enable_w1ts>0 || GPIO.enable_w1tc>0 || GPIO.enable1_w1ts.data>0||
-            GPIO.enable1_w1tc.data>0) {
-         GPIO.enable = (GPIO.enable | GPIO.enable_w1ts) & ~GPIO.enable_w1tc;
-         GPIO.enable1.data = (GPIO.enable1.data | GPIO.enable1_w1ts.data)
-            & ~GPIO.enable1_w1tc.data;
-         setoebits(GPIO.enable1.data, GPIO.enable);
-         /* And we clear the set and clear regs as they should be w/o. Plus,
-          * this way we do not apply the flags multiple times.
-          */
-         GPIO.enable_w1ts = 0; GPIO.enable_w1tc = 0;
-         GPIO.enable1_w1ts.data = 0; GPIO.enable1_w1tc.data = 0;
-      }
+      /* Any other notify will check every field. */
+      applycsbits();
+      setbits(GPIO.out1.data, GPIO.out);
+      applyoecsbits();
+      setoebits(GPIO.enable1.data, GPIO.enable);
       /* IN is handled by the return thread. */
       /* Strapping not yet implemented. */
       /* Interrupts not yet implemented. */

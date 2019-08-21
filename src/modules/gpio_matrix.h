@@ -271,9 +271,18 @@ SC_MODULE(gpio_matrix) {
    /* Functions */
    void setbits(uint32_t highbits, uint32_t lowbits);
    void setoebits(uint32_t highbits, uint32_t lowbits);
-   void updategpioreg();
-   void updategpiooe();
+   void applycsbits();
+   void applyoecsbits();
+
+   /* Update calls */
+   /* Call if the struct was modified. */
    void update();
+   /* Checks only OUT bits. Call only if you are sure only the OUT bits
+    * were changed.  */
+   void updategpioreg();
+   /* Checks only OE bits. Call only if you are sure only the OE bits
+    * were changed.  */
+   void updategpiooe();
    mux_out *getmux(int pin);
    void initptr();
 

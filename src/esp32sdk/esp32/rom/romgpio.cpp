@@ -66,7 +66,6 @@ void gpio_init(void) {}
   * @return None
   */
 void gpio_output_set(uint32_t set_mask, uint32_t clear_mask, uint32_t enable_mask, uint32_t disable_mask) {
-
    GPIO.out_w1ts = set_mask & enable_mask;
    GPIO.out_w1tc = clear_mask & enable_mask;
    GPIO.enable_w1tc = disable_mask;
@@ -112,8 +111,10 @@ uint32_t gpio_input_get(void) {
    del1cycle();
    for (g = (int)GPIO_NUM_0, mask = 0x1UL; g < (int)GPIO_NUM_32;
          g = g + 1, mask = mask << 1) {
-
-      if (digitalRead_nodel(g) == HIGH) res = res | mask;
+      /* Not all exist and some were not implemented, so we return zero
+       * for these bits.
+       */
+      if (getgpio(g) != NULL && digitalRead_nodel(g) == HIGH) res = res | mask;
    }
 
    return res;
@@ -134,8 +135,10 @@ uint32_t gpio_input_get_high(void) {
    del1cycle();
    for (g = (int)GPIO_NUM_32, mask = 0x1UL; g < (int)GPIO_NUM_MAX;
          g = g + 1, mask = mask << 1) {
-
-      if (digitalRead_nodel(g) == HIGH) res = res | mask;
+      /* Not all exist and some were not implemented, so we return zero
+       * for these bits.
+       */
+      if (getgpio(g) != NULL && digitalRead_nodel(g) == HIGH) res = res | mask;
    }
 
    return res;
