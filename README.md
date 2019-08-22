@@ -145,10 +145,15 @@ The model has been tested successfully with the Arduino or ESP-IDF libraries:
 * Adafruit RTClib
 * TaskScheduler
 * Nextion and NeoNextion
-* TFT_eSPI (requires a new driver for the ESP model)
 * WebServer
 * NTPClient
+* Preferences
+
+Some libraries needed modifications and the modified versions were included:
+
 * MQTT (ESP IDF)
+* NVS (ESP IDF)
+* TFT_eSPI (modified with new driver comming soon)
 
 # Limitations
 
