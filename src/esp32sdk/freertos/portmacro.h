@@ -47,4 +47,11 @@ typedef unsigned int UBaseType_t;
 #define portMAX_DELAY ( TickType_t ) 0xffffffffUL
 #define portNUM_CONFIGURABLE_REGIONS 1
 
+/* These were changed to call SystemC semaphores. The semaphore should
+ * be declared locally. They should later also make sure it is not called
+ * inside of ISRs.
+ */
+#define portENTER_CRITICAL(mux) mux.trywait()
+#define portEXIT_CRITICAL(mux) mux.post()
+
 #endif

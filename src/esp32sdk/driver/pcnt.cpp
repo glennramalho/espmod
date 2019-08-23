@@ -48,10 +48,8 @@
 #define PCNT_EVT_TYPE_ERR_STR   "PCNT value type error"
 #define PCNT_LIMT_VAL_ERR_STR   "PCNT limit value error"
 
-#define portENTER_CRITICAL(mux) pcntsem.trywait()
-#define portEXIT_CRITICAL(mux) pcntsem.post()
-#define PCNT_ENTER_CRITICAL(mux)    portENTER_CRITICAL(mux)
-#define PCNT_EXIT_CRITICAL(mux)     portEXIT_CRITICAL(mux)
+#define PCNT_ENTER_CRITICAL(mux)    portENTER_CRITICAL(pcntsem)
+#define PCNT_EXIT_CRITICAL(mux)     portEXIT_CRITICAL(pcntsem)
 
 #define PCNT_CHECK(a, str, ret_val) \
     if (!(a)) { \
