@@ -45,7 +45,7 @@ void  __attribute__((weak)) vApplicationStackOverflowHook( TaskHandle_t xTask, s
     printf("***ERROR*** A stack overflow in task ");
     printf((char *)pcTaskName);
     printf(" has been detected.\r\n");
-    abort();
+    espm_abort();
 }
 
 /* These two weak stubs for esp_reset_reason_{get,set}_hint are used when
@@ -66,7 +66,8 @@ static inline void invoke_abort()
    SC_REPORT_FATAL("PANIC", "Abort Called");
 }
 
-void abort()
+/* Renamed to espm_abort to not conflict with the system abort(). */
+void espm_abort()
 {
     printf("abort() was called\n");
     /* Calling code might have set other reset reason hint (such as Task WDT),

@@ -169,11 +169,12 @@ typedef struct tcpip_adapter_dns_param_s {
 #define TCPIP_ADAPTER_IPC_LOCAL   0 
 #define TCPIP_ADAPTER_IPC_REMOTE  1
 
+#include "espm_abort.h"
 #define TCPIP_ADAPTER_IPC_CALL(_if, _mac, _ip, _data, _fn) do {\
     tcpip_adapter_api_msg_t msg;\
     if (tcpip_inited == false) {\
         ESP_LOGE(TAG, "tcpip_adapter is not initialized!");\
-        abort();\
+        espm_abort();\
     }\
     memset(&msg, 0, sizeof(msg));\
     msg.tcpip_if = (_if);\

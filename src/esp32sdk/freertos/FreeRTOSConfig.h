@@ -69,12 +69,15 @@
     Modified 30 July 2019 by Glenn Ramalho
        - removed xtensa specific things to get it to compile on the ESPMOD
          model.
+    Modified 23 Aug 2019 by Glenn Ramalho
+       - Added espm_system.h and replaced abort() with espm_abort()
 */
 
 #ifndef FREERTOS_CONFIG_H
 #define FREERTOS_CONFIG_H
 
 #include "sdkconfig.h"
+#include "esp_system.h" /* Added because of espm_abort(). */
 
 
 /* ESP31 and ESP32 are dualcore processors. */
@@ -132,7 +135,7 @@ int xt_clock_freq(void) __attribute__((deprecated));
 #define configASSERT(a) if (!(a)) {                                     \
         ets_printf("%s:%d (%s)- assert failed!\n", __FILE__, __LINE__,  \
                    __FUNCTION__);                                       \
-        abort();                                                        \
+        espm_abort();                                                        \
         }
 #endif
 
