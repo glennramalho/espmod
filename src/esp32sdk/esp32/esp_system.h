@@ -13,6 +13,7 @@
 // limitations under the License.
 //
 // Modified 29 July 2019 by Glenn Ramalho
+//   - added some model functions.
 
 #ifndef __ESP_SYSTEM_H__
 #define __ESP_SYSTEM_H__
