@@ -39,6 +39,17 @@ void doitesp32devkitv1::dut(void) {
 }
 
 void doitesp32devkitv1::start_of_simulation() {
+   /* We change the behavior of SC_ERROR to call SC_STOP instead of SC_THROW.
+    * This helps us because the simulation will stop nicely after an error and
+    * any waveforms get closed. In addition, any exit handlers called in the
+    * model or the firmware can check to see if an error message has been
+    * raised. This is important as, when the exit handlers are called, any
+    * structs in the model area are stale and should not be checked.
+    *
+    * See espm_close() as an example of this check.
+    */
+   sc_report_handler::set_actions(SC_ERROR,
+      SC_LOG | SC_DISPLAY | SC_CACHE_REPORT | SC_STOP);
    /* Before we simulate, we initialize the sockets so that they are ready to
     * be used.
     */
