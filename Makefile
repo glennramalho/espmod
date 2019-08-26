@@ -95,7 +95,8 @@ ESPSDK=$(ESPSDKDIR)/esp32/esp_system.cpp \
    $(ESPSDKDIR)/lwip/sockets.cpp $(ESPSDKDIR)/driver/adc.cpp \
    $(ESPSDKDIR)/esp32/esp_wifi.cpp $(ESPSDKDIR)/esp32/esp_wifi.cpp \
    $(ESPSDKDIR)/tcpip_adapter.cpp $(ESPSDKDIR)/simnetdb.c \
-   $(ESPSDKDIR)/esp32/panic.cpp \
+   $(ESPSDKDIR)/esp32/panic.cpp $(ESPSDKDIR)/esp32/reset_reason.cpp \
+   $(ESPSDKDIR)/esp32/rom/romrtc.cpp \
    $(ESPSDKDIR)/nvs_flash/src/nvs_api.cpp \
    $(ESPSDKDIR)/nvs_flash/src/nvs_item_hash_list.cpp \
    $(ESPSDKDIR)/nvs_flash/src/nvs_ops.cpp \

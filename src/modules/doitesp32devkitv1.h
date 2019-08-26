@@ -30,6 +30,7 @@
 #include "pcntmod.h"
 #include "adc_types.h"
 #include "gn_mixed.h"
+#include "ctrlregs.h"
 
 SC_MODULE(doitesp32devkitv1) {
    /* Pins */
@@ -105,6 +106,9 @@ SC_MODULE(doitesp32devkitv1) {
 
    /* Processes */
    void dut(void);
+
+   /* Other state variables. */
+   ctrlregs_t ctrlregs;
 
    // Constructor
    SC_CTOR(doitesp32devkitv1) {

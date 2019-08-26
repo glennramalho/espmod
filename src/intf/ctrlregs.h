@@ -1,8 +1,9 @@
 /*******************************************************************************
- * update.cpp -- Copyright 2019 Glenn Ramalho - RFIDo Design
+ * ctrlregs.h -- Copyright 2019 Glenn Ramalho - RFIDo Design
  *******************************************************************************
  * Description:
- *   Functions to notify the modules that the IO structures have changed.
+ *   Defines a number of variables the SystemC model needs to communicate with
+ *   the library functions.
  *******************************************************************************
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,33 +19,17 @@
  *******************************************************************************
  */
 
-#include "gpio_matrix.h"
-#include "pcntmod.h"
-#include "adc_types.h"
-#include "soc/gpio_struct.h"
-#include "soc/pcnt_struct.h"
-#include "ctrlregs.h"
+#ifndef _CTRLREGS_H
+#define _CTRLREGS_H
 
-gpio_matrix *gpiomatrixptr;
-pcntmod *pcntptr;
-adc1 *adc1ptr;
-adc2 *adc2ptr;
-gpio_dev_t GPIO;
-pcnt_dev_t PCNT;
-ctrlregs_t *ctrlregsptr;
+#include "rom/rtc.h"
 
-void update_pcnt() {
-   pcntptr->update();
-}
+struct ctrlregs_t {
+   RESET_REASON cpu0_reset_reason;
+   RESET_REASON cpu1_reset_reason;
+   bool return_to_start;
+};
 
-void update_gpio() {
-   gpiomatrixptr->update();
-}
+extern ctrlregs_t *ctrlregsptr;
 
-void update_gpio_reg() {
-   gpiomatrixptr->updategpioreg();
-}
-
-void update_gpio_oe() {
-   gpiomatrixptr->updategpiooe();
-}
+#endif

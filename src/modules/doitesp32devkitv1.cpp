@@ -19,6 +19,7 @@
  */
 
 #include <systemc.h>
+#include "info.h"
 #include "doitesp32devkitv1.h"
 #include "gpioset.h"
 #include "lwip/sockets.h"
@@ -26,6 +27,7 @@
 #include "WiFi.h"
 #include "Wire.h"
 #include "driver/adc.h"
+#include "reset_reason.h"
 
 void doitesp32devkitv1::dut(void) {
    wait(125, SC_NS);
@@ -35,6 +37,15 @@ void doitesp32devkitv1::dut(void) {
    /* Now we run repeatedly the Arduino loop function. */
    for (;;) {
       loop();
+
+      /* For now we have no way to restart the simulation, so we stop it and
+       * a new simulation needs to be ran with the post-software reset flow.
+       */
+      if (ctrlregs.return_to_start) {
+         ctrlregs.return_to_start = false;
+         PRINTF_INFO("DUT", "Software reset was called.");
+         sc_stop();
+      }
    }
 }
 
@@ -54,6 +65,12 @@ void doitesp32devkitv1::start_of_simulation() {
     * be used.
     */
    espm_socket_init();
+
+   /* We initialize the reset reason to the state after the boot loader. */
+   ctrlregs.cpu0_reset_reason = RTCWDT_CPU_RESET;
+   ctrlregs.cpu1_reset_reason = EXT_CPU_RESET;
+   ctrlregs.return_to_start = false;
+   esp_reset_reason_init();
 }
 
 void doitesp32devkitv1::pininit() {
@@ -94,6 +111,7 @@ void doitesp32devkitv1::pininit() {
    /* Other modules. */
    pcntptr = &i_pcnt;
    gpiomatrixptr = &i_gpio_matrix;
+   ctrlregsptr = &ctrlregs;
 
    /* We configure the serial protocols. Each TestSerial needs to be connected
     * to the channel it controls.
