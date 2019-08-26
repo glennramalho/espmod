@@ -121,7 +121,11 @@ And execute the model:
  % ./Blink.x
 
 You should see the simulation run. You can optionally use the +waveform option
-to get a VCD file and view it using gtkwaves or some other viewer.
+to get a VCD file and view it using gtkwaves or some other viewer. If the file is large, you can use vcd2fst to convert it to the FST format and then gtkwaves can still process it.
+
+# Setting up a new simulation
+
+Probably the best way to do this is by copying one of the existing examples into your work area and then replace the .ino file with your firmware. If you are using the ESP-IDF style, then have the setup function in the .ino call your app_main() function and include the file in the Makefile.
 
 # Status
 
@@ -131,8 +135,9 @@ There is still a lot to implement, as of yet the following has been done:
 * WiFi (AP mode, STA mode)
 * Multiple ports, sockets communication
 * Flash (user data only and one predefined partition)
+* PCNT
 * ADC1 and ADC2
-* UART0 and UART2
+* UART0, 1 and 2
 * I2C (partially done, implemented via cchan)
 
 The model has been tested successfully with the Arduino or ESP-IDF libraries:
@@ -140,10 +145,15 @@ The model has been tested successfully with the Arduino or ESP-IDF libraries:
 * Adafruit RTClib
 * TaskScheduler
 * Nextion and NeoNextion
-* TFT_eSPI (requires a new driver for the ESP model)
 * WebServer
-* ESP32Encoder
 * NTPClient
+* Preferences
+
+Some libraries needed modifications and the modified versions were included:
+
+* MQTT (ESP IDF)
+* NVS (ESP IDF)
+* TFT_eSPI (modified with new driver comming soon)
 
 # Limitations
 
