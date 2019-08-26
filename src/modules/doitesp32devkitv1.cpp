@@ -67,7 +67,7 @@ void doitesp32devkitv1::start_of_simulation() {
    espm_socket_init();
 
    /* We initialize the reset reason to the state after the boot loader. */
-   ctrlregs.cpu0_reset_reason = RTCWDT_CPU_RESET;
+   ctrlregs.cpu0_reset_reason = RTCWDT_RTC_RESET;
    ctrlregs.cpu1_reset_reason = EXT_CPU_RESET;
    ctrlregs.return_to_start = false;
    esp_reset_reason_init();
