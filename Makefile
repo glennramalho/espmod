@@ -56,6 +56,7 @@ CORES=$(CORESDIR)/Arduino.cpp $(CORESDIR)/HardwareSerial.cpp \
    $(CORESDIR)/esp32-hal-spi.cpp \
    $(CORESDIR)/esp32-hal-gpio.cpp \
    $(CORESDIR)/esp32-hal-ledc.c \
+   $(CORESDIR)/esp32-hal-matrix.c \
    $(CORESDIR)/Print.cpp \
    $(CORESDIR)/Stream.cpp \
    $(ARDUINO)/StreamString.cpp \
