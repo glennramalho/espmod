@@ -56,6 +56,7 @@
 class TestSerial: public Stream {
    public:
    TestSerial();
+   TestSerial(int uartno);
    TestSerial(int pinrx, int rxmode, int pintx, int txmode);
    virtual ~TestSerial();
 
@@ -84,6 +85,7 @@ class TestSerial: public Stream {
    bool isinit();
 
    protected:
+   int uartno;
    sc_fifo<unsigned char> *to;
    sc_fifo<unsigned char> *from;
    bool taken;

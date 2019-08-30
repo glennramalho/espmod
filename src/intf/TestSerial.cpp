@@ -20,10 +20,28 @@
  *******************************************************************************
  */
 
+#include <systemc.h>
+#include "info.h"
 #include "TestSerial.h"
 #include "Arduino.h"
 
-TestSerial::TestSerial() {taken = false; waiting = '\0'; pinmodeset = false;}
+TestSerial::TestSerial() {
+   taken = false;
+   waiting = '\0';
+   uartno = -1;
+   pinmodeset = false;
+}
+TestSerial::TestSerial(int _u) {
+   if(_u < 0 || _u > 2) {
+      printf("Invalid UART %d", _u);
+      uartno = 0;
+   }
+   uartno = _u;
+   taken = false;
+   waiting = '\0';
+   pinmodeset = false;
+}
+
 TestSerial::TestSerial(int _rxpin, int _rxmode, int _txpin, int _txmode) {
    taken = false; waiting = '\0'; pinmodeset = true;
    rxpin = _rxpin;
@@ -35,7 +53,7 @@ TestSerial::TestSerial(int _rxpin, int _rxmode, int _txpin, int _txmode) {
 TestSerial::~TestSerial() {}
 
 void TestSerial::begin(int baudrate) {
-   ::printf("Setting Baud rate to %0d\n", baudrate);
+   PRINTF_INFO("TSER", "Setting Baud rate to %0d", baudrate);
    /* If pins were specified to go to some mode we do it. */
    if (pinmodeset) {
       /* We first drive the TX level high. It is now an input, but when we
@@ -51,16 +69,34 @@ void TestSerial::begin(int baudrate) {
 }
 
 void TestSerial::begin(int baudrate, int mode, int pinrx, int pintx) {
-   ::printf("Setting Baud rate to %0d\n", baudrate);
+   if (baudrate <= 0) baudrate = 9600;
+   PRINTF_INFO("TSER", "Setting UART %d Baud rate to %0d", uartno, baudrate);
+
+   /* Now we set the pins to the defaults, if they have not been set. */
+   if (pinrx < 0) switch(uartno) {
+      case 0: pinrx = RX; break;
+      case 1: pinrx = 9; break;
+      case 2: pinrx = 16; break;
+   }
+   if (pintx < 0) switch(uartno) {
+      case 0: pintx = TX; break;
+      case 1: pintx = 10; break;
+      case 2: pintx = 17; break;
+   }
+
    /* We first drive the TX level high. It is now an input, but when we change
     * the pin to be an output, it will not drive a zero.
     */
-   digitalWrite(txpin, true);
-   pinMode(pinrx, rxmode);
-   pinMode(pintx, txmode);
-   /* Not quite the code but works for now. */
-   gpio_iomux_out(pinrx, 0, false);
-   gpio_iomux_out(pintx, 0, false);
+   pinMode(pinrx, INPUT);
+   pinMatrixInAttach(pinrx,
+      (uartno == 0)?U0RXD_IN_IDX:
+      (uartno == 1)?U1RXD_IN_IDX:
+      (uartno == 2)?U2RXD_IN_IDX:0, false);
+   pinMode(pintx, OUTPUT);
+   pinMatrixOutAttach(pintx,
+      (uartno == 0)?U0TXD_OUT_IDX:
+      (uartno == 1)?U1TXD_OUT_IDX:
+      (uartno == 2)?U2TXD_OUT_IDX:0, false, false);
 }
 
 void TestSerial::setports(sc_fifo<unsigned char> *_to,
@@ -74,7 +110,7 @@ bool TestSerial::isinit() {
    else return true;
 }
 
-void TestSerial::end() { ::printf("Ending Serial\n");}
+void TestSerial::end() { PRINTF_INFO("TSER", "Ending Serial");}
 
 int TestSerial::printf(const char *fmt, ...) {
    char buff[128], *ptr;

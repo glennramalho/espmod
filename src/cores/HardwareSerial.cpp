@@ -34,5 +34,6 @@
 #include "esp32-hal-gpio.h"
 #include "HardwareSerial.h"
 
-TestSerial Serial(3, INPUT|FUNCTION_1, 1, OUTPUT|FUNCTION_1);
-TestSerial Serial2(16, INPUT|FUNCTION_5, 17, OUTPUT|FUNCTION_5);
+TestSerial Serial(0);
+TestSerial Serial1(1);
+TestSerial Serial2(2);
