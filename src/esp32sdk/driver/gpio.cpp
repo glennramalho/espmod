@@ -344,7 +344,7 @@ esp_err_t gpio_output_enable(gpio_num_t gpio_num)
    } else {
       GPIO.enable1_w1ts.data = (0x1 << (gpio_num - 32));
    }
-   update_gpio();
+   update_gpio_oe();
    gpio_matrix_out(gpio_num, SIG_GPIO_OUT_IDX, false, false);
    return ESP_OK;
 }
