@@ -35,12 +35,14 @@ int cchanflash::getrange(unsigned int addr) {
    unsigned int r;
    /* We need to scan the memory for the address o see if it is valid. */
    for(r = 0; r < rangestart.size(); r = r + 1) {
-      /* If the address is in the current range, we give the ok. */
-      if (addr >= rangestart[r] && addr <= rangeend[r]) return r;
-      /* If the current range is before the address, we passed it, so there
-       * can't be any valid address.
+      /* The address ranges are in order, so if the current address is before
+       * the current range, then there is no legal range.
        */
-      if (addr > rangeend[r]) return -1;
+      if (addr < rangestart[r]) return -1;
+      /* Now we check the ending address. If it is in this range, we return
+       * the addres range.
+       */
+      if (addr <= rangeend[r]) return r;
    }
    /* And if we do not find it, we return -1. */
    return -1;
