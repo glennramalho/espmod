@@ -62,7 +62,7 @@ public:
 };
 
 #ifdef ESP_PLATFORM
-SemaphoreHandle_t nvs::Lock::mSemaphore = NULL;
+//SemaphoreHandle_t nvs::Lock::mSemaphore = NULL;
 #endif
 
 using namespace std;

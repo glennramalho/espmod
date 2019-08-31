@@ -24,6 +24,7 @@
 #define _QSPIFLASH_H
 
 #include <systemc.h>
+#include "info.h"
 #include "cchan.h"
 
 enum secstate_t {UNK, ERS, PROG};
@@ -44,39 +45,28 @@ SC_MODULE(cchanflash) {
     * is or false if it is not.
     */
    bool checkaddr(unsigned int addr);
+   int getrange(unsigned int addr);
    /* For preloading something into the memory */
    bool preerase(unsigned int addr, unsigned int end);
    bool preload(unsigned int addr, void* data, unsigned int size);
+   void addrange(unsigned int _rangestart, unsigned int _rangeend);
+   void rangeinit();
 
    // Constructor
-   cchanflash(sc_module_name name,
-         unsigned int _userflashstart, unsigned int _userflashend) {
-      /* The ranges we simply take.  Note that we do not ask what is the
-       * real flash size, we only care about the area where the firmware
-       * can tamper.
-       */
-      userflashstart = _userflashstart;
-      userflashend = _userflashend;
-
-      /* We initialize the memory to all blank. */
-      int i;
-      int seccnt = (userflashend+1 - userflashstart)/4096;
-      secs = new secstate_t[seccnt];
-      for (i = 0; i < seccnt; i = i + 1) secs[i] = UNK;
-
-      /* The data is set to all blank. */
-      pgm = new std::vector<int>[seccnt*16];
+   SC_CTOR(cchanflash) {
+      secs = NULL;
+      pgm = NULL;
 
       i_uflash.rx(rx); i_uflash.tx(tx);
       SC_THREAD(flash);
    }
-   SC_HAS_PROCESS(cchanflash);
 
    private:
 
    /* Flash size */
-   unsigned int userflashstart;
-   unsigned int userflashend;
+   std::vector<unsigned int> rangestart;
+   std::vector<unsigned int> rangeend;
+   std::vector<unsigned int> secstart;
 
    /* We need a list of sectors so that we know what sectors have been
     * programmed, erased, or not yet used.

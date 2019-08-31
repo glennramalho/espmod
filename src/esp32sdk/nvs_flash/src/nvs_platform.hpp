@@ -11,11 +11,15 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// Modified by Glenn Ramalho on 31st Aug 2019
+//  - removed the semaphores
 #ifndef nvs_platform_h
 #define nvs_platform_h
 
 
-#ifdef ESP_PLATFORM
+/*#ifdef ESP_PLATFORM
+ * Would be nice to do the semaphores in the model, perhaps later.
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 
@@ -64,6 +68,7 @@ public:
 } // namespace nvs
 
 #else // ESP_PLATFORM
+*/
 namespace nvs
 {
 class Lock
@@ -75,7 +80,7 @@ public:
     static void uninit() {}
 };
 } // namespace nvs
-#endif // ESP_PLATFORM
+//#endif // ESP_PLATFORM
 
 
 #endif /* nvs_platform_h */

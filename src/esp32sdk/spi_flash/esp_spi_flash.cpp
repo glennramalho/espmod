@@ -141,9 +141,28 @@ esp_err_t spi_flash_read(size_t src_addr, void *des_addr, size_t size) {
    uint32_t *dest;
    esp_err_t resp;
    dest = (uint32_t *)des_addr;
-   if (size > 256) 
-      SC_REPORT_ERROR("SCFLASH",
-         "The flash does not support more than 256 bytes at a time");
+   /* We only support 256 bytes at a time, so we break up larger requests into
+    * smaller ones.
+    */
+   if (size > 256) {
+      esp_err_t resp;
+      /* We keep doing 256 bytes at a time or until an error shows up. */
+      do {
+         resp = spi_flash_read(src_addr, des_addr, 256);
+         size = size - 256;
+         des_addr = (char *)des_addr + 256;
+         src_addr = src_addr + 256;
+      } while(size > 256 && resp == ESP_OK);
+      /* If an error came up, we quit and report. */
+      if (resp != ESP_OK) return resp;
+      /* If there is still something left, we do it now. */
+      if (size > 0) return spi_flash_read(src_addr, des_addr, size);
+      else return ESP_OK;
+   }
+   /* If the size is 0, we just return success. */
+   if (size == 0) return ESP_OK;
+
+   /* Any other sizes, we process. */
    flashmutex.lock();
    Flashport.printf("r:%0x %u\r\n", src_addr, sizew);
    for(pos = 0; pos < sizew; pos = pos + 1) {

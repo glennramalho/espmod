@@ -117,6 +117,7 @@ void doitesp32devkitv1::pininit() {
     * to the channel it controls.
     */
    Serial.setports(&i_uart0.to, &i_uart0.from);
+   Serial1.setports(&i_uart1.to, &i_uart1.from);
    Serial2.setports(&i_uart2.to, &i_uart2.from);
    WiFi.setports(&i_uwifi.to, &i_uwifi.from);
    Flashport.setports(&i_uflash.to, &i_uflash.from);
