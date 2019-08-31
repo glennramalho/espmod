@@ -175,7 +175,7 @@ void digitalWrite_nodel(uint8_t pin, uint8_t val) {
          GPIO.out1_w1tc.val = ((uint32_t)1 << (pin - 32));
       }
    }
-   update_gpio();
+   update_gpio_reg();
 }
 
 /* Same but adds a 1cycle delay. */
