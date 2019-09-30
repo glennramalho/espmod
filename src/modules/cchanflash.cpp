@@ -26,9 +26,9 @@
 #include "cchanflash.h"
 
 #define SECADDR(range, addr) (secstart[range]+(((addr)-rangestart[range])>>12))
-#define PAGEADDRINSEC(range, addr) ((secstart[range]*1024)+((addr)>>8))
+#define PAGEADDRINSEC(range, addr) ((secstart[range]<<4)+((addr)>>8))
 #define PAGEADDR(range, addr) \
-   ((secstart[range]<<4)+((addr)-(rangestart[range])>>8))
+   ((secstart[range]<<4)+(((addr)-(rangestart[range]))>>8))
 #define ADDRINPAGE(range, addr) (((addr)-(rangestart[range]) & 0xfc)>>2)
 
 int cchanflash::getrange(unsigned int addr) {
@@ -107,7 +107,7 @@ bool cchanflash::preload(unsigned int addr, void* data, unsigned int size) {
    /* Now we program the data. Note that there could be something already
     * there. If there is we get rid of it.
     */
-   unsigned int currentaddr;
+   unsigned int adinsec;
    unsigned int byteaddr;
 
    /* We do 64 words at a time. */
@@ -118,13 +118,13 @@ bool cchanflash::preload(unsigned int addr, void* data, unsigned int size) {
    unsigned int writeend;
 
    /* We now scan one page at a time. */
-   for(currentaddr = addr - rangestart[r]; currentaddr <= endaddr;
-         currentaddr = currentaddr + 256) {
+   for(adinsec = addr - rangestart[r]; adinsec <= endaddr;
+         adinsec = adinsec + 256) {
 
       /* Writes must be contained within a page. So first we need to find
        * out if this write will be within this page or not.
        */
-      pageend = currentaddr | 0x0ffU;
+      pageend = adinsec | 0x0ffU;
 
       /* Now we find out if this write will go all the way to the end of the
        * page or not.
@@ -136,15 +136,15 @@ bool cchanflash::preload(unsigned int addr, void* data, unsigned int size) {
        * off. Therefore we will resize the field so that the page end position
        * fits.  Any new spaces we fill with blanks, 0xffffffff. */
       pagesize = (writeend % 256) + 1;
-      pgm[PAGEADDRINSEC(r, currentaddr)].resize(pagesize, 0xffffffff);
+      pgm[PAGEADDRINSEC(r, adinsec)].resize(pagesize, 0xffffffff);
 
       /* And we copy in the data, one word at a time.  We cycle from the
        * current address in this page all the way till the end of this
        * page.
        */
-      for (byteaddr = currentaddr % 256; byteaddr < writeend % 256;
+      for (byteaddr = adinsec % 256; byteaddr < writeend % 256;
             byteaddr = byteaddr + 4) {
-         pgm[PAGEADDRINSEC(r, currentaddr)][byteaddr>>2]
+         pgm[PAGEADDRINSEC(r, adinsec)][byteaddr>>2]
             = ((unsigned int *)data)[fromaddr>>2];
 
          // Each time we transfered a word, we increment the from address.
