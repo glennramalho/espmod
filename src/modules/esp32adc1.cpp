@@ -43,7 +43,7 @@ bool esp32adc1::busy() {
    if (!power_on) return false;
    if (endtime == SC_ZERO_TIME) return false;
    if (runningonchannel == -1) return false;
-   return sc_time_stamp() >= endtime;
+   return sc_time_stamp() < endtime;
 }
 
 void esp32adc1::wait_eoc() {
@@ -78,7 +78,7 @@ int esp32adc1::getraw() {
       case ADC_ATTEN_DB_6: top = 2.2; low = 0.0; break;
       default: top = 3.9; low = 0.0; break;
    }
-   
+
    /* We need to cap the results, the ADC will never give a value outside
     * the valid range. So, if we get something above the top, it wont
     * necessarily destroy the ADC, but it will not pass the all ones
