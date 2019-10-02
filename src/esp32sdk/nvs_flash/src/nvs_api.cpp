@@ -11,6 +11,10 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// Modified by Glenn Ramalho on 2nd Oct 2019
+//   - Changed some of the debug printf statement formats to clear some
+//       warnings.
 #include "nvs.hpp"
 #include "nvs_flash.h"
 #include "nvs_storage.hpp"
@@ -347,7 +351,7 @@ template<typename T>
 static esp_err_t nvs_set(nvs_handle_t handle, const char* key, T value)
 {
     Lock lock;
-    ESP_LOGD(TAG, "%s %s %d %d", __func__, key, sizeof(T), (uint32_t) value);
+    ESP_LOGD(TAG, "%s %s %lu %u", __func__, key, sizeof(T), (uint32_t) value);
     HandleEntry entry;
     auto err = nvs_find_ns_handle(handle, entry);
     if (err != ESP_OK) {
@@ -422,7 +426,7 @@ extern "C" esp_err_t nvs_set_str(nvs_handle_t handle, const char* key, const cha
 extern "C" esp_err_t nvs_set_blob(nvs_handle_t handle, const char* key, const void* value, size_t length)
 {
     Lock lock;
-    ESP_LOGD(TAG, "%s %s %d", __func__, key, length);
+    ESP_LOGD(TAG, "%s %s %lu", __func__, key, length);
     HandleEntry entry;
     auto err = nvs_find_ns_handle(handle, entry);
     if (err != ESP_OK) {
@@ -436,7 +440,7 @@ template<typename T>
 static esp_err_t nvs_get(nvs_handle_t handle, const char* key, T* out_value)
 {
     Lock lock;
-    ESP_LOGD(TAG, "%s %s %d", __func__, key, sizeof(T));
+    ESP_LOGD(TAG, "%s %s %lu", __func__, key, sizeof(T));
     HandleEntry entry;
     auto err = nvs_find_ns_handle(handle, entry);
     if (err != ESP_OK) {
