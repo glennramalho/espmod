@@ -61,8 +61,7 @@ class TestSerial: public Stream {
    virtual ~TestSerial();
 
    void setports(sc_fifo<unsigned char> *_to, sc_fifo<unsigned char> *from);
-   void begin(int baudrate);
-   void begin(int baudrate, int parity, int pinrx, int pintx);
+   void begin(int baudrate, int mode = -1, int pinrx = -1, int pintx = -1);
    void end();
 
    int printf(const char *fmt, ...);
