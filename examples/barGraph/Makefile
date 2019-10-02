@@ -21,7 +21,7 @@ SYSTEMC_HOME=/opt/systemc/systemc-2.3.3
 TARGET_ARCH=linux64
 ARCH_SUFFIX=64-linux64
 FLAGS_COMMON = -Wall -Wno-reorder -Wno-variadic-macros -Wno-parentheses \
-   -std=c++11 -fms-extensions -Wno-pedantic
+   $(CPPSTANDARD) -fms-extensions -Wno-pedantic
 FLAGS_STRICT = -Wno-long-long
 FLAGS_WERROR =
 
@@ -47,13 +47,13 @@ ARDUINOLIB=$(ARDUINOHOME)/hardware/espressif/esp32/libraries
 ESPIDF=$(ARDUINOHOME)/hardware/espressif/esp32/tools/sdk/include
 ESPLIB=$(HOME)/work/espmod/libespmod.a $(HOME)/work/espmod/libardidfmod.a
 ESPLIBINC=-Wl,--start-group $(ESPLIB) -Wl,--end-group
-ESPMOD=$(HOME)/work/espmod/src
+ESPMOD=../../src
 include $(ESPMOD)/../Makefile.vars
 INCDIR=-I. -I$(SRCDIR) $(INCLUDES)
 	 #-I$(ESPIDF)/spi_flash 
 DEFINES=-DDEBUG -DESP32 -DSYSCMOD
 CFLAGS=-g $(INCDIR) $(DEFINES)
-CPPFLAGS=$(CFLAGS) $(SYSTEMC_CXXFLAGS) -std=c++11
+CPPFLAGS=$(CFLAGS) $(SYSTEMC_CXXFLAGS)
 
 ## Project Source
 SRCDIR=.

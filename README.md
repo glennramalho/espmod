@@ -90,11 +90,13 @@ Official Website: https://accellera.org/community/systemc
 To install it is quite simple.
 
 First download the latest version of SystemC and follow the steps in the
-instructions to install it. It should be noted that you have to enable C++11
-as it is required by the Arduino-IDF ESP32 libraries. For the version of GCC
-SystemC will automatically install with C++11 disabled, so I had to force it
-to switch it on by setting SC_CPLUSPLUS=201103L and adding the -std=c++11
-to the CXXFLAGS.
+instructions to install it.
+
+NOTE: if you have an old version of GCC, like 4.x, you will have to force it
+to use C++11, as Arduino-IDF ESP32 libraries require it. You then need to set
+SC_CPLUSPLUS=201103L when you build SystemC and use the CPPSTANDARD variable
+in the Makefile.vars for the ESP model. Newer versions of GCC should not need
+this.
 
 Download and install the esp IDF and the Arduino IDF. The esp IDF can be inside
 the Arduino directory. It should work with the latest versions but I used

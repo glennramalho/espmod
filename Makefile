@@ -18,7 +18,7 @@ SYSTEMC_HOME=/opt/systemc/systemc-2.3.3
 TARGET_ARCH=linux64
 ARCH_SUFFIX=64-linux64
 FLAGS_COMMON = -Wall -Wno-reorder -Wno-variadic-macros -Wno-parentheses \
-   -std=c++11 -fms-extensions -Wno-pedantic
+   $(CPPSTANDARD) -fms-extensions -Wno-pedantic
 FLAGS_STRICT = -Wno-long-long
 FLAGS_WERROR =
 
@@ -44,7 +44,7 @@ include Makefile.vars
 INCDIR=-I. $(INCLUDES)
 DEFINES=-DESP32 -DSYSCMOD -DESP_PLATFORM
 CFLAGS=-g $(INCDIR) $(DEFINES)
-CPPFLAGS=$(CFLAGS) $(SYSTEMC_CXXFLAGS) -std=c++11
+CPPFLAGS=$(CFLAGS) $(SYSTEMC_CXXFLAGS)
 
 # Arduino ESP32 Core Files
 CORES=$(CORESDIR)/Arduino.cpp $(CORESDIR)/HardwareSerial.cpp \
