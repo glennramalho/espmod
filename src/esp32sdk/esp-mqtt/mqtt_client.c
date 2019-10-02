@@ -39,6 +39,15 @@
 # define MQTT_API_UNLOCK_FROM_OTHER_TASK(c)  { if (c->task_handle != xTaskGetCurrentTaskHandle()) { xSemaphoreGive(c->api_lock); } }
 #endif /* MQTT_USE_API_LOCKS */
 
+#ifdef MQTT_SUPPORTED_FEATURE_DER_CERTIFICATES
+# define MQTT_TRANSPORT_SET_CERT_OR_KEY(setfn, key, len) \
+    { if (key) { if (len) { setfn##_der(ssl, key, len); } else { setfn(ssl, key, strlen(key)); } } }
+#else
+# define MQTT_TRANSPORT_SET_CERT_OR_KEY(setfn, key, len) \
+    { if (key) { setfn(ssl, key, strlen(key)); } }
+#endif
+
+
 
 static const char *TAG = "MQTT_CLIENT";
 
@@ -408,14 +417,29 @@ esp_mqtt_client_handle_t esp_mqtt_client_init(const esp_mqtt_client_config_t *co
     esp_transport_handle_t ssl = esp_transport_ssl_init();
     ESP_MEM_CHECK(TAG, ssl, goto _mqtt_init_failed);
     esp_transport_set_default_port(ssl, MQTT_SSL_DEFAULT_PORT);
-    if (config->cert_pem) {
-        esp_transport_ssl_set_cert_data(ssl, config->cert_pem, strlen(config->cert_pem));
+
+#ifndef MQTT_SUPPORTED_FEATURE_DER_CERTIFICATES
+    if (config->cert_len || config->client_cert_len || config->client_key_len) {
+        ESP_LOGE(TAG, "Explicit cert-/key-len is not available in IDF version %s", IDF_VER);
+        goto _mqtt_init_failed;
     }
-    if (config->client_cert_pem) {
-        esp_transport_ssl_set_client_cert_data(ssl, config->client_cert_pem, strlen(config->client_cert_pem));
+#endif
+
+    if (config->use_global_ca_store == true) {
+        esp_transport_ssl_enable_global_ca_store(ssl);
+    } else if (config->cert_pem) {
+        MQTT_TRANSPORT_SET_CERT_OR_KEY(esp_transport_ssl_set_cert_data, config->cert_pem, config->cert_len);
     }
-    if (config->client_key_pem) {
-        esp_transport_ssl_set_client_key_data(ssl, config->client_key_pem, strlen(config->client_key_pem));
+    MQTT_TRANSPORT_SET_CERT_OR_KEY(esp_transport_ssl_set_client_cert_data, config->client_cert_pem, config->client_cert_len);
+    MQTT_TRANSPORT_SET_CERT_OR_KEY(esp_transport_ssl_set_client_key_data, config->client_key_pem, config->client_key_len);
+
+    if (config->psk_hint_key) {
+#ifdef MQTT_SUPPORTED_FEATURE_PSK_AUTHENTICATION
+        esp_transport_ssl_set_psk_key_hint(ssl, config->psk_hint_key);
+#else
+        ESP_LOGE(TAG, "PSK authentication is not available in IDF version %s", IDF_VER);
+        goto _mqtt_init_failed;
+#endif
     }
     esp_transport_list_add(client->transport_list, ssl, "mqtts");
     if (config->transport == MQTT_TRANSPORT_OVER_SSL) {
@@ -1176,9 +1200,9 @@ esp_err_t esp_mqtt_client_stop(esp_mqtt_client_handle_t client)
         }
 
         client->run = false;
-        //xEventGroupWaitBits(client->status_bits, STOPPED_BIT, false, true, portMAX_DELAY);
         client->state = MQTT_STATE_UNKNOWN;
         MQTT_API_UNLOCK_FROM_OTHER_TASK(client);
+        //xEventGroupWaitBits(client->status_bits, STOPPED_BIT, false, true, portMAX_DELAY);
         return ESP_OK;
     } else {
         ESP_LOGW(TAG, "Client asked to stop, but was not started");
@@ -1376,7 +1400,7 @@ esp_err_t esp_mqtt_client_register_event(esp_mqtt_client_handle_t client, esp_mq
 
     return esp_event_handler_register_with(client->config->event_loop_handle, MQTT_EVENTS, event, event_handler, event_handler_arg);
 #else
-//    ESP_LOGE(TAG, "Registering event handler while event loop not available in IDF version %s", IDF_VER);
+    ESP_LOGE(TAG, "Registering event handler while event loop not available in IDF version --");
     return ESP_FAIL;
 #endif
 }
