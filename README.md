@@ -181,7 +181,6 @@ The project is far from ready. There is still lots to do. Several interfaces are
    table is used.
  * Needing to put in a SPI interface model
  * Needing to put in a bus model to emulate memory mapped I/O accesses.
- * Needing to build the PCNT
  * Model Interrupts. Still lots to do here.
  * And of course, if you model the system you have to model the test interface
      too. There are some in place, like a WiFi client, flash chip and other
