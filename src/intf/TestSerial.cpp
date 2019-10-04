@@ -73,7 +73,7 @@ void TestSerial::begin(int baudrate, int mode, int pinrx, int pintx) {
       case 2: txpin = 17; break;
    }
    /* For the modes, we do the same. */
-   if (mode < 0 && !pinmodeset) {
+   if (mode < 0 || !pinmodeset) {
       rxmode = INPUT;
       txmode = OUTPUT;
    }
