@@ -50,6 +50,10 @@ unsigned long int millis() {
    return (unsigned long int)floor(sc_time_stamp().to_seconds() * 1000);
 }
 
+unsigned long int micros() {
+   return (unsigned long int)floor(sc_time_stamp().to_seconds() * 1000000);
+}
+
 void yield() { wait(125, SC_NS); }
 void del1cycle() { wait(125, SC_NS); }
 void wait_next_apb_clock() {
