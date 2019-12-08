@@ -35,6 +35,8 @@
 #include <stdlib.h>
 #include <errno.h>
 #include "Arduino.h"
+#include "esp32/reset_reason.h"
+#include "esp32/rom/rtc.h"
 
 uint32_t get_free_heap_size() {
    /* This function makes no sense in the simulation, so we pick something. */
@@ -72,4 +74,12 @@ int esp_gettimeofday(struct timeval *tv, struct timezone *tz) {
    tv->tv_sec = tm / 1000;
    tv->tv_usec = (tm % 1000) * 1000;
    return 0;
+}
+
+void esp_restart() {
+   software_reset();
+}
+
+void system_restart() {
+   software_reset();
 }

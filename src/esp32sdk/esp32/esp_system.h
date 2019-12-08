@@ -96,7 +96,7 @@ esp_err_t esp_register_shutdown_handler(shutdown_handler_t handle);
   * Peripherals (except for WiFi, BT, UART0, SPI1, and legacy timers) are not reset.
   * This function does not return.
   */
-void esp_restart(void) __attribute__ ((noreturn));
+void esp_restart(void);
 
 /** @cond */
 /**
@@ -105,7 +105,7 @@ void esp_restart(void) __attribute__ ((noreturn));
   * Function has been renamed to esp_restart.
   * This name will be removed in a future release.
   */
-void system_restart(void) __attribute__ ((deprecated, noreturn));
+void system_restart(void) __attribute__ ((deprecated));
 /** @endcond */
 
 /**
