@@ -40,7 +40,7 @@ inline bool operator==(const pcntbus_t &a, const pcntbus_t &b) {
    return true;
 }
 inline std::ostream &operator<<(std::ostream &os, const pcntbus_t &a) {
-   os << "ch0(" << a.sig_ch0 << "/" << a.sig_ch1 << ") ch1(" << a.ctrl_ch0
+   os << "ch0(" << a.sig_ch0 << "/" << a.ctrl_ch0 << ") ch1(" << a.sig_ch1
       << "/" << a.ctrl_ch1 << ")";
    return os;
 }

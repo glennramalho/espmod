@@ -158,4 +158,12 @@ void doitesp32devkitv1::trace(sc_trace_file *tf) {
    sc_trace(tf, d37_a1, d37_a1.name());
    sc_trace(tf, d38_a2, d38_a2.name());
    sc_trace(tf, d39_a3, d39_a3.name());
+   sc_trace(tf, pcntbus_0, pcntbus_0.name());
+   sc_trace(tf, pcntbus_1, pcntbus_1.name());
+   sc_trace(tf, pcntbus_2, pcntbus_2.name());
+   sc_trace(tf, pcntbus_3, pcntbus_3.name());
+   sc_trace(tf, pcntbus_4, pcntbus_4.name());
+   sc_trace(tf, pcntbus_5, pcntbus_5.name());
+   sc_trace(tf, pcntbus_6, pcntbus_6.name());
+   sc_trace(tf, pcntbus_7, pcntbus_7.name());
 }

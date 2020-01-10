@@ -172,25 +172,30 @@ void pcntmod::capture(int un) {
        * signal should go high or low.
        */
       /* First we check, if we are in reset, we do nothing. */
-      if ((ctrl.read() & (PCNT_PLUS_CNT_RST_U0_M<<un*2))>0) continue;
+      if (!((ctrl.read() & (PCNT_PLUS_CNT_RST_U0_M<<un*2))>0)) {
+         /* If it is ok, we can check the filtering. */
+         if (lvl.sig_ch0 != lastlvl.sig_ch0) {
+            /* If filtering is enabled so we notify the doit function when
+             * the signal should change value. If filterig is off, we notify
+             * it immediatedly.
+             */
+            if (filter_thres > 0)
+               filtered_sig0[un].notify(APB_CLOCK_PERIOD * filter_thres, SC_NS);
+            else filtered_sig0[un].notify();
+         }
 
-      /* If it is ok, we can check the filtering. */
-      if (lvl.sig_ch0 != lastlvl.sig_ch0) {
-         /* If filtering is enabled so we notify the doit function when
-          * the signal should change value. If filterig is off, we notify
-          * it immediatedly.
-          */
-         if (filter_thres > 0)
-            filtered_sig0[un].notify(APB_CLOCK_PERIOD * filter_thres, SC_NS);
-         else filtered_sig0[un].notify();
+         /* And we repeat for the other signal. */
+         if (lvl.sig_ch1 != lastlvl.sig_ch1) {
+            if (filter_thres > 0)
+               filtered_sig1[un].notify(APB_CLOCK_PERIOD * filter_thres, SC_NS);
+            else filtered_sig1[un].notify();
+         }
       }
 
-      /* And we repeat for the other signal. */
-      if (lvl.sig_ch1 != lastlvl.sig_ch1) {
-         if (filter_thres > 0)
-            filtered_sig1[un].notify(APB_CLOCK_PERIOD * filter_thres, SC_NS);
-         else filtered_sig1[un].notify();
-      }
+      /* Once we are done, we need to copy the current lvl into the lastlvl
+       * so that we can do edge detections.
+       */
+      lastlvl = lvl;
    }
 }
 
