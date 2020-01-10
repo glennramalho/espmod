@@ -24,6 +24,7 @@
 #include "soc/gpio_struct.h"
 #include "soc/pcnt_struct.h"
 #include "ctrlregs.h"
+#include "Arduino.h"
 
 gpio_matrix *gpiomatrixptr;
 pcntmod *pcntptr;
