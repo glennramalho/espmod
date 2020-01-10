@@ -36,6 +36,8 @@
 #include <stdlib.h>
 #include <errno.h>
 #include "Arduino.h"
+#include "esp32/reset_reason.h"
+#include "esp32/rom/rtc.h"
 
 uint32_t get_free_heap_size() {
    /* This function makes no sense in the simulation, so we pick something. */
@@ -80,6 +82,9 @@ void esp_restart() {
     * all we do is end the simulation. The tests will then have to be done
     * up to the restart and starting from the restart.
     */
-   SC_REPORT_INFO("SYS", "Firmware requested restart!");
-   sc_stop();
+   software_reset();
+}
+
+void system_restart() {
+   software_reset();
 }

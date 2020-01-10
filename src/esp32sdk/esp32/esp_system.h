@@ -107,7 +107,7 @@ void esp_restart(void);
   * Function has been renamed to esp_restart.
   * This name will be removed in a future release.
   */
-void system_restart(void) __attribute__ ((deprecated, noreturn));
+void system_restart(void) __attribute__ ((deprecated));
 /** @endcond */
 
 /**
