@@ -32,7 +32,7 @@ HelloServertest i_helloservertest("i_helloservertest");
 
 int sc_main(int argc, char *argv[]) {
    int tn;
-   bool wv;
+   bool wv = false;
    if (argc > 3) {
       SC_REPORT_ERROR("MAIN", "Too many arguments used in call");
       return 1;

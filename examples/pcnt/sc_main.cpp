@@ -32,7 +32,7 @@ pcnttest i_pcnttest("i_pcnttest");
 
 int sc_main(int argc, char *argv[]) {
    int tn;
-   bool wv;
+   bool wv = false;
    if (argc > 3) {
       SC_REPORT_ERROR("MAIN", "Too many arguments used in call");
       return 1;
