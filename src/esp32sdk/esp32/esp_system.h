@@ -95,8 +95,10 @@ esp_err_t esp_register_shutdown_handler(shutdown_handler_t handle);
   * After successful restart, CPU reset reason will be SW_CPU_RESET.
   * Peripherals (except for WiFi, BT, UART0, SPI1, and legacy timers) are not reset.
   * This function does not return.
+  * In the ESP model, the function was changed to call sc_stop(). Then its
+  * attribute became to a void return.
   */
-void esp_restart(void) __attribute__ ((noreturn));
+void esp_restart(void);
 
 /** @cond */
 /**

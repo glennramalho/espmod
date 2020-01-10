@@ -1,5 +1,6 @@
 #include <systemc.h>
 #include "tftdebugwrap.h"
+#include "info.h"
 
 tftdebugwrap::tftdebugwrap(int16_t _W, int16_t _H): TFT_eSPI(_W, _H) {
    skip = false;
@@ -73,14 +74,14 @@ void tftdebugwrap::drawRect(int32_t x, int32_t y, int32_t w, int32_t h,
 void tftdebugwrap::drawRoundRect(int32_t x0, int32_t y0, int32_t w, int32_t h,
       int32_t radius, uint32_t color) {
    bool wasskip = pushskip(x0, y0, x0+w, y0+h, color, 0, radius,
-      String("<rect>"));
+      String("<roundrect>"));
    TFT_eSPI::drawRoundRect(x0,y0,w,h,radius,color);
    popskip(wasskip);
 }
 void tftdebugwrap::fillRoundRect(int32_t x0, int32_t y0, int32_t w, int32_t h,
       int32_t radius, uint32_t color) {
    bool wasskip = pushskip(x0, y0, x0+w, y0+h, color, 0, radius,
-      String("<rect>"));
+      String("<roundrect>"));
    TFT_eSPI::fillRoundRect(x0,y0,w,h,radius,color);
    popskip(wasskip);
 }
@@ -263,6 +264,8 @@ void tftdebugwrap::endcmd() {
 bool tftdebugwrap::pushskip(int nx1, int ny1, int nx2, int ny2,
       int nfg, int nbg, int nsz, String nm) {
    bool wasskip = skip;
+   PRINTF_INFO("TFTDBG", "[%d,%d %d,%d]: color %d/%d sz=%d '%s'",
+      nx1, ny1, nx2, ny1, nfg, nbg, nsz, nm.c_str());
    if (!skip) {
       _x1 = nx1; _y1 = ny1; _x2 = nx2; _y2 = ny2;
       fg = nfg; bg = nbg; sz = nsz;
@@ -275,6 +278,7 @@ bool tftdebugwrap::pushskip(int nx1, int ny1, int nx2, int ny2,
 
 void tftdebugwrap::popskip(bool wasskip) {
    skip = wasskip;
+   PRINTF_INFO("TFTDBG", "POP");
    if (!skip) {
       end.notify();
       wait(SC_ZERO_TIME);

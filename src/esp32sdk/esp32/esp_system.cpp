@@ -30,6 +30,7 @@
  *    limitations under the License.
  */
 
+#include <systemc.h>
 #include "esp_system.h"
 #include "esp_wifi.h"
 #include <stdlib.h>
@@ -72,4 +73,13 @@ int esp_gettimeofday(struct timeval *tv, struct timezone *tz) {
    tv->tv_sec = tm / 1000;
    tv->tv_usec = (tm % 1000) * 1000;
    return 0;
+}
+
+void esp_restart() {
+   /* It is difficult to test the ESP restart from inside the model. Therefore,
+    * all we do is end the simulation. The tests will then have to be done
+    * up to the restart and starting from the restart.
+    */
+   SC_REPORT_INFO("SYS", "Firmware requested restart!");
+   sc_stop();
 }
