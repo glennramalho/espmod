@@ -57,6 +57,7 @@ SC_MODULE(pcntmod) {
    sc_time fctrl1[8];
    sc_event filtered_sig0[8];
    sc_event filtered_sig1[8];
+   sc_event reset_un[8];
    sc_event update_ev;
 
    /* Sets initial drive condition. */

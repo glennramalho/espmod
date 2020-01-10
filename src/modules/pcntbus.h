@@ -52,9 +52,9 @@ inline bool operator!=(const pcntbus_t &a, const pcntbus_t &b) {
 inline void sc_trace(sc_trace_file *tf, const pcntbus_t &object,
       const std::string &name) {
    sc_trace(tf, object.sig_ch0, name + "_sigch0");
-   sc_trace(tf, object.sig_ch1, name + "_sigch0");
-   sc_trace(tf, object.ctrl_ch0, name + "_sigch0");
-   sc_trace(tf, object.ctrl_ch1, name + "_sigch0");
+   sc_trace(tf, object.sig_ch1, name + "_sigch1");
+   sc_trace(tf, object.ctrl_ch0, name + "_ctrlch0");
+   sc_trace(tf, object.ctrl_ch1, name + "_ctrlch1");
 }
 
 #endif

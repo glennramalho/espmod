@@ -38,6 +38,18 @@ void pcntmod::updateth() {
       }
       int_ena.write(PCNT.int_ena.val);
       ctrl.write(PCNT.ctrl.val);
+      /* We need to apply any reset bits. We can't set the values directly
+       * as they are signals and they are driven by another thread, so we
+       * just raise the notices.
+       */
+      if ((PCNT_PLUS_CNT_RST_U0_M & PCNT.ctrl.val)>0) reset_un[0].notify();
+      if ((PCNT_PLUS_CNT_RST_U1_M & PCNT.ctrl.val)>0) reset_un[1].notify();
+      if ((PCNT_PLUS_CNT_RST_U2_M & PCNT.ctrl.val)>0) reset_un[2].notify();
+      if ((PCNT_PLUS_CNT_RST_U3_M & PCNT.ctrl.val)>0) reset_un[3].notify();
+      if ((PCNT_PLUS_CNT_RST_U4_M & PCNT.ctrl.val)>0) reset_un[4].notify();
+      if ((PCNT_PLUS_CNT_RST_U5_M & PCNT.ctrl.val)>0) reset_un[5].notify();
+      if ((PCNT_PLUS_CNT_RST_U6_M & PCNT.ctrl.val)>0) reset_un[6].notify();
+      if ((PCNT_PLUS_CNT_RST_U7_M & PCNT.ctrl.val)>0) reset_un[7].notify();
    }
 }
 
@@ -202,17 +214,22 @@ void pcntmod::capture(int un) {
 void pcntmod::count(int un) {
    pcntbus_t p;
    while(true) {
-      wait(filtered_sig0[un] | filtered_sig1[un]);
+      wait(filtered_sig0[un] | filtered_sig1[un] | reset_un[un]);
       p = pcntbus_i[un]->read();
-      if (filtered_sig0[un].triggered()) {
-         if (sc_time_stamp() < fctrl0[un]) 
-            docnt(un, p.sig_ch0, !p.ctrl_ch0, 0);
-         else docnt(un, p.sig_ch0, p.ctrl_ch0, 0);
-      }
+      /* If there was a reset notice, we reset the block and do nothing else.*/
+      if (reset_un[un].triggered()) { cnt_unit[un].write(0); }
+      /* Assuming it was not in reset, we can look at the other triggers. */
       else {
-         if (sc_time_stamp() < fctrl1[un]) 
-            docnt(un, p.sig_ch1, !p.ctrl_ch1, 1);
-         else docnt(un, p.sig_ch1, p.ctrl_ch1, 1);
+         if (filtered_sig0[un].triggered()) {
+            if (sc_time_stamp() < fctrl0[un]) 
+               docnt(un, p.sig_ch0, !p.ctrl_ch0, 0);
+            else docnt(un, p.sig_ch0, p.ctrl_ch0, 0);
+         }
+         else {
+            if (sc_time_stamp() < fctrl1[un]) 
+               docnt(un, p.sig_ch1, !p.ctrl_ch1, 1);
+            else docnt(un, p.sig_ch1, p.ctrl_ch1, 1);
+         }
       }
    }
 }
