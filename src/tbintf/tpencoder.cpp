@@ -24,11 +24,11 @@
 
 void tpencoder::press(bool pb) {
    if (pb) {
-      pinB.write(GN_LOGIC_1);
+      pinA.write(GN_LOGIC_1);
       buttonpressed = true;
    }
    else {
-      pinB.write(GN_LOGIC_Z);
+      pinA.write(GN_LOGIC_Z);
       buttonpressed = false;
    }
 }
@@ -38,24 +38,24 @@ void tpencoder::turnright(int pulses, bool pressbutton) {
    if (pressbutton) press(true);
 
    /* If the last was a left turn, we need to do the direction change glitch.
-    * Note that if the button is pressed, we only toggle pin A. */
+    * Note that if the button is pressed, we only toggle pin B. */
    if (!lastwasright) {
       wait(speed, SC_MS);
-      if (!buttonpressed) pinB.write(GN_LOGIC_1);
+      pinB.write(GN_LOGIC_1);
       wait(speed, SC_MS);
-      if (!buttonpressed) pinB.write(GN_LOGIC_Z);
+      pinB.write(GN_LOGIC_Z);
    }
 
    /* And we apply the pulses, again, watching for the button. */
    while(pulses > 0) {
       wait(speed, SC_MS);
-      pinA.write(GN_LOGIC_1);
+      if (!buttonpressed) pinA.write(GN_LOGIC_1);
       wait(speed, SC_MS);
-      if (!buttonpressed) { pinB.write(GN_LOGIC_1); }
+      pinB.write(GN_LOGIC_1);
       wait(speed, SC_MS);
-      pinA.write(GN_LOGIC_Z);
+      if (!buttonpressed) pinA.write(GN_LOGIC_Z);
       wait(speed, SC_MS);
-      if (!buttonpressed) { pinB.write(GN_LOGIC_Z); }
+      pinB.write(GN_LOGIC_Z);
       pulses = pulses - 1;
    }
 
@@ -81,25 +81,25 @@ void tpencoder::turnleft(int pulses, bool pressbutton) {
     * Note that if the button is pressed, we only toggle pin A. */
    if (lastwasright) {
       wait(speed, SC_MS);
-      pinA.write(GN_LOGIC_1);
+      if (!buttonpressed) pinA.write(GN_LOGIC_1);
       wait(speed, SC_MS);
-      if (!buttonpressed) pinB.write(GN_LOGIC_1);
+      pinB.write(GN_LOGIC_1);
       wait(speed, SC_MS);
-      if (!buttonpressed) pinB.write(GN_LOGIC_Z);
+      pinB.write(GN_LOGIC_Z);
       wait(speed, SC_MS);
-      pinA.write(GN_LOGIC_Z);
+      if (!buttonpressed) pinA.write(GN_LOGIC_Z);
    }
 
    /* And we apply the pulses, again, watching for the button. */
    while(pulses > 0) {
       wait(speed, SC_MS);
-      if (!buttonpressed) { pinB.write(GN_LOGIC_1); }
+      pinB.write(GN_LOGIC_1);
       wait(speed, SC_MS);
-      pinA.write(GN_LOGIC_1);
+      if (!buttonpressed) pinA.write(GN_LOGIC_1);
       wait(speed, SC_MS);
-      if (!buttonpressed) { pinB.write(GN_LOGIC_Z); }
+      pinB.write(GN_LOGIC_Z);
       wait(speed, SC_MS);
-      pinA.write(GN_LOGIC_Z);
+      if (!buttonpressed) pinA.write(GN_LOGIC_Z);
       pulses = pulses - 1;
    }
 

@@ -288,7 +288,7 @@ void gpio_pad_select_gpio(uint8_t gpio_num) {
          gpio_num);
       return;
    }
-   gpin->set_function(2);
+   gpin->set_function(3);
 }
 
 /**

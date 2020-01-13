@@ -43,8 +43,8 @@ SC_MODULE(tpencoder) {
    void invertturn(int pulses);
 
    SC_CTOR(tpencoder) {
-      /* We start off setting the default to 10ms and floating the two pins. */
-      speed = 10;
+      /* We start off setting the default to 200ms and floating the two pins. */
+      speed = 200;
       lastwasright = false;
    }
 
