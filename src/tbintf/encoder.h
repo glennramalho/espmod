@@ -1,5 +1,5 @@
 /*******************************************************************************
- * tpencoder.h -- Copyright 2019 (c) Glenn Ramalho - RFIDo Design
+ * encoder.h -- Copyright 2019 (c) Glenn Ramalho - RFIDo Design
  *******************************************************************************
  * Description:
  *   This is a testbench module to emulate a rotary quad encoder with a button.
@@ -25,10 +25,10 @@
 #include <systemc.h>
 #include "gn_mixed.h"
 
-SC_MODULE(tpencoder) {
+SC_MODULE(encoder) {
    sc_inout<gn_mixed> pinA {"pinA"};
    sc_inout<gn_mixed> pinB {"pinB"};
-   sc_signal<bool> buttonpressed {"buttonpressed", false};
+   sc_inout<gn_mixed> pinC {"pinC"};
 
    private:
    int speed; /* period in miliseconds */
@@ -54,7 +54,7 @@ SC_MODULE(tpencoder) {
    void turnleft(int pulses, bool pressbutton = false);
    void invertturn(int pulses);
 
-   SC_CTOR(tpencoder) {
+   SC_CTOR(encoder) {
       /* We start off setting the default to 200ms and floating the two pins. */
       speed = 200;
       phase = 50;

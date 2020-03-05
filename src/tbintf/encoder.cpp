@@ -1,9 +1,10 @@
 /*******************************************************************************
- * tpencoder.cpp -- Copyright 2019 (c) Glenn Ramalho - RFIDo Design
+ * encoder.cpp -- Copyright 2019 (c) Glenn Ramalho - RFIDo Design
  *******************************************************************************
  * Description:
  *   This is a testbench module to emulate a rotary quad encoder with a button.
- *   This encoder encodes the button by forcing pin B high.
+ *   Two pins are provided for the encoder function and a third one handles
+ *   the button.
  *******************************************************************************
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,20 +21,14 @@
  */
 
 #include <systemc.h>
-#include "tpencoder.h"
+#include "encoder.h"
 
-void tpencoder::press(bool pb) {
-   if (pb) {
-      pinA.write(GN_LOGIC_1);
-      buttonpressed = true;
-   }
-   else {
-      pinA.write(GN_LOGIC_Z);
-      buttonpressed = false;
-   }
+void encoder::press(bool pb) {
+   if (pb) pinC.write(GN_LOGIC_1);
+   else pinC.write(GN_LOGIC_Z);
 }
 
-void tpencoder::turnright(int pulses, bool pressbutton) {
+void encoder::turnright(int pulses, bool pressbutton) {
    /* We start by raising the button, if requested. */
    if (pressbutton) press(true);
 
@@ -50,11 +45,11 @@ void tpencoder::turnright(int pulses, bool pressbutton) {
    wait(phase, SC_MS);
    while(pulses > 0) {
       wait(speed-phase, SC_MS);
-      if (!buttonpressed) pinA.write(GN_LOGIC_1);
+      pinA.write(GN_LOGIC_1);
       wait(phase, SC_MS);
       pinB.write(GN_LOGIC_1);
       wait(speed-phase, SC_MS);
-      if (!buttonpressed) pinA.write(GN_LOGIC_Z);
+      pinA.write(GN_LOGIC_Z);
       if (edges == 2) wait(phase, SC_MS);
       pinB.write(GN_LOGIC_Z);
       if (edges != 2) wait(phase, SC_MS);
@@ -75,7 +70,7 @@ void tpencoder::turnright(int pulses, bool pressbutton) {
    lastwasright = true;
 }
 
-void tpencoder::turnleft(int pulses, bool pressbutton) {
+void encoder::turnleft(int pulses, bool pressbutton) {
    /* We start by raising the button, if requested. */
    if (pressbutton) press(true);
 
@@ -83,13 +78,13 @@ void tpencoder::turnleft(int pulses, bool pressbutton) {
     * Note that if the button is pressed, we only toggle pin A. */
    if (lastwasright) {
       wait(speed, SC_MS);
-      if (!buttonpressed) pinA.write(GN_LOGIC_1);
+      pinA.write(GN_LOGIC_1);
       wait(speed, SC_MS);
       pinB.write(GN_LOGIC_1);
       wait(speed, SC_MS);
       pinB.write(GN_LOGIC_Z);
       wait(speed, SC_MS);
-      if (!buttonpressed) pinA.write(GN_LOGIC_Z);
+      pinA.write(GN_LOGIC_Z);
    }
 
    /* And we apply the pulses, again, watching for the button. */
@@ -98,11 +93,11 @@ void tpencoder::turnleft(int pulses, bool pressbutton) {
       wait(speed-phase, SC_MS);
       pinB.write(GN_LOGIC_1);
       wait(phase, SC_MS);
-      if (!buttonpressed) pinA.write(GN_LOGIC_1);
+      pinA.write(GN_LOGIC_1);
       wait(speed-phase, SC_MS);
       pinB.write(GN_LOGIC_Z);
       if (edges == 2) wait(phase, SC_MS);
-      if (!buttonpressed) pinA.write(GN_LOGIC_Z);
+      pinA.write(GN_LOGIC_Z);
       if (edges != 2) wait(phase, SC_MS);
       pulses = pulses - 1;
    }
@@ -121,13 +116,14 @@ void tpencoder::turnleft(int pulses, bool pressbutton) {
    lastwasright = false;
 }
 
-void tpencoder::start_of_simulation() {
+void encoder::start_of_simulation() {
    pinA.write(GN_LOGIC_Z);
    pinB.write(GN_LOGIC_Z);
+   pinC.write(GN_LOGIC_Z);
 }
 
-void tpencoder::trace(sc_trace_file *tf) {
-   sc_trace(tf, buttonpressed, buttonpressed.name());
+void encoder::trace(sc_trace_file *tf) {
    sc_trace(tf, pinA, pinA.name());
    sc_trace(tf, pinB, pinB.name());
+   sc_trace(tf, pinC, pinC.name());
 }

@@ -304,7 +304,8 @@ void cchanflash::flash(void) {
          /* Writing to a never used sector can be bad. */
          else if (secs[SECADDR(range, addr)] == UNK)
          {
-            PRINTF_ERROR("SCFLASH", "Access to illegal address %0x", addr);
+            PRINTF_ERROR("SCFLASH", "Access to unititialized address %0x",
+               addr);
             i_uflash.to.write('\1');
          }
          /* We do not support size 0 or large messages. */
