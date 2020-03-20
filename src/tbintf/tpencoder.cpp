@@ -33,7 +33,7 @@ void tpencoder::press(bool pb) {
    }
 }
 
-void tpencoder::turnright(int pulses, bool pressbutton) {
+void tpencoder::turnleft(int pulses, bool pressbutton) {
    /* We start by raising the button, if requested. */
    if (pressbutton) press(true);
 
@@ -75,7 +75,7 @@ void tpencoder::turnright(int pulses, bool pressbutton) {
    lastwasright = true;
 }
 
-void tpencoder::turnleft(int pulses, bool pressbutton) {
+void tpencoder::turnright(int pulses, bool pressbutton) {
    /* We start by raising the button, if requested. */
    if (pressbutton) press(true);
 

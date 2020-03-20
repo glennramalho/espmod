@@ -28,7 +28,7 @@ void encoder::press(bool pb) {
    else pinC.write(GN_LOGIC_Z);
 }
 
-void encoder::turnright(int pulses, bool pressbutton) {
+void encoder::turnleft(int pulses, bool pressbutton) {
    /* We start by raising the button, if requested. */
    if (pressbutton) press(true);
 
@@ -70,7 +70,7 @@ void encoder::turnright(int pulses, bool pressbutton) {
    lastwasright = true;
 }
 
-void encoder::turnleft(int pulses, bool pressbutton) {
+void encoder::turnright(int pulses, bool pressbutton) {
    /* We start by raising the button, if requested. */
    if (pressbutton) press(true);
 
