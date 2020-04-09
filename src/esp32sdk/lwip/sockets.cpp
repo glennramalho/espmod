@@ -65,6 +65,10 @@
 #include "errno.h"
 #include "freertos/task.h"
 
+#define ESCAPENONE 0
+#define ESCAPEALL 1
+#define ESCAPEFROMCOLON 2
+
 struct fd_t {
    int fdn;             /* File Descriptor Number */
    IPAddress ip;        /* Associated IP address */
@@ -72,6 +76,7 @@ struct fd_t {
    int owner;           /* Associated bound/listening fdn (if any) */
    unsigned long tmout; /* Timeout or 0 if none */
    int flags;           /* Flags */
+   int type;            /* Protocol type: STREAM, DGRAM, etc. */
    bool connected;      /* Is connected */
    bool bound;          /* Is bound/listentimg */
    bool closed;         /* Tagged to close when the buffer goes empty. */
@@ -81,8 +86,7 @@ struct fd_t {
    int keepalive;       /* Keep alive flag */
    std::deque<unsigned char> buffer; /* Data in buffer */
    bool islistening() {
-      /* Listening port is defined as bound and maxconnect non-negative. */
-      return bound == true && maxconnect >= 0;
+      return type == SOCK_STREAM && bound == true && maxconnect >= 0;
    }
    fd_t(IPAddress _ip, int _port, int _owner): buffer() {
       fdn = 0;
@@ -90,6 +94,7 @@ struct fd_t {
       port = _port;
       owner = _owner;
       tmout = 0;
+      type = SOCK_STREAM; /* This is the most common one. */
       connected = false;
       bound = false;
       closed = false;
@@ -105,6 +110,7 @@ struct fd_t {
       port = _port;
       owner = -1;
       tmout = 0;
+      type = SOCK_STREAM; /* This is the most common one. */
       connected = false;
       bound = false;
       closed = false;
@@ -120,6 +126,7 @@ struct fd_t {
       port = -1;
       owner = -1;
       tmout = 0;
+      type = SOCK_STREAM; /* This is the most common one. */
       connected = false;
       bound = false;
       closed = false;
@@ -135,6 +142,7 @@ struct fd_t {
       port = -1;
       owner = _owner;
       tmout = 0;
+      type = SOCK_STREAM; /* This is the most common one. */
       connected = false;
       bound = false;
       closed = false;
@@ -164,11 +172,12 @@ std::vector<fd_t> _fdlist;
 sc_semaphore onewrite("onewrite", 1);
 int alloc(int owner = -1); /* -1 means no owner. */
 bool isopen(int fd);
-int espm_sendmsg(int port, const char *msg, int size = -1, bool escape = false,
-      bool wait = true);
+static int __espm_sendmsg(int port, const char *msg, int size = -1,
+   int escape = ESCAPENONE, bool wait = true);
+static int __espm_receive(int ind, void *mem, size_t len, int flags);
 int espm_getind(int fd);
 void fillbuffers();
-void takerequest();
+void takerequest(int *ind);
 int _controlfd;
 int _controlport;
 bool _portclosed;
@@ -277,8 +286,14 @@ int espm_select(int maxfdp1, fd_set *readset, fd_set *writeset,
  * ignored.
  */
 int espm_socket(int domain, int type, int protocol) {
+   int fd;
    errno = 0;
-   return alloc();
+   fd = alloc();
+   if (fd < 0) return fd;
+   int ind = espm_getind(fd);
+   if (ind < 0) { errno = EBADF; return -1; }
+   _fdlist[ind].type = type;
+   return fd;
 }
 /* For now all we do is set the timeout value. */
 int espm_setsockopt(int s, int level, int optname, const void *optval,
@@ -331,7 +346,7 @@ int espm_connect(int s, const struct sockaddr *name, socklen_t namelen) {
    WiFiSerial.setTimeout(_fdlist[ind].tmout);
    snprintf(request_ipstr, 40, "\xff""c %s:%d\r\n",
       _fdlist[ind].ip.toString().c_str(), _fdlist[ind].port);
-   espm_sendmsg(_controlport, request_ipstr);
+   __espm_sendmsg(_controlport, request_ipstr);
    espm_readline(_fdlist[ind].fdn, &msg);
 
    /* Then we check the message, if it starts with a control followed by a "y"
@@ -444,7 +459,7 @@ int espm_accept(int s, struct sockaddr *addr, socklen_t *addrlen) {
    snprintf(buffer, 80, "\xff%dy %02x:%02x:%02x:%02x:%02x:%02x %s:%d\r\n",
       _fdlist[aind].port, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5],
       IPAddress(ipinfo.ip.addr).toString().c_str(), _fdlist[aind].port);
-   espm_sendmsg(_controlport, buffer);
+   __espm_sendmsg(_controlport, buffer);
    /* And we return the accept socket. */
    return afd;
 }
@@ -492,7 +507,7 @@ int espm_close(int s) {
    if (_fdlist[ind].connected) {
       char buf[15];
       snprintf(buf, 15, "\xff%d!\r\n", _fdlist[ind].port);
-      espm_sendmsg(_controlport, buf);
+      __espm_sendmsg(_controlport, buf);
    }
    /* We remove the file descriptor */
    _fdlist.erase(_fdlist.begin()+ind);
@@ -584,98 +599,48 @@ int espm_write (int fd, const void *buf, size_t count) {
       errno = EBADF;
       return -1;
    }
-   return espm_sendmsg(_fdlist[ind].port, msg, count, true,
+   return __espm_sendmsg(_fdlist[ind].port, msg, count, ESCAPEALL,
          ((_fdlist[ind].flags & O_NONBLOCK) == O_NONBLOCK)?false:true);
 }
 int espm_recv(int s, void *mem, size_t len, int flags) {
-   size_t p;
    int ind = espm_getind(s);
-   unsigned long starttime = millis();
-   unsigned char *msg = (unsigned char *)mem;
 
    errno = 0;
    if (ind < 0) {
       errno = EBADF;
       return -1;
    }
-   /* We can only read from a connected or a listening socket. */
-   if (!_fdlist[ind].connected && !_fdlist[ind].islistening()) {
-      errno = EBADF;
-      return -1;
-   }
-   /* We now check the flags. */
-   if (((flags & MSG_DONTWAIT) == MSG_DONTWAIT || 
-         _fdlist[ind].flags & O_NONBLOCK)
-         && (_fdlist[ind].buffer.size() == 0 || len == 0)) {
-      errno = EWOULDBLOCK;
-      return -1;
-   }
-   /* This could change later but for now we do not support peeking. */
-   if (flags & ~(MSG_WAITALL | MSG_DONTWAIT) > 0) {
-      errno = EOPNOTSUPP;
-      return -1;
-   }
-   /* If the other side of a file descriptor has been closed we also return
-    * zero width, but only if there is nothing else in the stream. */
-   if (_fdlist[ind].closed && _fdlist[ind].buffer.size() == 0) {
-      return 0;
-   }
-
-   /* If we now read until we take in all chars or, if WAITALL was not present,
-    * until we have emptied out the buffer.
-    */
-   p = 0;
-   while(p < len) {
-      /* If we don't have waitall and the buffer is empty, we stop. */
-      if ((flags & MSG_WAITALL) != MSG_WAITALL
-          && _fdlist[ind].buffer.size() == 0) break;
-      /* If we do have the WAITALL and there is no data, we wait. */
-      if ((flags & MSG_WAITALL) == MSG_WAITALL) {
-         while(_fdlist[ind].buffer.size() == 0) {
-            del1cycle();
-
-            /* We check for timeouts too. */
-            if (_fdlist[ind].tmout != 0
-                  && millis() > starttime + _fdlist[ind].tmout) {
-                errno = ETIMEDOUT;
-                return -1;
-            }
-         }
-      }
-      /* And we take the char */
-      msg[p] = _fdlist[ind].buffer.front();
-      _fdlist[ind].buffer.pop_front();
-      p = p + 1;
-   }
-   return p;
+   return __espm_receive(ind, mem, len, flags);
 }
+
 int espm_recvfrom(int s, void *mem, size_t len, int flags,
       struct sockaddr *src_addr, socklen_t *addrlen) {
    int resplen;
    int ind = espm_getind(s);
 
-   /* recvfrom is actually for connectionless messages, like done with UDP.
-    * This is not yet supported. So we will require a connection for now.
-    * If not connected we then return that we did not get anything.
-    */
    errno = 0;
    if (ind < 0) {
       errno = EBADF;
       return -1;
    }
    /* This should not happen. If there is an address to write to we need
-    * an address length.
+    * an address length. The address length valid and the address null does
+    * not make any sense, so we will be picky and complain.
     */
    if (src_addr != NULL && addrlen == NULL) { errno = EINVAL; return -1; }
+   if (src_addr == NULL && addrlen != NULL) { errno = EINVAL; return -1; }
 
-   resplen = espm_recv(s, mem, len, flags);
+   /* The message seems to be valid, so we can attempt to receive it. */
+   resplen = __espm_receive(ind, mem, len, flags);
+
    /* If it failed, we then go ahead and return failure. */
    if (resplen < 0) return -1;
 
    /* If it succeded, we can return the source address. We only do this if the
     * address points to a real place. If it fails, we return a failure.
     */
-   if (espm_getpeername(s, src_addr, addrlen) > 0) return -1;
+   if (src_addr != NULL && addrlen != NULL
+      && espm_getpeername(s, src_addr, addrlen) > 0) return -1;
 
    /* If it succeeded, we return the responded length. */
    return resplen;
@@ -685,6 +650,7 @@ int espm_recvfrom(int s, void *mem, size_t len, int flags,
 int espm_read(int s, void *mem, size_t len) {
    return espm_recv(s, mem, len, MSG_WAITALL);
 }
+
 int espm_readline(int s, String *msg, bool usetimeout) {
    char nchar;
    int starttime = millis();
@@ -750,23 +716,43 @@ int espm_send(int socket, const void *buffer, size_t length, int flags) {
       errno = EBADF;
       return -1;
    }
-   if (!_fdlist[ind].connected || _fdlist[ind].islistening()) {
-      errno = ENOTCONN; /* TODO listening too? or EAGAIN? */
+   /* SOCK_STREAM must be connected. The others must not be connected. */
+   if (_fdlist[ind].type == SOCK_STREAM && !_fdlist[ind].connected) {
+      errno = ENOTCONN;
       return -1;
    }
-   return espm_sendmsg(_fdlist[ind].port, msg, length, true,
+   else if (_fdlist[ind].type != SOCK_STREAM && _fdlist[ind].connected) {
+      errno = EISCONN;
+      return -1;
+   }
+   /* The port must be bound and listening. SOCK_STREAM need to be listening,
+    * others need to just be bound.
+    */
+   if (_fdlist[ind].type == SOCK_STREAM && !_fdlist[ind].islistening() ||
+         _fdlist[ind].type != SOCK_STREAM && !_fdlist[ind].bound) {
+      errno = EAGAIN;
+      return -1;
+   }
+   /* And we call the internal send task if it is all ok. */
+   return __espm_sendmsg(_fdlist[ind].port, msg, length, ESCAPEALL,
          ((_fdlist[ind].flags & O_NONBLOCK) == O_NONBLOCK ||
           (flags & MSG_DONTWAIT) == MSG_DONTWAIT)?false:true);
 }
 
+/* sendto is intended for UDP connections. It does not need a connection
+ * to be made. It simply sends the packet to the provided destination.
+ */
 int espm_sendto(int socket, const void *buffer, size_t length, int flags,
       const struct sockaddr *dest_addr, socklen_t dest_len) {
    int ind;
+   const struct sockaddr_in *dip;
+   dip = (const struct sockaddr_in *)dest_addr;
 
    errno = 0;
    /* First we get rid of some dumb errors. */
    if (dest_addr == NULL && dest_len != 0) { errno = EINVAL; return -1; }
    if (dest_addr != NULL && dest_len == 0) { errno = EINVAL; return -1; }
+
    /* If no dest_addr was given, as the man page states, it is the same as
     * calling send().
     */
@@ -777,16 +763,30 @@ int espm_sendto(int socket, const void *buffer, size_t length, int flags,
    if (ind < 0) { errno = EBADF; return -1; }
    if (length > 1460) { errno = EMSGSIZE; return -1; }
 
-   /* Now we attempt to connect. Note that actually UDP packets do not do a
-    * connection, we just send the message out and hope it reaches someone.
-    * In the environment as it is built though, we do not have that yet, so
-    * we do a secret connect.
+   /* We can optionally give an EISCONN if the we are dealing with a
+    * SOCK_STREAM and we get an address.
     */
-   if (!_fdlist[ind].connected)
-      if (espm_connect(socket, dest_addr, dest_len) < 0) return -1;
+   if (_fdlist[ind].type == SOCK_STREAM || _fdlist[ind].type==SOCK_SEQPACKET) {
+      errno = EISCONN;
+      return -1;
+   }
+   /* Regular DGRAMS also need to return EISCONN if they are connected. */
+   else if (_fdlist[ind].connected) {
+      errno = EISCONN;
+      return -1;
+   }
 
-   /* And we can send the message. */
-   return espm_send(socket, buffer, length, flags);
+   /* Now we make the packet and send it. The packet must have an IP address. */
+   char *msgtosend = new char(length+40);
+   if (msgtosend == NULL) { errno = ENOMEM; return -1; }
+   snprintf(msgtosend, 40, "\xff""s %s:%d:",
+      IPAddress(dip->sin_addr.s_addr).toString().c_str(), ntohs(dip->sin_port));
+   /* We tack the buffer to the end of the command. */
+   int len = strlen(msgtosend);
+   memcpy(&(msgtosend[len]), buffer, length);
+   /* And we send it. */
+   return __espm_sendmsg(_controlport, msgtosend, length, ESCAPEFROMCOLON,
+      (flags & MSG_DONTWAIT) == MSG_DONTWAIT||_fdlist[ind].flags & O_NONBLOCK);
 }
 
 int espm_getpeername(int s, struct sockaddr *addr, socklen_t *addrlen) {
@@ -872,13 +872,73 @@ int espm_getind(int fd) {
    return -1;
 }
 
-int espm_sendmsg(int port, const char *msg, int size, bool escape,
+int __espm_receive(int ind, void *mem, size_t len, int flags) {
+   size_t p;
+   unsigned long starttime = millis();
+   unsigned char *msg = (unsigned char *)mem;
+
+   /* If this is a connection based socket it must be connected. */
+   if (_fdlist[ind].type == SOCK_STREAM && (!_fdlist[ind].connected ||
+         !_fdlist[ind].islistening())) {
+      errno = ENOTCONN;
+      return -1;
+   }
+
+   /* We now check the flags. */
+   if (((flags & MSG_DONTWAIT) == MSG_DONTWAIT || 
+         _fdlist[ind].flags & O_NONBLOCK)
+         && (_fdlist[ind].buffer.size() == 0 || len == 0)) {
+      errno = EWOULDBLOCK;
+      return -1;
+   }
+   /* This could change later but for now we do not support peeking. */
+   if (flags & ~(MSG_WAITALL | MSG_DONTWAIT) > 0) {
+      errno = EOPNOTSUPP;
+      return -1;
+   }
+   /* If the other side of a file descriptor has been closed we also return
+    * zero width, but only if there is nothing else in the stream. */
+   if (_fdlist[ind].closed && _fdlist[ind].buffer.size() == 0) {
+      return 0;
+   }
+
+   /* If we now read until we take in all chars or, if WAITALL was not present,
+    * until we have emptied out the buffer.
+    */
+   p = 0;
+   while(p < len) {
+      /* If we don't have waitall and the buffer is empty, we stop. */
+      if ((flags & MSG_WAITALL) != MSG_WAITALL
+          && _fdlist[ind].buffer.size() == 0) break;
+      /* If we do have the WAITALL and there is no data, we wait. */
+      if ((flags & MSG_WAITALL) == MSG_WAITALL) {
+         while(_fdlist[ind].buffer.size() == 0) {
+            del1cycle();
+
+            /* We check for timeouts too. */
+            if (_fdlist[ind].tmout != 0
+                  && millis() > starttime + _fdlist[ind].tmout) {
+                errno = ETIMEDOUT;
+                return -1;
+            }
+         }
+      }
+      /* And we take the char */
+      msg[p] = _fdlist[ind].buffer.front();
+      _fdlist[ind].buffer.pop_front();
+      p = p + 1;
+   }
+   return p;
+}
+
+int __espm_sendmsg(int port, const char *msg, int size, int escstyle,
       bool wait) {
    int p;
    int portstrptr;
    static int lastport = -1;
    char portstr[14];
    int len;
+   bool escape;
    //onewrite.wait();
    /* If requested, we begin sending the port number. This, we do only if the
     * previous packet was not a control packet (they have no ports) nor was
@@ -904,6 +964,10 @@ int espm_sendmsg(int port, const char *msg, int size, bool escape,
       portstr[0] = '\0';
       lastport = -1;
    }
+
+   /* We check the escape style to see if we should escape or not. */
+   if (escstyle == ESCAPEALL) escape = true;
+   else escape = false;
 
    /* We only start sending if there is enough space for the port string
     * (if requested) and at least one character. If the first char is an
@@ -940,6 +1004,12 @@ int espm_sendmsg(int port, const char *msg, int size, bool escape,
          portstrptr = portstrptr + 1;
          continue;
       }
+
+      /* We look at the current character. If it is a colon and we are set to
+       * start escaping from the first colon, we then switch the flag.
+       */
+      if (!escape && escstyle == ESCAPEFROMCOLON && msg[p] == ':')
+         escape = true;
 
       /* Now we look at the main message. If this is a non-blocking operation
        * and there is no space in the FIFO we just quit. So we see if there is
@@ -1013,14 +1083,14 @@ void fillbuffers() {
       token = WiFiSerial.bl_read();
 
       /* If an escape comes in we do a second read. */
-      if (token == 0xff) escaped = WiFiSerial.bl_read();
+      if (token == '\xff') escaped = WiFiSerial.bl_read();
       else escaped = '\0';
 
       /* If we are in the middle of a message (ind > 0) and data came in,
        * we simply forwarded it to the corresponding stream. Escaped FF we
        * treat the same way.
        */
-      if (token == 0xff && escaped == 0xff || token != 0xff) {
+      if (token == '\xff' && escaped == '\xff' || token != '\xff') {
          if (_portclosed) {
             /* A port was closed since last time we looked. So we need to
              * find out the index again. And we also clear the flag.
@@ -1078,7 +1148,12 @@ void fillbuffers() {
       /* We got a connect request. These are handled automatically here,
        * as long as there is a socket listening for it.
        */
-      else if (escaped == 'c') takerequest();
+      else if (escaped == 'c') takerequest(NULL);
+      /* The send messages are used by UDP. These packets look kinda a conenct
+       * followed by data. So, we use the same function. If it is valid, then
+       * the function changes the ind so that the data will be taken too.
+       */
+      else if (escaped == 's') takerequest(&ind);
       /* We have another control command. We then just send it to the control
        * buffer and let the requesting command deal with it.
        */
@@ -1098,38 +1173,88 @@ void fillbuffers() {
    }
 }
 
-void takerequest() {
+/* Take request is for handling connect and send requests. For connect, the
+ * ind argument should be NULL. For the send command, the ind should be a
+ * pointer to the index variable so the data can be collected.
+ */
+void takerequest(int *ind) {
    unsigned char rec;
    bool bad;
    String msg;
    int a1, a2, a3, a4, port;
    int it;
+   bool connect;
+
+   /* We can have a 'c' or an 's' command. We then look for either:
+    *    %d.%d.%d.%d:%p   <connect>
+    *
+    *    or
+    *
+    *    %d.%d.%d.%d:%p:  <send>
+    */
+   /* If the ind pointer is NULL, this is a connect command. If not, it is
+    * a send.
+    */
+   if (ind == NULL) connect = true;
+   else connect = false;
+   
+   /* We then first look for a colon. We skip any spaces. */
    do {
       rec = WiFiSerial.bl_read();
       if (rec == ' ') continue;
       msg = msg + (char)rec;
-   } while(rec != '\n');
+   } while(rec != ':');
+   /* Now we go until the newline or second colon. */
+   do {
+      rec = WiFiSerial.bl_read();
+      if (rec == ' ') continue;
+      msg = msg + (char)rec;
+   } while(rec != ':' && rec != '\n');
 
-   /* We need the connection details to see if it is a match. */
+   /* If this is a connect and we did not get a \n, we discard everything that
+    * comes in until the newline.
+    */
+   if (connect) while(rec != '\n') rec = WiFiSerial.bl_read();
+
+   /* We should now have in msg the connection part of the command. We can then
+    * parse it to see if we have all we need and it is correct.
+    */
    if (5 != sscanf(msg.c_str(), "%d.%d.%d.%d:%d", &a1, &a2, &a3, &a4, &port)) {
       bad = true;
    }
 
-   /* If it is a connect message, we need a listening file descriptor. */
+   /* We now look to see if we have a receiving descriptor. This depends on the
+    * protocol type.
+    *    - the port must match
+    *    - connect can only go to SOCK_STREAM and send to the others.
+    *    - the port must be listening, either because it was bound and listen()
+    *        or just bound. The just bound is for SOCK_DGRAM.
+    */
    if (!bad) for(it = 0; it < (int)_fdlist.size(); it = it + 1) {
-      if (_fdlist[it].islistening() && _fdlist[it].port == port) break;
+      if (_fdlist[it].islistening() && _fdlist[it].port == port &&
+         (connect && _fdlist[it].type == SOCK_STREAM ||
+         !connect && _fdlist[it].type != SOCK_STREAM)) break;
    }
 
-   /* If we did not find it or we found it and the number of connections
-    * has been exceeded, we reject it. We also reject bad messages. We
-    * respond by sending the request back so that the correct client knows
-    * the message is for him.
+   /* First we look at datagrams we got. If the message is not bad, the
+    * descriptor is valid and it is not of type STREAM, we then return ok. The
+    * calling function will take in the data.
+    */
+   if (!bad && it < (int)_fdlist.size() && _fdlist[it].type != SOCK_STREAM) {
+      *ind = it;
+      return;
+   }
+    
+   /* SOCK_STREAM packets need a connection. We then check that the number
+    * of connections has been exceeded, we reject it. We also reject bad
+    * messages. We respond by sending the request back so that the correct
+    * client knows the message is for him.
     */
    if (bad || it == (int)_fdlist.size()
          || _fdlist[it].connections == _fdlist[it].maxconnect) {
       msg = _fdlist[it].port + msg;
       msg = String("\xff") + msg;
-      espm_sendmsg(_controlport, msg.c_str());
+      __espm_sendmsg(_controlport, msg.c_str());
    }
    else {
       /* The others we put in the list to be accepted. We already count it

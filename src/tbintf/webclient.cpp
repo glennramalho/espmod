@@ -788,7 +788,6 @@ void webclient::fillbuffers() {
    int port = -1;
    int ind = -1;
    char token, escaped;
-   String msg;
 
    /* We begin initializing the buffers. We need the -1 port. */
    _portlist.push_back(wifiport_t(-1));
@@ -875,9 +874,47 @@ void webclient::fillbuffers() {
          /* If it was a colon, we just discard it.  The rest should go to the
           * port. */
       }
-      /* If this is not a port number, we send the message to the control
-       * port. We simply send the command to the control buffer.
-       */
+      /* If this is not a port number, we check to see if this is a UDP send. */
+      else if (escaped == 's') {
+         /* We now parse the message to get the IP and port. */
+         String msg = "";
+         int newind;
+         int a1, a2, a3, a4, port;
+         /* We go until we get the second colon. */
+         do {
+            escaped = i_uwifi.from.read();
+            msg = msg + escaped;
+         } while (escaped != ':');
+         do {
+            escaped = i_uwifi.from.read();
+            msg = msg + escaped;
+         } while (escaped != ':');
+         /* We check the address and port to see if it is ok. */
+         if (5 != sscanf(msg.c_str(), "%d.%d.%d.%d:%d",&a1,&a2,&a3,&a4,&port)) {
+            PRINTF_ERROR("WEBCLI", "Got an illegal send command");
+            do escaped = i_uwifi.from.read();
+            while (escaped != '\n');
+         }
+         /* We now try to find an open matching port. Note that we do not yet
+          * check the IP. This is UDP, so we just discard messages to non-open
+          * ports.
+          */
+         else {
+            newind = getnotclosed(port);
+            if (newind < 0) {
+               /* We did not find a matching port, so we dump it. */
+               do escaped = i_uwifi.from.read();
+               while (escaped != '\n');
+            }
+            /* If we found a matching port, we set the ind to it so that the
+             * data goes into the correct port.
+             */
+            else ind = newind; 
+         }
+         /* Other commands like connect, we simply let them go to the control
+          * fifo.
+          */
+      }
       else {
          /* We take all chars until the end of the command. Then we send the
           * notification. Note that we do not need to send the notification
