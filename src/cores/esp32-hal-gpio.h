@@ -115,8 +115,6 @@ void detachInterrupt(uint8_t pin);
 #define PIN_WIRE_SDA SDA
 #define PIN_WIRE_SCL SCL
 
-const char *pinname(int pin);
-
 #include <sdkconfig.h>
 
 #ifdef __cplusplus

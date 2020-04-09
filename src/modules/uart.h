@@ -33,8 +33,26 @@ SC_MODULE(uart) {
    void intake();
    void outtake();
 
+   private:
    sc_time baudperiod;
+   int baudrate;
+   bool debug;
+   bool autodetect;
+   int stopbits; /* 0: invalid, 1: one bit, 2: 1.5 bits, 3: 2 bits */
+
+   public:
    void set_baud(unsigned int baudrate);
+   void set_debug(bool on) { debug = on; }
+   bool get_debug() { return debug; }
+   bool get_baud() { return baudrate; }
+   void set_stop(int _sp) { stopbits = _sp; }
+   int get_stop() { return stopbits; }
+
+   /* This enables the autodetect. It will take the first message and discard
+    * it. Only the start bit will be used.
+    */
+   void setautodetect() { autodetect = true; }
+   int getautorate();
 
    uart(sc_module_name name, int tx_buffer_size, int rx_buffer_size):
          rx("rx"), tx("tx"),
@@ -43,6 +61,10 @@ SC_MODULE(uart) {
       sensitive << rx;
       SC_THREAD(outtake); /* Active when something is in the fifo. */
       set_baud(115200); /* The default is 115200. */
+
+      autodetect = false;
+      debug = false;
+      stopbits = 1;
    }
    SC_HAS_PROCESS(uart);
 };

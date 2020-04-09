@@ -20,6 +20,7 @@
 
 #include <systemc.h>
 #include "uart.h"
+#include "info.h"
 
 void uart::intake() {
    char buffer[100];
@@ -37,6 +38,46 @@ void uart::intake() {
       wait();
       if (rx.read() != false) continue;
 
+      /* If we are in autodetect mode, we will keep looking for a rise. */
+      if (autodetect) {
+         sc_time start = sc_time_stamp();
+         wait(sc_time(2, SC_MS), rx.value_changed_event());
+         sc_time delta = start - sc_time_stamp();
+         if (delta >= sc_time(2, SC_MS)) {
+            PRINTF_WARN("UART", "%s: autodetect timed out", name());
+            set_baud(300);
+         }
+         else if (delta >= sc_time(3, SC_MS)) set_baud(300);
+         else if (delta >= sc_time(1, SC_MS)) set_baud(600);
+         else if (delta >= sc_time(800, SC_US)) set_baud(1200);
+         else if (delta >= sc_time(400, SC_US)) set_baud(2400);
+         else if (delta >= sc_time(200, SC_US)) set_baud(4800);
+         else if (delta >= sc_time(100, SC_US)) set_baud(9600);
+         else if (delta >= sc_time(50, SC_US)) set_baud(19200);
+         else if (delta >= sc_time(20, SC_US)) set_baud(38400);
+         else if (delta >= sc_time(15, SC_US)) set_baud(57600);
+         else if (delta >= sc_time(12, SC_US)) set_baud(74880);
+         else if (delta >= sc_time(7, SC_US)) set_baud(115200);
+         else if (delta >= sc_time(4, SC_US)) set_baud(230400);
+         else if (delta >= sc_time(3, SC_US)) set_baud(256000);
+         else if (delta >= sc_time(2, SC_US)) set_baud(460800);
+         else if (delta >= sc_time(900, SC_NS)) set_baud(921600);
+         else if (delta >= sc_time(400, SC_NS)) set_baud(1843200);
+         else if (delta >= sc_time(200, SC_NS)) set_baud(3686400);
+         else {
+            PRINTF_WARN("UART", "rate too fast on UART %s", name());
+            set_baud(3686400);
+         }
+         /* We wait now for the packet to end, assuming 2 stop bits and some
+          * extra time.
+          */
+         wait(baudperiod * 10);
+         /* And we clear the flag. */
+         autodetect = false;
+
+         continue;
+      }
+
       /* In the real circuit we should do a larger delay to make sure clock
        * jitter and other errors do not kill us. In this simulation
        * environment though, it is ok to wait a short time as we know
@@ -48,8 +89,9 @@ void uart::intake() {
       /* And we take one bit at a time and merge them together. */
       msg = 0;
       for(cnt = 0, pos = 1; cnt < 8; cnt = cnt + 1, pos = pos << 1) {
-         /*printf("[%s/%d]: r %s\n", name(), cnt,
-            sc_time_stamp().to_string().c_str()); */
+         if (debug) {
+            PRINTF_INFO("UART", "[%s/%d]: received", name(), cnt);
+         }
          incomming = rx.read();
          if (incomming == true) msg = msg | pos;
          else if (incomming != false) {
@@ -64,13 +106,13 @@ void uart::intake() {
        * the sender has no way to know if the buffer has space or not.
        */
       if (from.num_free() == 0) {
-         snprintf(buffer, 100, "Buffer overflow on UART %s", name());
-         SC_REPORT_WARNING("UART", buffer);
+         PRINTF_WARN("UART", "Buffer overflow on UART %s", name());
       }
       else {
          from.write(msg);
-         /*printf("[%s] received-%c/%x @ %s\n", name(), msg, msg,
-            sc_time_stamp().to_string().c_str()); */
+         if (debug) {
+            PRINTF_INFO("UART", "[%s] received-%c/%x\n", name(), msg, msg);
+         }
       }
    }
 }
@@ -83,24 +125,37 @@ void uart::outtake() {
    while(true) {
       /* We block until we receive something to send. */
       msg = to.read();
-      /*printf("[%s] sending-%c/%x @ %s\n", name(), msg, msg,
-         sc_time_stamp().to_string().c_str()); */
+      if (debug) {
+         PRINTF_INFO("UART","[%s] sending-%c/%x", name(), msg, msg);
+      }
       /* Then we send the packet asynchronously. */
       tx.write(false);
       wait(baudperiod);
       for(cnt = 0, pos = 1; cnt < 8; cnt = cnt + 1, pos = pos << 1) {
-         /*printf("[%s/%d]: s %s\n", name(), cnt,
-            sc_time_stamp().to_string().c_str());*/
+         if(debug) {
+            PRINTF_INFO("UART", "[%s/%d]: sent", name(), cnt);
+         }
          if ((pos & msg)>0) tx.write(true);
          else tx.write(false);
          wait(baudperiod);
       }
       /* And we send the stop bit. */
       tx.write(true);
-      wait(baudperiod);
+      if (stopbits < 2) wait(baudperiod);
+      else if (stopbits == 2) wait(baudperiod + baudperiod / 2);
+      else wait(baudperiod * 2);
    }
 }
 
 void uart::set_baud(unsigned int rate) {
+   baudrate = rate;
    baudperiod = sc_time(8680, SC_NS) * (115200 / rate);
 }
+
+int uart::getautorate() {
+      /* If autodetect is still true, it is not done, we return 0. */
+      if (autodetect) { return 0; }
+      /* if it is false, we return the rate. */
+      else { return get_baud(); }
+   }
+
