@@ -603,7 +603,7 @@ int espm_write (int fd, const void *buf, size_t count) {
       errno = EBADF;
       return -1;
    }
-   if (!_fdlist[ind].connected || _fdlist[ind].islistening()) {
+   if (!_fdlist[ind].connected) {
       errno = EBADF;
       return -1;
    }
@@ -726,7 +726,7 @@ int espm_send(int socket, const void *buffer, size_t length, int flags) {
       errno = EBADF;
       return -1;
    }
-   /* SOCK_STREAM must be connected. The others must not be connected. */
+   /* SOCK_STREAM must be connected, either via a connect() or listening accept(). */
    if (_fdlist[ind].type == SOCK_STREAM && !_fdlist[ind].connected) {
       errno = ENOTCONN;
       return -1;
@@ -735,11 +735,8 @@ int espm_send(int socket, const void *buffer, size_t length, int flags) {
       errno = EISCONN;
       return -1;
    }
-   /* The port must be bound and listening. SOCK_STREAM need to be listening,
-    * others need to just be bound.
-    */
-   if (_fdlist[ind].type == SOCK_STREAM && !_fdlist[ind].islistening() ||
-         _fdlist[ind].type != SOCK_STREAM && !_fdlist[ind].bound) {
+   /* SOCK_DGRAMs also must be bound. */
+   if (_fdlist[ind].type != SOCK_STREAM && !_fdlist[ind].bound) {
       errno = EAGAIN;
       return -1;
    }
@@ -900,12 +897,13 @@ int __espm_receive(int s, void *mem, size_t len, int flags) {
       return -1;
    }
 
-   /* To read a sock_stream most be set to connected or listening. SOCK_DGRAM
-    * does not need any of them.
-    */
-   if (_fdlist[ind].type == SOCK_STREAM && !_fdlist[ind].connected &&
-         !_fdlist[ind].islistening()) {
+   /* To read a SOCK_STREAM must be set to connected. SOCK_DGRAM need to be bound. */
+   if (_fdlist[ind].type == SOCK_STREAM && !_fdlist[ind].connected) {
       errno = ENOTCONN;
+      return -1;
+   }
+   else if (_fdlist[ind].type != SOCK_STREAM && !_fdlist[ind].bound) {
+      errno = EAGAIN;
       return -1;
    }
 
