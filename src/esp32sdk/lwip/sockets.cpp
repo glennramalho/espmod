@@ -86,7 +86,8 @@ struct fd_t {
    int keepalive;       /* Keep alive flag */
    std::deque<unsigned char> buffer; /* Data in buffer */
    bool islistening() {
-      return type == SOCK_STREAM && bound == true && maxconnect >= 0;
+      return (type == SOCK_STREAM || type == SOCK_SEQPACKET)
+         && bound == true && maxconnect >= 0;
    }
    fd_t(IPAddress _ip, int _port, int _owner): buffer() {
       fdn = 0;
@@ -176,6 +177,7 @@ bool isopen(int fd);
 static int __espm_sendmsg(int port, const char *msg, int size = -1,
    int escape = ESCAPENONE, bool wait = true);
 static int __espm_receive(int s, void *mem, size_t len, int flags);
+static int __espm_readline(int s, String *msg, bool usetimeout = false);
 int espm_getind(int fd);
 void fillbuffers();
 void takerequest(int *ind);
@@ -289,6 +291,21 @@ int espm_select(int maxfdp1, fd_set *readset, fd_set *writeset,
 int espm_socket(int domain, int type, int protocol) {
    int fd;
    errno = 0;
+   /* We do not have the fancy protocols. */
+   if (domain != AF_INET) {
+      errno = EAFNOSUPPORT;
+      return -1;
+   }
+   /* Currently we only support SOCK_STREAM and SOCK_DGRAM */
+   if (type != SOCK_STREAM && type != SOCK_DGRAM) {
+      errno = EPROTONOSUPPORT;
+      return -1;
+   }
+   /* Currently we only support protocol 0 */
+   if (protocol != 0) {
+      errno = EPROTONOSUPPORT;
+      return -1;
+   }
    fd = alloc();
    if (fd < 0) return fd;
    int ind = espm_getind(fd);
@@ -299,25 +316,38 @@ int espm_socket(int domain, int type, int protocol) {
 /* For now all we do is set the timeout value. */
 int espm_setsockopt(int s, int level, int optname, const void *optval,
       socklen_t optlen) {
-   struct timeval tv;
    errno = 0;
    if (optval == NULL) { errno = EFAULT; return -1; }
    int ind = espm_getind(s);
    if (ind < 0) { errno = EBADF; return -1; }
    if (level == SOL_SOCKET
          && (optname == SO_RCVTIMEO || optname == SO_SNDTIMEO)) {
-      tv.tv_sec = 0;
-      tv.tv_usec = 0;
-      memcpy((void *)&tv, optval, optlen);
+      struct timeval tv;
+      if (optlen < sizeof(struct timeval)) {
+         errno = EINVAL;
+         return -1;
+      }
+      tv.tv_sec = ((struct timeval *)optval)->tv_sec;
+      tv.tv_usec = ((struct timeval *)optval)->tv_usec;
       _fdlist[ind].tmout = tv.tv_sec*1000 + tv.tv_usec/1000;
    }
-   else if (level == SOL_SOCKET && optname == SO_KEEPALIVE)
-      memcpy((void *)&(_fdlist[ind].keepalive), optval, optlen);
+   else if (level == SOL_SOCKET && optname == SO_KEEPALIVE) {
+      if (optlen < sizeof(int)) {
+         errno = EINVAL;
+         return -1;
+      }
+      _fdlist[ind].keepalive = *(int *)optval;
+   }
    else if (level == SOL_SOCKET && optname == SO_REUSEADDR) {
       /* For now we ignore this option. Perhaps it should be added later. */
    }
-   else if (level == IPPROTO_TCP && optname == TCP_NODELAY)
-      memcpy((void *)&(_fdlist[ind].tcpnodelay), optval, optlen);
+   else if (level == IPPROTO_TCP && optname == TCP_NODELAY) {
+      if (optlen < sizeof(int)) {
+         errno = EINVAL;
+         return -1;
+      }
+      _fdlist[ind].tcpnodelay = *(int *)optval;
+   }
    else {
       errno = EINVAL;
       return -1;
@@ -329,14 +359,27 @@ int espm_connect(int s, const struct sockaddr *name, socklen_t namelen) {
    int ind = espm_getind(s);
    const struct sockaddr_in *rip;
    String msg;
-   char request_ipstr[40];
+   char request_ipstr[50]; /* Quite long in case it is IPv6. */
 
-   rip = (const struct sockaddr_in *)name;
    errno = 0;
-   if (rip == NULL) { errno = EPROTOTYPE; return -1; }
-   if (rip->sin_family != AF_INET) { errno = EPROTOTYPE; return -1; }
+   /* We first do some basic checking. */
    if (ind < 0) { errno = EBADF; return -1; }
+   if (name == NULL) { errno = EPROTOTYPE; return -1; }
+   if (namelen < sizeof(sockaddr_in)) { errno = EINVAL; return -1; }
+
+   /* Now we check the data, that the porotype is ok, the file descriptor is
+    * valid and so on.
+    */
+   rip = (const struct sockaddr_in *)name;
+   if (rip->sin_family != AF_INET) { errno = EPROTOTYPE; return -1; }
+
+   /* If the socket is of type SOCK_DGRAM, this basically does a bind. */
+   if (_fdlist[ind].type == SOCK_DGRAM) return espm_bind(s, name, namelen);
+
+   /* The filedescriptor should not be already connected. */
    if (_fdlist[ind].connected) { errno = EISCONN; return -1; }
+
+   /* If it all looks ok, we can get the IP address and port. */
    _fdlist[ind].ip = IPAddress(rip->sin_addr.s_addr);
    _fdlist[ind].port = ntohs(rip->sin_port);
 
@@ -344,13 +387,18 @@ int espm_connect(int s, const struct sockaddr *name, socklen_t namelen) {
     * and send the connect request. After this we wait for the response to
     * return. If it is a "y" it succeeded. If it is a "n" it failed.
     */
-   WiFiSerial.setTimeout(_fdlist[ind].tmout);
-   snprintf(request_ipstr, 40, "\xff""c %s:%d\r\n",
+   snprintf(request_ipstr, 50, "\xff""c %s:%d\r\n",
       _fdlist[ind].ip.toString().c_str(), _fdlist[ind].port);
    onewrite.wait();
-   (void)__espm_sendmsg(_controlport, request_ipstr);
+   int resp;
+   WiFiSerial.setTimeout(_fdlist[ind].tmout);
+   resp = __espm_sendmsg(_controlport, request_ipstr);
    onewrite.post();
-   espm_readline(_fdlist[ind].fdn, &msg);
+   if (resp < 0) { return -1; }
+   oneread.wait();
+   resp = __espm_readline(_fdlist[ind].fdn, &msg);
+   oneread.post();
+   if (resp < 0) { return -1; }
 
    /* Then we check the message, if it starts with a control followed by a "y"
     * we then tag the socket as connected and return successful.
@@ -358,6 +406,8 @@ int espm_connect(int s, const struct sockaddr *name, socklen_t namelen) {
    if (msg.startsWith("\xffy")) {
       _fdlist[ind].connected = true;
       _fdlist[ind].bound = false;
+      PRINTF_INFO("SOCK", "Connected socket %d to IP %s port %d", s,
+            _fdlist[ind].ip.toString().c_str(), _fdlist[ind].port);
       return 0;
    }
    /* If we get anything else, we return that it was refused. Now, there are
@@ -378,14 +428,19 @@ int espm_bind(int socket, const struct sockaddr *address,
    struct sockaddr_in *radd = (struct sockaddr_in *)address;
    int ind = espm_getind(socket);
    errno = 0;
-   if (ind < 0) {
-      errno = EBADF;
-      return -1;
-   }
-   if (address == NULL) { errno = EOPNOTSUPP; return -1; }
+
+   /* We first do some basic checking. */
+   if (ind < 0) { errno = EBADF; return -1; }
+   if (address == NULL) { errno = EINVAL; return -1; }
+   if (address_len < sizeof(sockaddr_in)) { errno = EINVAL; return -1; }
+   if (_fdlist[ind].bound) { errno = EINVAL; return -1; }
+
+   /* We check that the protocol is the correct one. */
    if (radd->sin_family != AF_INET) { errno = EOPNOTSUPP; return -1; }
+   _fdlist[ind].ip = IPAddress(radd->sin_addr.s_addr);
    _fdlist[ind].port = ntohs(radd->sin_port);
    _fdlist[ind].bound = true;
+   /* The maxconnect is -1 until listen runs. */
    _fdlist[ind].maxconnect = -1;
 
    return ESP_OK;
@@ -394,12 +449,13 @@ int espm_bind(int socket, const struct sockaddr *address,
 int espm_listen(int socket, int backlog) {
    int ind = espm_getind(socket);
    errno = 0;
-   if (ind < 0) {
-      errno = EBADF;
-      return -1;
-   }
-   if (!_fdlist[ind].bound) {
-      errno = EINVAL;
+
+   /* Listen can only be ran on bound sockets of type SOCK_STREAM or SOCK_SEQPACKET.
+    */
+   if (ind < 0) { errno = EBADF; return -1; }
+   if (!_fdlist[ind].bound) { errno = EINVAL; return -1; }
+   if (_fdlist[ind].type != SOCK_STREAM && _fdlist[ind].type != SOCK_SEQPACKET) {
+      errno = EOPNOTSUPP;
       return -1;
    }
    _fdlist[ind].maxconnect = backlog;
@@ -412,11 +468,17 @@ int espm_accept(int s, struct sockaddr *addr, socklen_t *addrlen) {
    String msg;
    int ind = espm_getind(s);
    errno = 0;
-   if (addr == NULL) { errno = EINVAL; return -1; }
-   if (addrlen == NULL) { errno = EINVAL; return -1; }
-   if (ind < 0) { errno = EBADF; return -1; }
-   if (!_fdlist[ind].islistening() || _fdlist[ind].maxconnect <= 0)
+   /* We do the basic checking. */
+   if (addr == NULL && addrlen != NULL || addr != NULL && addrlen == NULL) {
+      errno = EINVAL; return -1;
+   }
+   if (addrlen != NULL && *addrlen < sizeof(struct sockaddr_in))
    { errno = EINVAL; return -1; }
+   if (ind < 0) { errno = EBADF; return -1; }
+   if (_fdlist[ind].type != SOCK_STREAM && _fdlist[ind].type != SOCK_SEQPACKET)
+   { errno = EOPNOTSUPP; return -1; }
+   if (!_fdlist[ind].islistening()) { errno = EINVAL; return -1; }
+
    /* If the other side of a file descriptor has been closed we also return
     * zero width, but only if there is nothing else in the stream. */
    if (_fdlist[ind].closed && _fdlist[ind].buffer.size() == 0)
@@ -427,7 +489,11 @@ int espm_accept(int s, struct sockaddr *addr, socklen_t *addrlen) {
       return -1;
    }
 
-   if (espm_readline(s, &msg) < 0) return -1;
+   int resp;
+   oneread.wait();
+   resp = __espm_readline(s, &msg);
+   oneread.post();
+   if (resp < 0) return -1;
 
    /* Now we parse the message to get the port.  If it is not correct, we
     * return a proto error.
@@ -442,10 +508,7 @@ int espm_accept(int s, struct sockaddr *addr, socklen_t *addrlen) {
    afd = alloc(s);
    if (afd < 0) return -1;
    aind = espm_getind(afd);
-   if (aind < 0) {
-      errno = EBADF;
-      return -1;
-   }
+   if (aind < 0) { errno = EBADF; return -1; }
    _fdlist[aind].ip = _fdlist[ind].ip;
    _fdlist[aind].port = _fdlist[ind].port;
    _fdlist[aind].flags = _fdlist[ind].flags;
@@ -463,8 +526,18 @@ int espm_accept(int s, struct sockaddr *addr, socklen_t *addrlen) {
       _fdlist[aind].port, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5],
       IPAddress(ipinfo.ip.addr).toString().c_str(), _fdlist[aind].port);
    onewrite.wait();
-   (void)__espm_sendmsg(_controlport, buffer);
+   resp = __espm_sendmsg(_controlport, buffer);
    onewrite.post();
+   if (resp <= 0) { espm_close(afd); errno = ECONNABORTED; return -1; }
+
+   PRINTF_INFO("SOCK", "Accepted socket %d lidstening %d from IP %s port %d", afd,
+         s, _fdlist[ind].ip.toString().c_str(), _fdlist[ind].port);
+
+   /* If the address is not null, then we fill the struct with the connection
+    * data. It should never fail as we should have done all the checking already.
+    */
+   if (addr != NULL) (void)espm_getsockname(afd, addr, addrlen);
+
    /* And we return the accept socket. */
    return afd;
 }
@@ -564,7 +637,6 @@ int espm_fcntl(int s, int cmd, int val) {
 int espm_getsockopt (int s, int level, int optname, void *optval,
       socklen_t *optlen) {
    errno = 0;
-   struct timeval tv;
    int ind = espm_getind(s);
    if (ind < 0) {
       errno = EBADF;
@@ -574,6 +646,7 @@ int espm_getsockopt (int s, int level, int optname, void *optval,
    if (optlen == NULL) { errno = EFAULT; return -1; }
    if (level == SOL_SOCKET
          && (optname == SO_RCVTIMEO || optname == SO_SNDTIMEO)) {
+      struct timeval tv;
       tv.tv_sec = _fdlist[ind].tmout / 1000;
       tv.tv_usec = (_fdlist[ind].tmout % 1000) * 1000;
       if (*optlen > sizeof(struct timeval))
@@ -599,14 +672,16 @@ int espm_write (int fd, const void *buf, size_t count) {
    const char *msg = (const char *)buf;
    int ind = espm_getind(fd);
 
-   if (ind < 0) {
-      errno = EBADF;
-      return -1;
+   if (ind < 0) { errno = EBADF; return -1; }
+   /* SOCK_DGRAM needs to be bound to have an address. */
+   if (!_fdlist[ind].bound && _fdlist[ind].type == SOCK_DGRAM) {
+      errno = EDESTADDRREQ; return -1;
    }
-   if (!_fdlist[ind].connected) {
-      errno = EBADF;
-      return -1;
+   /* SOCK_STREAM must be connected, either via a connect() or listening accept(). */
+   else if (!_fdlist[ind].connected && _fdlist[ind].type != SOCK_DGRAM) {
+      errno = EBADF; return -1;
    }
+
    onewrite.wait();
    resp = __espm_sendmsg(_fdlist[ind].port, msg, count, ESCAPEALL,
          ((_fdlist[ind].flags & O_NONBLOCK) == O_NONBLOCK)?false:true);
@@ -640,7 +715,6 @@ int espm_recvfrom(int s, void *mem, size_t len, int flags,
    errno = 0;
    resplen = __espm_receive(s, mem, len, flags);
    oneread.post();
-   if (resplen < 0) return -1;
 
    /* If it failed, we then go ahead and return failure. */
    if (resplen < 0) return -1;
@@ -660,7 +734,7 @@ int espm_read(int s, void *mem, size_t len) {
    return espm_recv(s, mem, len, MSG_WAITALL);
 }
 
-int espm_readline(int s, String *msg, bool usetimeout) {
+int __espm_readline(int s, String *msg, bool usetimeout) {
    char nchar;
    int starttime = millis();
    int ind;
@@ -722,16 +796,18 @@ int espm_send(int socket, const void *buffer, size_t length, int flags) {
    const char *msg = (const char *)buffer;
    int ind = espm_getind(socket);
    errno = 0;
-   if (ind < 0) {
-      errno = EBADF;
-      return -1;
+   if (ind < 0) { errno = EBADF; return -1; }
+   if (length > 1460) { errno = EMSGSIZE; return -1; }
+   /* SOCK_DGRAM needs to be bound to have an address. */
+   if (!_fdlist[ind].bound && _fdlist[ind].type == SOCK_DGRAM) {
+      errno = EDESTADDRREQ; return -1;
    }
    /* SOCK_STREAM must be connected, either via a connect() or listening accept(). */
-   if (_fdlist[ind].type == SOCK_STREAM && !_fdlist[ind].connected) {
-      errno = ENOTCONN;
-      return -1;
+   else if (!_fdlist[ind].connected && _fdlist[ind].type != SOCK_DGRAM) {
+      errno = ENOTCONN; return -1;
    }
-   else if (_fdlist[ind].type != SOCK_STREAM && _fdlist[ind].connected) {
+
+   if (_fdlist[ind].type != SOCK_STREAM && _fdlist[ind].connected) {
       errno = EISCONN;
       return -1;
    }
@@ -774,23 +850,20 @@ int espm_sendto(int socket, const void *buffer, size_t length, int flags,
    if (ind < 0) { errno = EBADF; return -1; }
    if (length > 1460) { errno = EMSGSIZE; return -1; }
 
-   /* We can optionally give an EISCONN if the we are dealing with a
-    * SOCK_STREAM and we get an address.
+   /* We can optionally give an EISCONN if the we are dealing with a SOCK_STREAM and
+    * we get an address.
     */
    if (_fdlist[ind].type == SOCK_STREAM || _fdlist[ind].type==SOCK_SEQPACKET) {
       errno = EISCONN;
       return -1;
    }
    /* Regular DGRAMS also need to return EISCONN if they are connected. */
-   else if (_fdlist[ind].connected) {
-      errno = EISCONN;
-      return -1;
-   }
+   else if (_fdlist[ind].connected) { errno = EISCONN; return -1; }
 
    /* Now we make the packet and send it. The packet must have an IP address. */
-   char *msgtosend = new char(length+40);
+   char *msgtosend = new char[length+50];
    if (msgtosend == NULL) { errno = ENOMEM; return -1; }
-   snprintf(msgtosend, 40, "\xff""s %s:%d:",
+   snprintf(msgtosend, 50, "\xff""s %s:%d:",
       IPAddress(dip->sin_addr.s_addr).toString().c_str(), ntohs(dip->sin_port));
    /* We tack the buffer to the end of the command. */
    int cmdlen = strlen(msgtosend);
@@ -800,6 +873,7 @@ int espm_sendto(int socket, const void *buffer, size_t length, int flags,
    resp = __espm_sendmsg(_controlport, msgtosend, cmdlen+length, ESCAPEFROMCOLON,
       (flags & MSG_DONTWAIT) == MSG_DONTWAIT||_fdlist[ind].flags & O_NONBLOCK);
    onewrite.post();
+   delete msgtosend;
    return resp;
 }
 
@@ -809,13 +883,10 @@ int espm_getpeername(int s, struct sockaddr *addr, socklen_t *addrlen) {
    int ind = espm_getind(s);
    errno = 0;
    /* We do the basic checking. */
-   if (ind < 0) {
-      errno = EBADF;
-      return -1;
-   }
-   if (!_fdlist[ind].connected) { errno = ENOTCONN; return -1; }
    if (addr == NULL || addrlen == NULL) { errno = EFAULT; return -1; }
+   if (ind < 0) { errno = EBADF; return -1; }
    if (*addrlen < 0) { errno = EINVAL; return -1; }
+   if (!_fdlist[ind].connected) { errno = ENOTCONN; return -1; }
    /* We build the sockaddr. */
    ad.sin_family = AF_INET;
    ad.sin_port = htons(_fdlist[ind].port);
@@ -830,13 +901,13 @@ int espm_getpeername(int s, struct sockaddr *addr, socklen_t *addrlen) {
 }
 
 int espm_getsockname(int s, struct sockaddr *addr, socklen_t *addrlen) {
-   static struct sockaddr_in *ad = (struct sockaddr_in *)addr;
    int ind = espm_getind(s);
    errno = 0;
-   if (ind < 0) {
-      errno = EBADF;
-      return -1;
-   }
+   if (ind < 0) { errno = EBADF; return -1; }
+   if (addr == NULL || addrlen == NULL) { errno = EFAULT; return -1; }
+   if (*addrlen < sizeof(struct sockaddr_in)) { errno = EINVAL; return -1; }
+
+   struct sockaddr_in *ad = (struct sockaddr_in *)addr;
    ad->sin_family = AF_INET;
    ad->sin_port = htons(_fdlist[ind].port);
    ad->sin_addr.s_addr = _fdlist[ind].ip;
@@ -1007,8 +1078,7 @@ int __espm_sendmsg(int port, const char *msg, int size, int escstyle,
     * the nullchar. If size is >= 0, we then go until all chars have been sent.
     */
    portstrptr = 0; p = 0;
-   while(portstr[portstrptr]!='\0'
-      || size >= 0 && p < size || size < 0 && msg[p]!='\0') {
+   while(portstr[portstrptr]!='\0' || size>0 && p<size || size<0 && msg[p]!='\0') {
       /* Each time we delay one cycle to prevent us from getting stuck in a busy
        * loop without time delays.
        */

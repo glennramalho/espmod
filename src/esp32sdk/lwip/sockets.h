@@ -198,7 +198,6 @@ int espm_getsockname(int s, struct sockaddr *addr, socklen_t *addrlen);
 
 #ifdef __cplusplus
    #include <Arduino.h>
-   int espm_readline(int s, String *msg, bool usetimeout = false);
 #endif
 
 #endif
