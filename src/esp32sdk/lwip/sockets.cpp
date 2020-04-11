@@ -170,11 +170,12 @@ std::vector<fd_t> _fdlist;
 
 /* We let one semaphore user in. */
 sc_semaphore onewrite("onewrite", 1);
+sc_semaphore oneread("oneread", 1);
 int alloc(int owner = -1); /* -1 means no owner. */
 bool isopen(int fd);
 static int __espm_sendmsg(int port, const char *msg, int size = -1,
    int escape = ESCAPENONE, bool wait = true);
-static int __espm_receive(int ind, void *mem, size_t len, int flags);
+static int __espm_receive(int s, void *mem, size_t len, int flags);
 int espm_getind(int fd);
 void fillbuffers();
 void takerequest(int *ind);
@@ -346,7 +347,9 @@ int espm_connect(int s, const struct sockaddr *name, socklen_t namelen) {
    WiFiSerial.setTimeout(_fdlist[ind].tmout);
    snprintf(request_ipstr, 40, "\xff""c %s:%d\r\n",
       _fdlist[ind].ip.toString().c_str(), _fdlist[ind].port);
-   __espm_sendmsg(_controlport, request_ipstr);
+   onewrite.wait();
+   (void)__espm_sendmsg(_controlport, request_ipstr);
+   onewrite.post();
    espm_readline(_fdlist[ind].fdn, &msg);
 
    /* Then we check the message, if it starts with a control followed by a "y"
@@ -354,7 +357,7 @@ int espm_connect(int s, const struct sockaddr *name, socklen_t namelen) {
     */
    if (msg.startsWith("\xffy")) {
       _fdlist[ind].connected = true;
-      _fdlist[ind].bound = true; /* TODO: not quite, should be fixed later. */
+      _fdlist[ind].bound = false;
       return 0;
    }
    /* If we get anything else, we return that it was refused. Now, there are
@@ -459,7 +462,9 @@ int espm_accept(int s, struct sockaddr *addr, socklen_t *addrlen) {
    snprintf(buffer, 80, "\xff%dy %02x:%02x:%02x:%02x:%02x:%02x %s:%d\r\n",
       _fdlist[aind].port, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5],
       IPAddress(ipinfo.ip.addr).toString().c_str(), _fdlist[aind].port);
-   __espm_sendmsg(_controlport, buffer);
+   onewrite.wait();
+   (void)__espm_sendmsg(_controlport, buffer);
+   onewrite.post();
    /* And we return the accept socket. */
    return afd;
 }
@@ -507,7 +512,9 @@ int espm_close(int s) {
    if (_fdlist[ind].connected) {
       char buf[15];
       snprintf(buf, 15, "\xff%d!\r\n", _fdlist[ind].port);
-      __espm_sendmsg(_controlport, buf);
+      onewrite.wait();
+      (void)__espm_sendmsg(_controlport, buf);
+      onewrite.post();
    }
    /* We remove the file descriptor */
    _fdlist.erase(_fdlist.begin()+ind);
@@ -588,6 +595,7 @@ int espm_getsockopt (int s, int level, int optname, void *optval,
    return 0;
 }
 int espm_write (int fd, const void *buf, size_t count) {
+   int resp;
    const char *msg = (const char *)buf;
    int ind = espm_getind(fd);
 
@@ -599,30 +607,27 @@ int espm_write (int fd, const void *buf, size_t count) {
       errno = EBADF;
       return -1;
    }
-   return __espm_sendmsg(_fdlist[ind].port, msg, count, ESCAPEALL,
+   onewrite.wait();
+   resp = __espm_sendmsg(_fdlist[ind].port, msg, count, ESCAPEALL,
          ((_fdlist[ind].flags & O_NONBLOCK) == O_NONBLOCK)?false:true);
+   onewrite.post();
+   return resp;
 }
-int espm_recv(int s, void *mem, size_t len, int flags) {
-   int ind = espm_getind(s);
 
+int espm_recv(int s, void *mem, size_t len, int flags) {
+   int resp;
+
+   oneread.wait();
    errno = 0;
-   if (ind < 0) {
-      errno = EBADF;
-      return -1;
-   }
-   return __espm_receive(ind, mem, len, flags);
+   resp = __espm_receive(s, mem, len, flags);
+   oneread.post();
+   return resp;
 }
 
 int espm_recvfrom(int s, void *mem, size_t len, int flags,
       struct sockaddr *src_addr, socklen_t *addrlen) {
    int resplen;
-   int ind = espm_getind(s);
 
-   errno = 0;
-   if (ind < 0) {
-      errno = EBADF;
-      return -1;
-   }
    /* This should not happen. If there is an address to write to we need
     * an address length. The address length valid and the address null does
     * not make any sense, so we will be picky and complain.
@@ -631,7 +636,11 @@ int espm_recvfrom(int s, void *mem, size_t len, int flags,
    if (src_addr == NULL && addrlen != NULL) { errno = EINVAL; return -1; }
 
    /* The message seems to be valid, so we can attempt to receive it. */
-   resplen = __espm_receive(ind, mem, len, flags);
+   oneread.wait();
+   errno = 0;
+   resplen = __espm_receive(s, mem, len, flags);
+   oneread.post();
+   if (resplen < 0) return -1;
 
    /* If it failed, we then go ahead and return failure. */
    if (resplen < 0) return -1;
@@ -709,6 +718,7 @@ int espm_readline(int s, String *msg, bool usetimeout) {
 }
 
 int espm_send(int socket, const void *buffer, size_t length, int flags) {
+   int resp;
    const char *msg = (const char *)buffer;
    int ind = espm_getind(socket);
    errno = 0;
@@ -734,9 +744,12 @@ int espm_send(int socket, const void *buffer, size_t length, int flags) {
       return -1;
    }
    /* And we call the internal send task if it is all ok. */
-   return __espm_sendmsg(_fdlist[ind].port, msg, length, ESCAPEALL,
+   onewrite.wait();
+   resp = __espm_sendmsg(_fdlist[ind].port, msg, length, ESCAPEALL,
          ((_fdlist[ind].flags & O_NONBLOCK) == O_NONBLOCK ||
           (flags & MSG_DONTWAIT) == MSG_DONTWAIT)?false:true);
+   onewrite.post();
+   return resp;
 }
 
 /* sendto is intended for UDP connections. It does not need a connection
@@ -745,6 +758,7 @@ int espm_send(int socket, const void *buffer, size_t length, int flags) {
 int espm_sendto(int socket, const void *buffer, size_t length, int flags,
       const struct sockaddr *dest_addr, socklen_t dest_len) {
    int ind;
+   int resp;
    const struct sockaddr_in *dip;
    dip = (const struct sockaddr_in *)dest_addr;
 
@@ -782,11 +796,14 @@ int espm_sendto(int socket, const void *buffer, size_t length, int flags,
    snprintf(msgtosend, 40, "\xff""s %s:%d:",
       IPAddress(dip->sin_addr.s_addr).toString().c_str(), ntohs(dip->sin_port));
    /* We tack the buffer to the end of the command. */
-   int len = strlen(msgtosend);
-   memcpy(&(msgtosend[len]), buffer, length);
+   int cmdlen = strlen(msgtosend);
+   memcpy(&(msgtosend[cmdlen]), buffer, length);
    /* And we send it. */
-   return __espm_sendmsg(_controlport, msgtosend, length, ESCAPEFROMCOLON,
+   onewrite.wait();
+   resp = __espm_sendmsg(_controlport, msgtosend, cmdlen+length, ESCAPEFROMCOLON,
       (flags & MSG_DONTWAIT) == MSG_DONTWAIT||_fdlist[ind].flags & O_NONBLOCK);
+   onewrite.post();
+   return resp;
 }
 
 int espm_getpeername(int s, struct sockaddr *addr, socklen_t *addrlen) {
@@ -872,14 +889,22 @@ int espm_getind(int fd) {
    return -1;
 }
 
-int __espm_receive(int ind, void *mem, size_t len, int flags) {
+int __espm_receive(int s, void *mem, size_t len, int flags) {
    size_t p;
    unsigned long starttime = millis();
    unsigned char *msg = (unsigned char *)mem;
 
-   /* If this is a connection based socket it must be connected. */
-   if (_fdlist[ind].type == SOCK_STREAM && (!_fdlist[ind].connected ||
-         !_fdlist[ind].islistening())) {
+   int ind = espm_getind(s);
+   if (ind < 0) {
+      errno = EBADF;
+      return -1;
+   }
+
+   /* To read a sock_stream most be set to connected or listening. SOCK_DGRAM
+    * does not need any of them.
+    */
+   if (_fdlist[ind].type == SOCK_STREAM && !_fdlist[ind].connected &&
+         !_fdlist[ind].islistening()) {
       errno = ENOTCONN;
       return -1;
    }
@@ -939,7 +964,6 @@ int __espm_sendmsg(int port, const char *msg, int size, int escstyle,
    char portstr[14];
    int len;
    bool escape;
-   //onewrite.wait();
    /* If requested, we begin sending the port number. This, we do only if the
     * previous packet was not a control packet (they have no ports) nor was
     * the same as the current port.
@@ -977,7 +1001,6 @@ int __espm_sendmsg(int port, const char *msg, int size, int escstyle,
    if (WiFiSerial.availableForWrite() < len+1 && msg[0] != 0xff ||
          WiFiSerial.availableForWrite() < len+2 &&
          msg[0] == 0xff && msg[1] == 0xff) {
-      //onewrite.post();
       return 0;
    }
 
@@ -1019,7 +1042,6 @@ int __espm_sendmsg(int port, const char *msg, int size, int escstyle,
       if (!wait && (WiFiSerial.availableForWrite() == 0 ||
             msg[p] == 0xff && WiFiSerial.availableForWrite() == 1 && escape)) {
          /* We release the semaphore and return what has been sent so far. */
-         onewrite.post();
          return p;
       }
 
@@ -1031,14 +1053,13 @@ int __espm_sendmsg(int port, const char *msg, int size, int escstyle,
       /* If we see an FF and we got the request to escape them, we then send
        * it twice.
        */
-      if (escape && *msg == 0xff) WiFiSerial.write(msg[p]);
+      if (escape && msg[p] == 0xff) WiFiSerial.write(msg[p]);
 
       /* And we count the char as sent. Note that escaped 0xff are not counted
        * as two but as one.
        */
       p = p + 1;
    }
-   //onewrite.post();
    return p;
 }
 
@@ -1083,14 +1104,14 @@ void fillbuffers() {
       token = WiFiSerial.bl_read();
 
       /* If an escape comes in we do a second read. */
-      if (token == '\xff') escaped = WiFiSerial.bl_read();
+      if (token == 0xff) escaped = WiFiSerial.bl_read();
       else escaped = '\0';
 
       /* If we are in the middle of a message (ind > 0) and data came in,
        * we simply forwarded it to the corresponding stream. Escaped FF we
        * treat the same way.
        */
-      if (token == '\xff' && escaped == '\xff' || token != '\xff') {
+      if (token == 0xff && escaped == 0xff || token != 0xff) {
          if (_portclosed) {
             /* A port was closed since last time we looked. So we need to
              * find out the index again. And we also clear the flag.
@@ -1254,7 +1275,9 @@ void takerequest(int *ind) {
          || _fdlist[it].connections == _fdlist[it].maxconnect) {
       msg = _fdlist[it].port + msg;
       msg = String("\xff") + msg;
-      __espm_sendmsg(_controlport, msg.c_str());
+      onewrite.wait();
+      (void)__espm_sendmsg(_controlport, msg.c_str());
+      onewrite.post();
    }
    else {
       /* The others we put in the list to be accepted. We already count it
@@ -1262,7 +1285,7 @@ void takerequest(int *ind) {
        * that does the accepting.
        */
       unsigned int p;
-      _fdlist[it].buffer.push_back((unsigned char)'\xff');
+      _fdlist[it].buffer.push_back((unsigned char)0xff);
       _fdlist[it].buffer.push_back((unsigned char)'c');
       _fdlist[it].buffer.push_back((unsigned char)' ');
       for(p = 0; p < msg.length(); p = p + 1)

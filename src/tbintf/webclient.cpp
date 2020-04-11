@@ -316,6 +316,7 @@ void webclient::expecttillline(int port, std::string line) {
       printf("To WiFi: %s\n", msg.c_str());
    } while (msg.find(line.c_str()) != 0);
 }
+
 bool findend(std::string msg, const char *cnst) {
    std::string patt = cnst;
    auto srch = std::search(msg.begin(), msg.end(), patt.begin(), patt.end(),
@@ -337,6 +338,14 @@ void webclient::expectauthenticate(int port) {
    /* And we dump any remaining chars in the stream. */
    wait(10, SC_MS);
    flush(port);
+}
+void webclient::openudpport(IPAddress ip, int port) {
+   /* Ports need to be open before expecting data. Usually this is done via the
+    * connect command, but UDP ports do not have a connect. Therefore, we need
+    * an open command.
+    */
+   PRINTF_INFO("TEST", "Opening UDP port %d", port);
+   _portlist.push_back(wifiport_t(port, true));
 }
 
 void webclient::printpage(int port) {
@@ -880,17 +889,19 @@ void webclient::fillbuffers() {
          String msg = "";
          int newind;
          int a1, a2, a3, a4, port;
+         bool firstcolon;
          /* We go until we get the second colon. */
+         firstcolon = false;
          do {
+            if (escaped == ':') firstcolon = true;
             escaped = i_uwifi.from.read();
             msg = msg + escaped;
-         } while (escaped != ':');
-         do {
-            escaped = i_uwifi.from.read();
-            msg = msg + escaped;
-         } while (escaped != ':');
+         } while (!(escaped == ':' && firstcolon == true));
          /* We check the address and port to see if it is ok. */
          if (5 != sscanf(msg.c_str(), "%d.%d.%d.%d:%d",&a1,&a2,&a3,&a4,&port)) {
+            /* If we do not match the format, we warn and dump the rest of the
+             * line.
+             */
             PRINTF_ERROR("WEBCLI", "Got an illegal send command");
             do escaped = i_uwifi.from.read();
             while (escaped != '\n');
@@ -902,7 +913,9 @@ void webclient::fillbuffers() {
          else {
             newind = getnotclosed(port);
             if (newind < 0) {
-               /* We did not find a matching port, so we dump it. */
+               /* We did not find a matching port, so we issue an ERROR and dump it.
+                */
+               PRINTF_ERROR("WEBCLI", "Got a SEND command to port %d", port);
                do escaped = i_uwifi.from.read();
                while (escaped != '\n');
             }

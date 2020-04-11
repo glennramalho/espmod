@@ -60,14 +60,23 @@ struct wifiport_t {
    int port;
    bool closed;
    std::deque<unsigned char> buffer;
+   bool connectionless;
    wifiport_t() {
       port = 0;
       closed = false;
+      connectionless = false;
    }
    wifiport_t(int _p) {
       port = _p;
       closed = false;
+      connectionless = false;
    }
+   wifiport_t(int _p, bool _connectionless) {
+      port = _p;
+      closed = false;
+      connectionless = _connectionless;
+   }
+
 };
 
 SC_MODULE(webclient) {
@@ -91,6 +100,7 @@ SC_MODULE(webclient) {
    void expecttillregex(int port, const char *patt);
    void expecttillline(int port, std::string line);
    void expectupgrade(int port);
+   void openudpport(IPAddress ip, int port);
    std::string packetname(mqtt_type_t type, const char *str);
    std::string packetname(mqtt_type_t type, const unsigned char *str);
    int expectmqtt(int port, mqtt_type_t exptype);
