@@ -874,7 +874,10 @@ int espm_sendto(int socket, const void *buffer, size_t length, int flags,
       (flags & MSG_DONTWAIT) == MSG_DONTWAIT||_fdlist[ind].flags & O_NONBLOCK);
    onewrite.post();
    delete msgtosend;
-   return resp;
+   /* We return the characters we sent, but we do not include the header. */
+   if (resp < 0) return resp;
+   else if (resp - cmdlen <= 0) return 0;
+   else return resp - cmdlen;
 }
 
 int espm_getpeername(int s, struct sockaddr *addr, socklen_t *addrlen) {
