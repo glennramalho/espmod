@@ -1310,7 +1310,6 @@ void fillbuffers() {
  */
 void takerequest(int *ind) {
    unsigned char rec;
-   bool bad;
    String msg;
    int a1, a2, a3, a4, port;
    int it;
@@ -1337,7 +1336,7 @@ void takerequest(int *ind) {
       rec = WiFiSerial.bl_read();
       if (rec == ' ') continue;
       msg = msg + (char)rec;
-   } while(rec != ':' && firstcolon);
+   } while(rec != ':' || !firstcolon);
 
    /* If this is a connect and we did not get a \n, we discard everything that
     * comes in until the newline.
@@ -1348,7 +1347,9 @@ void takerequest(int *ind) {
     * parse it to see if we have all we need and it is correct.
     */
    if (5 != sscanf(msg.c_str(), "%d.%d.%d.%d:%d", &a1, &a2, &a3, &a4, &port)) {
-      bad = true;
+      PRINTF_WARN("SOCK", "Could not understand %s", msg.c_str());
+      *ind = -1;
+      return;
    }
 
    /* We now look to see if we have a receiving descriptor. This depends on the
@@ -1358,7 +1359,7 @@ void takerequest(int *ind) {
     *    - the port must be listening, either because it was bound and listen()
     *        or just bound. The just bound is for SOCK_DGRAM.
     */
-   if (!bad) for(it = 0; it < (int)_fdlist.size(); it = it + 1) {
+   for(it = 0; it < (int)_fdlist.size(); it = it + 1) {
       if (_fdlist[it].islistening() && _fdlist[it].port == port &&
          (connect && _fdlist[it].type == SOCK_STREAM ||
          !connect && _fdlist[it].type != SOCK_STREAM)) break;
@@ -1368,7 +1369,7 @@ void takerequest(int *ind) {
     * descriptor is valid and it is not of type STREAM, we then return ok. The
     * calling function will take in the data.
     */
-   if (!bad && it < (int)_fdlist.size() && _fdlist[it].type != SOCK_STREAM) {
+   if (it < (int)_fdlist.size() && _fdlist[it].type != SOCK_STREAM) {
       *ind = it;
       return;
    }
@@ -1378,7 +1379,7 @@ void takerequest(int *ind) {
     * messages. We respond by sending the request back so that the correct
     * client knows the message is for him.
     */
-   if (bad || it == (int)_fdlist.size()
+   if (it == (int)_fdlist.size()
          || _fdlist[it].connections == _fdlist[it].maxconnect) {
       msg = _fdlist[it].port + msg;
       msg = String("\xff") + msg;
