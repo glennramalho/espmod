@@ -47,7 +47,7 @@ bool webclient::willclose(int port) {
    else if (_portlist[ind].closed) return true;
    else return false;
 }
-sc_event fifowrite_ev;
+static sc_event __fifowrite_ev;
 
 void webclient::send(int port, void *msg, int len, bool escape) {
    const unsigned char *c = (const unsigned char *)msg;
@@ -190,7 +190,7 @@ int webclient::read(int port, int ind) {
 
    /* We keep waiting until we get a char or we get a closed message. */
    while (_portlist[ind].buffer.size() == 0 && !_portlist[ind].closed) {
-      wait(fifowrite_ev);
+      wait(__fifowrite_ev);
    }
    
    /* If we have no data, we then return -1. This means we were waiting and
@@ -829,7 +829,7 @@ void webclient::fillbuffers() {
           */
          if (ind >= 0) {
             _portlist[ind].buffer.push_back(token);
-            fifowrite_ev.notify();
+            __fifowrite_ev.notify();
          }
          continue;
       }
@@ -865,7 +865,7 @@ void webclient::fillbuffers() {
 
             /* We close the fifo. We also need to notify any waiting threads. */
             PRINTF_INFO("WEBCLI", "Closed port %d", _portlist[ind].port);
-            fifowrite_ev.notify();
+            __fifowrite_ev.notify();
             _portlist[ind].closed = true;
          }
          else if (escaped == 'y' || escaped == 'n') {
@@ -878,7 +878,7 @@ void webclient::fillbuffers() {
                escaped = i_uwifi.from.read();
                _portlist[ind].buffer.push_back(escaped);
             } while(escaped != '\n');
-            fifowrite_ev.notify();
+            __fifowrite_ev.notify();
          }
          /* If it was a colon, we just discard it.  The rest should go to the
           * port. */
@@ -939,7 +939,7 @@ void webclient::fillbuffers() {
             escaped = i_uwifi.from.read();
          } while (escaped != '\n');
          _portlist[0].buffer.push_back(escaped);
-         fifowrite_ev.notify();
+         __fifowrite_ev.notify();
       }
    }
 }

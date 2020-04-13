@@ -169,9 +169,14 @@ std::string fdstring(fd_t *f) {
 
 std::vector<fd_t> _fdlist;
 
-/* We let one semaphore user in. */
-sc_semaphore onewrite("onewrite", 1);
-sc_semaphore oneread("oneread", 1);
+/* We use these semaphores to make sure we do not have the threads running into
+ * each other.
+ */
+static sc_semaphore __onewrite("__onewrite", 1);
+static sc_semaphore __oneread("__oneread", 1);
+
+static sc_event __fifowrite_ev;
+
 int alloc(int owner = -1); /* -1 means no owner. */
 bool isopen(int fd);
 static int __espm_sendmsg(int port, const char *msg, int size = -1,
@@ -181,9 +186,9 @@ static int __espm_readline(int s, String *msg, bool usetimeout = false);
 int espm_getind(int fd);
 void fillbuffers();
 void takerequest(int *ind);
-int _controlfd;
-int _controlport;
-bool _portclosed;
+static int _controlfd;
+static int _controlport;
+static bool _portclosed;
 int getnotlisten(int port);
 
 void espm_socket_init() {
@@ -389,15 +394,15 @@ int espm_connect(int s, const struct sockaddr *name, socklen_t namelen) {
     */
    snprintf(request_ipstr, 50, "\xff""c %s:%d\r\n",
       _fdlist[ind].ip.toString().c_str(), _fdlist[ind].port);
-   onewrite.wait();
+   __onewrite.wait();
    int resp;
    WiFiSerial.setTimeout(_fdlist[ind].tmout);
    resp = __espm_sendmsg(_controlport, request_ipstr);
-   onewrite.post();
+   __onewrite.post();
    if (resp < 0) { return -1; }
-   oneread.wait();
+   __oneread.wait();
    resp = __espm_readline(_fdlist[ind].fdn, &msg);
-   oneread.post();
+   __oneread.post();
    if (resp < 0) { return -1; }
 
    /* Then we check the message, if it starts with a control followed by a "y"
@@ -490,9 +495,9 @@ int espm_accept(int s, struct sockaddr *addr, socklen_t *addrlen) {
    }
 
    int resp;
-   oneread.wait();
+   __oneread.wait();
    resp = __espm_readline(s, &msg);
-   oneread.post();
+   __oneread.post();
    if (resp < 0) return -1;
 
    /* Now we parse the message to get the port.  If it is not correct, we
@@ -525,9 +530,9 @@ int espm_accept(int s, struct sockaddr *addr, socklen_t *addrlen) {
    snprintf(buffer, 80, "\xff%dy %02x:%02x:%02x:%02x:%02x:%02x %s:%d\r\n",
       _fdlist[aind].port, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5],
       IPAddress(ipinfo.ip.addr).toString().c_str(), _fdlist[aind].port);
-   onewrite.wait();
+   __onewrite.wait();
    resp = __espm_sendmsg(_controlport, buffer);
-   onewrite.post();
+   __onewrite.post();
    if (resp <= 0) { espm_close(afd); errno = ECONNABORTED; return -1; }
 
    PRINTF_INFO("SOCK", "Accepted socket %d lidstening %d from IP %s port %d", afd,
@@ -585,9 +590,9 @@ int espm_close(int s) {
    if (_fdlist[ind].connected) {
       char buf[15];
       snprintf(buf, 15, "\xff%d!\r\n", _fdlist[ind].port);
-      onewrite.wait();
+      __onewrite.wait();
       (void)__espm_sendmsg(_controlport, buf);
-      onewrite.post();
+      __onewrite.post();
    }
    /* We remove the file descriptor */
    _fdlist.erase(_fdlist.begin()+ind);
@@ -682,20 +687,20 @@ int espm_write (int fd, const void *buf, size_t count) {
       errno = EBADF; return -1;
    }
 
-   onewrite.wait();
+   __onewrite.wait();
    resp = __espm_sendmsg(_fdlist[ind].port, msg, count, ESCAPEALL,
          ((_fdlist[ind].flags & O_NONBLOCK) == O_NONBLOCK)?false:true);
-   onewrite.post();
+   __onewrite.post();
    return resp;
 }
 
 int espm_recv(int s, void *mem, size_t len, int flags) {
    int resp;
 
-   oneread.wait();
+   __oneread.wait();
    errno = 0;
    resp = __espm_receive(s, mem, len, flags);
-   oneread.post();
+   __oneread.post();
    return resp;
 }
 
@@ -711,10 +716,10 @@ int espm_recvfrom(int s, void *mem, size_t len, int flags,
    if (src_addr == NULL && addrlen != NULL) { errno = EINVAL; return -1; }
 
    /* The message seems to be valid, so we can attempt to receive it. */
-   oneread.wait();
+   __oneread.wait();
    errno = 0;
    resplen = __espm_receive(s, mem, len, flags);
-   oneread.post();
+   __oneread.post();
 
    /* If it failed, we then go ahead and return failure. */
    if (resplen < 0) return -1;
@@ -729,7 +734,6 @@ int espm_recvfrom(int s, void *mem, size_t len, int flags,
    return resplen;
 }
 
-
 int espm_read(int s, void *mem, size_t len) {
    return espm_recv(s, mem, len, MSG_WAITALL);
 }
@@ -740,31 +744,36 @@ int __espm_readline(int s, String *msg, bool usetimeout) {
    int ind;
    bool crseen;
    int p;
+   unsigned long timeouttarg;
 
    ind = espm_getind(s);
    errno = 0;
-   if (ind < 0) {
-      errno = EBADF;
-      return -1;
-   }
+   if (ind < 0) { errno = EBADF; return -1; }
+
+   /* We precalculate the timeout target. */
+   if (!usetimeout || _fdlist[ind].tmout == 0) timeouttarg = 0;
+   else timeouttarg = starttime + _fdlist[ind].tmout;
 
    /* We are going to wait for the message to come in. We start off initializing
     * the crseen bool to false. Later it is used to scan for the crlf sequence.
     */
    crseen = false;
    while(1) {
-      del1cycle();
-      if (usetimeout && _fdlist[ind].tmout != 0
-            && millis() < starttime + _fdlist[ind].tmout){
-         errno = ETIMEDOUT;
-         return -1;
-      }
+      /* Now we wait for either the data or the timeout. */
+      while (_fdlist[ind].buffer.size() == 0) {
+         /* If there is no timeout, we wait indefinitely. If there is one, then
+          * we wait only the specified time.
+          */
+         if (timeouttarg == 0) wait(__fifowrite_ev);
+         else wait(sc_time(timeouttarg - millis(), SC_MS), __fifowrite_ev);
 
-      /* For the connections we do not obay the block/nonblock prop. Instead we
-       * look for the timeout value, as these are network delays we are
-       * representing.
-       */
-      if (_fdlist[ind].buffer.size() == 0) continue;
+         /* We then check the result. If the timeout expired, we raise a timeout. */
+         if (!__fifowrite_ev.triggered() && timeouttarg != 0 &&
+               millis() >= timeouttarg) {
+             errno = ETIMEDOUT;
+             return -1;
+         }
+      }
 
       /* Now we look at the char. We are looking for "\r\n". */
       nchar = (char)(_fdlist[ind].buffer.front());
@@ -817,11 +826,11 @@ int espm_send(int socket, const void *buffer, size_t length, int flags) {
       return -1;
    }
    /* And we call the internal send task if it is all ok. */
-   onewrite.wait();
+   __onewrite.wait();
    resp = __espm_sendmsg(_fdlist[ind].port, msg, length, ESCAPEALL,
          ((_fdlist[ind].flags & O_NONBLOCK) == O_NONBLOCK ||
           (flags & MSG_DONTWAIT) == MSG_DONTWAIT)?false:true);
-   onewrite.post();
+   __onewrite.post();
    return resp;
 }
 
@@ -869,10 +878,10 @@ int espm_sendto(int socket, const void *buffer, size_t length, int flags,
    int cmdlen = strlen(msgtosend);
    memcpy(&(msgtosend[cmdlen]), buffer, length);
    /* And we send it. */
-   onewrite.wait();
+   __onewrite.wait();
    resp = __espm_sendmsg(_controlport, msgtosend, cmdlen+length, ESCAPEFROMCOLON,
       (flags & MSG_DONTWAIT) == MSG_DONTWAIT||_fdlist[ind].flags & O_NONBLOCK);
-   onewrite.post();
+   __onewrite.post();
    delete msgtosend;
    /* We return the characters we sent, but we do not include the header. */
    if (resp < 0) return resp;
@@ -963,6 +972,7 @@ int espm_getind(int fd) {
 int __espm_receive(int s, void *mem, size_t len, int flags) {
    size_t p;
    unsigned long starttime = millis();
+   unsigned long timeouttarg;
    unsigned char *msg = (unsigned char *)mem;
 
    int ind = espm_getind(s);
@@ -1003,18 +1013,31 @@ int __espm_receive(int s, void *mem, size_t len, int flags) {
     * until we have emptied out the buffer.
     */
    p = 0;
+
+   /* We precalculate the timeout target. */
+   if (_fdlist[ind].tmout == 0) timeouttarg = 0;
+   else timeouttarg = starttime + _fdlist[ind].tmout;
+
    while(p < len) {
       /* If we don't have waitall and the buffer is empty, we stop. */
       if ((flags & MSG_WAITALL) != MSG_WAITALL
           && _fdlist[ind].buffer.size() == 0) break;
+
       /* If we do have the WAITALL and there is no data, we wait. */
       if ((flags & MSG_WAITALL) == MSG_WAITALL) {
          while(_fdlist[ind].buffer.size() == 0) {
-            del1cycle();
+            /* We wait for the next notification or the timeout. We do not have one
+             * event for each buffer, so we just wait for any write and then check
+             * to see if we got the data we needed.
+             */
+            if (timeouttarg == 0) wait(__fifowrite_ev);
+            else wait(sc_time(timeouttarg - millis(), SC_MS), __fifowrite_ev);
 
-            /* We check for timeouts too. */
-            if (_fdlist[ind].tmout != 0
-                  && millis() > starttime + _fdlist[ind].tmout) {
+            /* If we did not get an event triggered, we check the timeout. If it was
+             * triggered, we raise the flag.
+             */
+            if (!__fifowrite_ev.triggered() && timeouttarg != 0 &&
+                  millis() >= timeouttarg) {
                 errno = ETIMEDOUT;
                 return -1;
             }
@@ -1194,6 +1217,7 @@ void fillbuffers() {
           * it.
           */
          if (ind >= 0) _fdlist[ind].buffer.push_back(token);
+         __fifowrite_ev.notify();
          continue;
       }
 
@@ -1233,6 +1257,8 @@ void fillbuffers() {
                escaped = WiFiSerial.bl_read();
                _fdlist[ind].buffer.push_back(escaped);
             } while(escaped != '\n');
+            /* Once the command is in we issue the notification. */
+            __fifowrite_ev.notify();
          }
          /* If it was a colon, we just discard it.  The rest should go to the
           * port. */
@@ -1260,7 +1286,7 @@ void fillbuffers() {
             escaped = WiFiSerial.bl_read();
          } while (escaped != '\n');
          _fdlist[0].buffer.push_back(escaped);
-//         fifowrite_ev.notify();
+         __fifowrite_ev.notify();
       }
    }
 }
@@ -1346,9 +1372,9 @@ void takerequest(int *ind) {
          || _fdlist[it].connections == _fdlist[it].maxconnect) {
       msg = _fdlist[it].port + msg;
       msg = String("\xff") + msg;
-      onewrite.wait();
+      __onewrite.wait();
       (void)__espm_sendmsg(_controlport, msg.c_str());
-      onewrite.post();
+      __onewrite.post();
    }
    else {
       /* The others we put in the list to be accepted. We already count it
