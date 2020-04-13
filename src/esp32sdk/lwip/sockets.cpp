@@ -204,50 +204,52 @@ int espm_select(int maxfdp1, fd_set *readset, fd_set *writeset,
    int rets;
    int it;
    unsigned long starttime;
+   unsigned long timeouttarg;
    errno = 0;
 
-   del1cycle();
    starttime = millis();
+   del1cycle();
 
-   /* If no set was given, we just wait for the time specified. */
-   if (readset == NULL && writeset == NULL && timeout != NULL) {
-      wait(timeout->tv_sec * 1000000 + timeout->tv_usec, SC_US);
-      return 0;
-   }
-   else if (readset == NULL && writeset == NULL && timeout == NULL) {
-      /* This is not quite correct, we are supposed to wait until a signal
-       * came in, but being we do not have any signal system, we then just
-       * report it as an error.
-       */
-      errno = -1;
-      return EINVAL;
-   }
    /* maxfdp1 needs to be checked too. */
    if (maxfdp1 < 0 || maxfdp1 > FD_SETSIZE) {
       errno = -1;
       return EINVAL;
    }
-   /* This case does not make much sense, but the manpage says nothing about
-    * how to handle this, so we'll leave it this way.
+
+   /* If no set was given, we just wait for the time specified. We also have the
+    * case where the nfds is zero; which means we can have a list of descriptors
+    * but the descriptors but we do not check them.
     */
-   if (maxfdp1 == 0) {
+   if ((maxfdp1 == 0 || readset == NULL && writeset == NULL) && timeout != NULL) {
+      wait(timeout->tv_sec * 1000000 + timeout->tv_usec, SC_US);
+
+      /* If there are any cases in one of the sets, we clear the list. */
+      if (readset != NULL) FD_ZERO(readset);
+      if (writeset != NULL) FD_ZERO(writeset);
+      if (exceptset != NULL) FD_ZERO(exceptset);
+
+      /* And we return zero as no FD passed the check. */
       return 0;
    }
 
-   /* This scanning part could have been done better using SC events. For now
-    * this will work though.
+   /* If all three pointers are null, we are supposed to hang until an interrupt
+    * signal comes in. We do not have any such signal, so we instead return an
+    * invalid error.
     */
-   while(timeout == NULL
-      || millis() < starttime + timeout->tv_sec*1000 + timeout->tv_usec/1000) {
+   if (readset == NULL && writeset == NULL && timeout == NULL) {
+      errno = -1;
+      return EINVAL;
+   }
 
-      del1cycle();
-      /* This will probably change later, but for now we do a quite simple test
-       * as we currently have only one client for the file descriptors, this one
-       * is the WiFi and it has only one buffer.
-       */
-
-      rets = 0;
-
+   /* We precalculate the timeout, if any. */
+   if (timeout==NULL) timeouttarg = 0;
+   else timeouttarg = starttime + timeout->tv_sec*1000 + timeout->tv_usec/1000;
+      
+   /* Now we need to wait either the timeout or until the next event in a fifo.
+    * If timeouttarg is 0 then we skip the wait.
+    */
+   rets = 0;
+   while((timeouttarg == 0 || millis() <= timeouttarg) && rets == 0) {
       /* We are going to loop through all file descriptors. */
       for(it = 0; it < (int)_fdlist.size(); it = it + 1) {
 
@@ -267,6 +269,16 @@ int espm_select(int maxfdp1, fd_set *readset, fd_set *writeset,
 
       /* Once we are done, if we found descriptors, we stop looking. */
       if (rets > 0) break;
+
+      /* If we had a timeout we also break. */
+      if (millis() >= timeouttarg) break;
+
+      /* If we did not see any results, we need to wait. We wait for either the
+       * timeout time, a write to a fifo buffer, or a read from the WiFiSerial.
+       */
+      if (timeouttarg == 0) wait(WiFiSerial.data_read_event() | __fifowrite_ev);
+      else wait(sc_time(timeouttarg - millis(), SC_MS),
+         WiFiSerial.data_read_event() | __fifowrite_ev);
    }
 
    /* Now we need to indicate which descriptors are ready, if any. For this
@@ -286,6 +298,7 @@ int espm_select(int maxfdp1, fd_set *readset, fd_set *writeset,
          else FD_CLR(_fdlist[it].fdn, writeset);
       }
    }
+   if (exceptset != NULL) FD_ZERO(exceptset);
 
    return rets;
 }
@@ -1316,18 +1329,15 @@ void takerequest(int *ind) {
    if (ind == NULL) connect = true;
    else connect = false;
    
-   /* We then first look for a colon. We skip any spaces. */
+   /* We then first look for two colons. */
+   bool firstcolon = false;
+   rec = '\0';
    do {
+      if (rec == ':') firstcolon = true;
       rec = WiFiSerial.bl_read();
       if (rec == ' ') continue;
       msg = msg + (char)rec;
-   } while(rec != ':');
-   /* Now we go until the newline or second colon. */
-   do {
-      rec = WiFiSerial.bl_read();
-      if (rec == ' ') continue;
-      msg = msg + (char)rec;
-   } while(rec != ':' && rec != '\n');
+   } while(rec != ':' && firstcolon);
 
    /* If this is a connect and we did not get a \n, we discard everything that
     * comes in until the newline.
