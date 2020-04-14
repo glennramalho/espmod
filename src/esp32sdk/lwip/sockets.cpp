@@ -1328,20 +1328,16 @@ void takerequest(int *ind) {
    if (ind == NULL) connect = true;
    else connect = false;
    
-   /* We then first look for two colons. */
+   /* We then go until the end of the line or the second colon. */
    bool firstcolon = false;
    rec = '\0';
-   do {
+   while(! (rec == '\n' || rec == ':' && firstcolon)) {
       if (rec == ':') firstcolon = true;
       rec = WiFiSerial.bl_read();
+      /* We discard any whitespaces. */
       if (rec == ' ') continue;
       msg = msg + (char)rec;
-   } while(rec != ':' || !firstcolon);
-
-   /* If this is a connect and we did not get a \n, we discard everything that
-    * comes in until the newline.
-    */
-   if (connect) while(rec != '\n') rec = WiFiSerial.bl_read();
+   }
 
    /* We should now have in msg the connection part of the command. We can then
     * parse it to see if we have all we need and it is correct.
