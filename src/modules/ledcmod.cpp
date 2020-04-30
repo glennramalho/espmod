@@ -1,5 +1,5 @@
 /*******************************************************************************
- * ledchschmod.cpp -- Copyright 2020 (c) Glenn Ramalho - RFIDo Design
+ * ledcmod.cpp -- Copyright 2020 (c) Glenn Ramalho - RFIDo Design
  *******************************************************************************
  * Description:
  * Implements a SystemC module for the ESP32 PWM High-speed channel
@@ -19,7 +19,7 @@
  */
 
 #include <systemc.h>
-#include "ledchschmod.h"
+#include "ledcmod.h"
 
 void ledcmod::updateth() {
    int ch;
@@ -114,7 +114,7 @@ void ledcmod::start_of_simulation() {
    }
 }
 
-void ledchschmod::calc_points(int un, bool start_dither) {
+void ledcmod::calc_points(int un, bool start_dither) {
    int lp;
    int lpoint_frac;
    bool duty_start;
@@ -194,7 +194,7 @@ void ledchschmod::calc_points(int un, bool start_dither) {
    hpoint = hpoint_i.read() * timestep[un].read();
 }
 
-void ledchschmod::channel(int ch) {
+void ledcmod::channel(int ch) {
    enum {OVERFLOW, HPOINT, LPOINT} state = OVERFLOW;
    bool outen;
    while(1) {
@@ -295,30 +295,26 @@ void ledchschmod::channel(int ch) {
    }
 }
 
-void timer(int tim) {
+void ledcmod::timer(int tim) {
    int ch;
    while(1) {
       /* If we got a reset, we then restart the timer. */
-      if (timer_ev.triggered()) {
-         if (rst) {
-            timerstart[tim] = sc_time_stamp();
-            /* We notify any dependent channels when it should overlap. */
-            if (tim < 4) ch = 0;
-            else ch = 8;
-            do {
-               if (assocch[ch] == tim) channel[ch].notify(timerstep[tim]);
-            } while (ch != 8 && ch != 16);
+      if (rst) timer_cnt[tim].write(0);
+      /* We only count if we are not paused. */
+      if (!pause) {
+         /* We now increment the timer value. */
+         if (timer_cnt[tim].read() != timer_lim[tim].read() - 1) {
+            timer_cnt[tim].write(timer_cnt[tim].read() + 1);
          }
-
-         if (pause && !paused[un]) {
-            timerstart[tim] = sc_time_stamp();
-            /* We notify any dependent channels when it should overlap. */
-            if (tim < 4) ch = 0;
-            else ch = 8;
-            do {
-               if (assocch[ch] == tim) channel[ch].notify(timerstep[tim]);
-            } while (ch != 8 && ch != 16);         }
+         else {
+            /* We hit a overlap. We need to notify the channels. */
+            timer_cnt.notify(timeinc[tim]);
+            /* And raise the interrupt. */
+            int_ovl[tim+8].write(true);
+            /* We also refresh the timer steps. */
+            timestep[tim].write(timeinc[tim].read());
+         }
+         timer_cnt.notify(timeinc[tim]);
       }
-      int_ovl.notify(timestep[tim]);
    }
 }
