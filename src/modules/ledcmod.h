@@ -1,8 +1,8 @@
 /*******************************************************************************
- * ledchschmod.h -- Copyright 2019 (c) Glenn Ramalho - RFIDo Design
+ * ledcmod.h -- Copyright 2019 (c) Glenn Ramalho - RFIDo Design
  *******************************************************************************
  * Description:
- * Implements a SystemC module for the ESP32 PWM High-speed channel
+ * Implements a SystemC module for the ESP32 PWM LEDC module.
  *******************************************************************************
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,45 +18,51 @@
  *******************************************************************************
  */
 
-#ifndef _LEDCHSCHMOD_H
-#define _LEDCHSCHMOD_H
+#ifndef _LEDCMOD_H
+#define _LEDCMOD_H
 
 #include <systemc.h>
 
-SC_MODULE(ledchschmod) {
+SC_MODULE(ledcmod) {
    public:
-   sc_out<bool> sig_out {"sig_out"};
-   sc_in<uint32_t> timer {"timer"};
-   sc_signal<uint32_t> conf0_reg {"conf0_reg", 0};
-   sc_signal<uint32_t> hpoint_i {"hpoint_i", 0};
-   sc_signal<uint32_t> lpoint_i {"lpoint_i", 0};
-   sc_signal<sc_time> timestep_i {"timestep_i", 0};
-   sc_signal<uint32_t> conf1_reg {"conf1_reg", 0};
-   sc_signal<uint32_t> duty_r_reg {"duty_r_reg", 0};
+   sc_out<bool> sig_out[16];
+   sc_signal<uint32_t> conf0[16];
+   sc_signal<uint32_t> conf1[16];
+   sc_signal<uint32_t> hpoint[16];
+   sc_signal<uint32_t> duty[16];
+   sc_signal<uint32_t> duty_r[16];
+   sc_signal<uint32_t> timer_cnt[8];
+   sc_signal<uint32_t> timer_lim[8];
+   sc_signal<uint32_t> int_st {"int_st"};
+   sc_signal<uint32_t> int_ena {"int_ena"};
+   sc_signal<uint32_t> int_clr {"int_clr"};
 
-   sc_time hpoint, lpoint;
+   /* Functions */
+   void update();
+   void initstruct();
+   void calc_points(int un, bool start_dither);
 
-   int div;
-   void drive() {
-      while(1) {
-         start = sc_time_stamp();
-         wait(div * apb_clk * ticks);
-         ov.trigger();
-      }
+   /* Threads */
+   void channel(int ch);
+   void timer(int tim);
+   void updateth(void);
+   void returnth(void);
+
+   /* Variables */
+   int thislp[16];
+   int thiscyc[16];
+   sc_event update_ev;
+
+   SC_CTOR(ledcmod) {
+      initstruct();
+
+      SC_THREAD(updateth);
+      sesitive << update_ev;
+
+      SC_THREAD(returnth);
    }
-   uint32_t readtimer(int tn) {
-      if (timer_running[tn]) {
-         start_timer
-      }
-   }
 
-   SC_CTOR(ledchschmod) {
-      s
-      thiscyc = 0;
-   }
-
-   void start_of_simulation() {
-      sig_out.write(false);
-   }
-
-
+   void start_of_simulation();
+   void trace(sc_trace_file *tf);
+};
+extern ledcmod *ledcpntr;

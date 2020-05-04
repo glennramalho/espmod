@@ -2,7 +2,7 @@
  * ledcmod.cpp -- Copyright 2020 (c) Glenn Ramalho - RFIDo Design
  *******************************************************************************
  * Description:
- * Implements a SystemC module for the ESP32 PWM High-speed channel
+ * Implements a SystemC module for the ESP32 PWM LEDC module.
  *******************************************************************************
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@
 
 #include <systemc.h>
 #include "ledcmod.h"
+#include "soc/ledc_struct.h"
+#include "soc/ledc_reg.h"
 
 void ledcmod::updateth() {
    int ch;
@@ -80,22 +82,68 @@ void ledcmod::updateth() {
 }
 
 void ledcmod::returnth() {
+   int un;
    /* We wait for one of the responses to get triggered, and then we copy the
     * R/O register back to the struct.
     */
-   wait() {
-      int unint;
-      LEDC.int_raw.val = 0;
-      for(unint = 0; unint < 24; unint = unint + 1)
-         LEDC.int_raw.val = 1 << (int_raw[unint].read());
+   while (true) {
+      wait(
+         timer_cnt[0].value_changed_event()| timer_cnt[1].value_changed_event() |
+         timer_cnt[2].value_changed_event()| timer_cnt[3].value_changed_event() |
+         timer_cnt[4].value_changed_event()| timer_cnt[5].value_changed_event() |
+         timer_cnt[6].value_changed_event()| timer_cnt[7].value_changed_event() |
+         duty_r[0].value_changed_event()| duty_r[1].value_changed_event() |
+         duty_r[2].value_changed_event()| duty_r[3].value_changed_event() |
+         duty_r[4].value_changed_event()| duty_r[5].value_changed_event() |
+         duty_r[6].value_changed_event()| duty_r[7].value_changed_event() |
+         duty_r[8].value_changed_event()| duty_r[9].value_changed_event() |
+         duty_r[10].value_changed_event()| duty_r[11].value_changed_event() |
+         duty_r[12].value_changed_event()| duty_r[13].value_changed_event() |
+         duty_r[14].value_changed_event()| duty_r[15].value_changed_event() |
+         int_raw[0].value_changed_event() | int_raw[1].value_changed_event() |
+         int_raw[2].value_changed_event() | int_raw[3].value_changed_event() |
+         int_raw[4].value_changed_event() | int_raw[5].value_changed_event() |
+         int_raw[6].value_changed_event() | int_raw[7].value_changed_event() |
+         int_raw[8].value_changed_event() | int_raw[9].value_changed_event() |
+         int_raw[10].value_changed_event()| int_raw[11].value_changed_event() |
+         int_raw[12].value_changed_event()| int_raw[13].value_changed_event() |
+         int_raw[14].value_changed_event()| int_raw[15].value_changed_event() |
+         int_raw[16].value_changed_event()| int_raw[17].value_changed_event() |
+         int_raw[18].value_changed_event()| int_raw[19].value_changed_event() |
+         int_raw[20].value_changed_event()| int_raw[21].value_changed_event() |
+         int_raw[22].value_changed_event()| int_raw[23].value_changed_event());
 
+      for (un = 0; un < 16; un = un + 1) {
+         LEDC.int_raw.val = 0x0;
+         /* If we hit the maximum dither times, we have an interrupt and
+          * clear the duty_start. */
+         if (int_raw[un+8].read()) {
+            LEDC.int_raw[un+8].val = LEDC.int_raw[un+8].val | (1<<un);
+            if (un < 8)
+               LEDC.channel_group[0].channel[un].conf1.duty_start = false;
+            else LEDC.channel_group[1].channel[un-8].conf1.duty_start = false;
+         }
+         /* We copy the duty values */
+         if (un < 8) LEDC.channel_group[0].channel[un].duty_rd.duty_read =
+            duty_r[un].read();
+         else LEDC.channel_group[1].channel[un-8].duty_rd.duty_read =
+            duty_r[un-8].read();
+      }
+      /* We also copy over the timer values and interrupts. */
+      for(un = 0; un < 4; un = un + 1) {
+         LEDC.int_raw[un].val = LEDC.int_raw[un].val | int_raw[un].read();
+         LEDC.timer_group[0].timer[un].value.timer_cnt[un]
+            = timer_cnt[un].read();
 
-
-
-         /* If we hit the maximum number of times, we clear the duty_start. */
-         LEDC.channel_group[x].channel[ch].conf1.duty_start = 0;
+      }
+      for(un = 0; un < 4; un = un + 1) {
+         LEDC.int_raw[un+4].val = LEDC.int_raw[un+4].val | int_raw[un+4].read();
+         LEDC.timer_group[1].timer[un].value.timer_cnt[un+8]
+            = timer_cnt[un].read();
+      }
    }
 }
+
 void ledcmod::update() {
    update_ev.notify();
    wait_next_apb_clock();
@@ -109,9 +157,12 @@ void ledcmod::start_of_simulation() {
    /* We spawn a thread for each channel and timer. */
    int un;
    for(un = 0; un < 16; un = un + 1) {
-      sc_spawn(sc_bind(&ledcmod::capture, this, un));
-      sc_spawn(sc_bind(&ledcmod::count, this, un));
+      sc_spawn(sc_bind(&ledcmod::channel, this, un));
+      sig_out[un].write(false);
    }
+   for(un = 0; un < 8; un = un + 1)
+      sc_spawn(sc_bind(&ledcmod::timer, this, un));
+
 }
 
 void ledcmod::calc_points(int un, bool start_dither) {
@@ -186,23 +237,31 @@ void ledcmod::calc_points(int un, bool start_dither) {
          int_raw[ch+8].write(1, SC_NS);
       }
    }
-   /* Now we calculate the timing for the lpoint. */
-   lpoint = lp * timestep[un].read();
+
    /* We put the lp value in the read/only register. */
-   LEDC.channel_group[x].channel[ch].duty_rd.duty_read = lp;
-   /* The hpoint we simply take. */
-   hpoint = hpoint_i.read() * timestep[un].read();
+   duty_r[un].write(lp & LEDC_DUTY_HSCH0);
+   thislp[un] = lp & LEDC_DUTY_HSCH0;
 }
 
 void ledcmod::channel(int ch) {
-   enum {OVERFLOW, HPOINT, LPOINT} state = OVERFLOW;
    bool outen;
+   bool recheckpoints;
+   int sel;
    while(1) {
+      /* We wait for a timer to tick or a change in the configuration. */
+      wait();
+
       /* We go ahead and grab the output enable as we use it quite often. */
-      if (un < 8) outen =
-         RDFIELD(conf0[un], LEDC_SIG_OUT_EN_HSCH0_M, LEDC_SIG_OUT_EN_HSCH0_S);
-      else outen =
-         RDFIELD(conf0[un], LEDC_SIG_OUT_EN_LSCH0_M, LEDC_SIG_OUT_EN_LSCH0_S);
+      if (un < 8) {
+         outen =
+            RDFIELD(conf0[un], LEDC_SIG_OUT_EN_HSCH0_M, LEDC_SIG_OUT_EN_HSCH0_S);
+         sel= RDFIELD(conf0[un], LEDC_TIMER_SEL_HSCH0_M, LEDC_TIMER_SEL_HSCH0_S);
+      }
+      else {
+         outen =
+            RDFIELD(conf0[un], LEDC_SIG_OUT_EN_LSCH0_M, LEDC_SIG_OUT_EN_LSCH0_S);
+         sel= RDFIELD(conf0[un], LEDC_TIMER_SEL_LSCH0_M, LEDC_TIMER_SEL_LSCH0_S);
+      }
 
       /* First we process changes in the PWM. These can affect the rest. */
       /* If we got a trigger on the output and the channel is stopped, we
@@ -217,80 +276,38 @@ void ledcmod::channel(int ch) {
 
       }
 
-      /* If we see a change to one of the timer parameters, we need to
-       * recalculate where we are.
+      /* If we see a change in the hpoint or the duty we need to recalculate
+       * the lpoint. We also need to do this when the timer is switched or when
+       * we start a new cycle.
        */
-      if (hpoint[un].event() || duty[un].event()) {
+      if (duty[un].event() || timer_sel[un].event()) {
+         calc_points(un, true);
          /* We restart the cycle calculation. */
          thiscyc[un] = 0;
-         /* Recalculate the hpoint and lpoint. */
-         calc_points(un, true);
-
-         /* We need to find out where we are first. */
-         current_pos = sc_time_stamp() - starttime;
-         if (current_pos < hpoint[un]) {
-            if (outen) sig_out[un].write(false);
-            chev[un].notify(hpoint[un] - current_pos);
-            state = LPOINT;
-         }
-         else if (current_pos < hpoint + lpoint) {
-            if (outen) sig_out[un].write(true);
-            chev[un].notify(lpoint[un] + hpoint[un] - current_pos);
-            state = LPOINT;
-         }
-         else {
-            /* We are post lpoint, so all we do is take the line low and
-             * wait for the overlap.
-             */
-            if (outen) sig_out[un].write(false);
-            state = OVERLAP;
-         }
+         /* And we will need to recheck the hpoint and lpoint. */
+         recheckpoints = true;
       }
-      else if (overlap.triggered()) {
+      /* Anytime the cycle restarts (timer returns to zero) we need to
+       * increment the cycle counter and adjust the jitter, if any.
+       */
+      else if (timer_cnt[sel].read() == 0) {
          /* We start adjusting the cycle number for the dither. */
          thiscyc[un] = thiscyc[un] + 1;
          if (thiscyc[un] == 16) thiscyc[un] = 0;
-         /* and we calculate the hpoint and lpoint. */
-         calc_points(un, false);
-         /* Anytime the timer overlaps, we restart to make sure all timers
-          * are synchronized.
-          */
-         if (hpoint[un] == sc_time(0, SC_NS)) {
-            /* If hpoit is zero, we are in the |"|_.
-             * We start with the ramp going high and wait until the lpoint.
-             */
-            if (outen) sig_out[un].write(true);
-            chev.notify(lpoint[un]);
-            state = LPOINT;
-         }
-         else {
-            /* Can be: _|"| or _|"|_ 
-             * Here, we are waiting for the hpoint. Therefore we take the
-             * output low (or high if it is inverted) and wait for the
-             * hpoint.
-             */
+         /* We also calculate the lpoint. */
+         calc_points();
+         /* And we will need to recheck the hpoint and lpoint. */
+         recheckpoints = true;
+      }
+      else recheckpoints = false;
+
+      /* If it was a timer tick, we need to see if it affects us. */
+      if (outen && (timer_cnt[sel].event() || recheckpoints)) {
+         /* And we check where we are in the flow. */
+         if (timer_cnt[sel].read() >= thislp[un] + hpoint[un].read())
             sig_out[un].write(false);
-            chev.notify(hpoint[un]);
-            state = HPOINT;
-         }
-      }
-      else if (state == HPOINT) {
-         /* If we are at the hpoint, we take the wave high and wait for the
-          * lpoint.
-          */
-         sig_out[un].write(true);
-         /* We only trigger the event if we do not have the case where the
-          * wave ends on the lowpoint.
-          */
-         if (lpoint[un] + hpoint[un] != period[un]) state = LPOINT;
-         chev.notify(lpoint);
-      }
-      else if (state == LPOINT) {
-         /* If we are in the lpoint state all we do is take the wave low. We
-          * do not need to trigger the event as we know we will keep it low
-          * until the next overlap.
-          */
-         sig_out[un].write(false);
+         else if (timer_cnt[sel].read() >= hpoint[un]) sig_out[un].write(true);
+         else sig_out[un].write(false);
       }
    }
 }
@@ -302,19 +319,62 @@ void ledcmod::timer(int tim) {
       if (rst) timer_cnt[tim].write(0);
       /* We only count if we are not paused. */
       if (!pause) {
-         /* We now increment the timer value. */
+         /* If we are not paused, we increment. */
          if (timer_cnt[tim].read() != timer_lim[tim].read() - 1) {
             timer_cnt[tim].write(timer_cnt[tim].read() + 1);
          }
          else {
-            /* We hit a overlap. We need to notify the channels. */
-            timer_cnt.notify(timeinc[tim]);
-            /* And raise the interrupt. */
-            int_ovl[tim+8].write(true);
-            /* We also refresh the timer steps. */
-            timestep[tim].write(timeinc[tim].read());
+            /* We hit the end we write a zero and raise the interrupt. */
+            timer_cnt[tim].write(0);
+            int_raw[tim+8].write(true);
          }
-         timer_cnt.notify(timeinc[tim]);
       }
+   }
+}
+
+void pcntmod::trace(sc_trace_file *tf) {
+   int un;
+   std::string sigb = name();
+   std::string sign = sigb + ".conf0_0";
+   int digit;
+
+   digit = sign.length() - 1;
+   for(un = 0; un < 16; un = un + 1) {
+      sign[digit] = '0' + un; sc_trace(tf, conf0[un], sign.c_str());
+   }
+   sign = sigb + ".conf1_0";
+   digit = sign.length() - 1;
+   for(un = 0; un < 8; un = un + 1) {
+      sign[digit] = '0' + un; sc_trace(tf, conf0[un], sign.c_str());
+   }
+   sign = sigb + ".hpoint_0";
+   digit = sign.length() - 1;
+   for(un = 0; un < 8; un = un + 1) {
+      sign[digit] = '0' + un; sc_trace(tf, conf1[un], sign.c_str());
+   }
+   sign = sigb + ".duty_0";
+   digit = sign.length() - 1;
+   for(un = 0; un < 8; un = un + 1) {
+      sign[digit] = '0' + un; sc_trace(tf, duty[un], sign.c_str());
+   }
+   sign = sigb + ".duty_r_0";
+   digit = sign.length() - 1;
+   for(un = 0; un < 8; un = un + 1) {
+      sign[digit] = '0' + un; sc_trace(tf, duty_r[un], sign.c_str());
+   }
+   sign = sigb + ".timer_cnt_0";
+   digit = sign.length() - 1;
+   for(un = 0; un < 8; un = un + 1) {
+      sign[digit] = '0' + un; sc_trace(tf, timer_cnt[un], sign.c_str());
+   }
+   sign = sigb + ".timer_lim_0";
+   digit = sign.length() - 1;
+   for(un = 0; un < 8; un = un + 1) {
+      sign[digit] = '0' + un; sc_trace(tf, timer_lim[un], sign.c_str());
+   }
+   sign = sigb + ".int_raw_0";
+   digit = sign.length() - 1;
+   for(un = 0; un < 24; un = un + 1) {
+      sign[digit] = '0' + un; sc_trace(tf, int_raw[un], sign.c_str());
    }
 }
