@@ -47,6 +47,7 @@ typedef unsigned int UBaseType_t;
 #define portTICK_RATE_MS 1
 #define portMAX_DELAY ( TickType_t ) 0xffffffffUL
 #define portNUM_CONFIGURABLE_REGIONS 1
+#define portTICK_PERIOD_MS (1000/configTICK_RATE_HZ)
 /* This is not quite it but will work for now. */
 #define portYIELD_FROM_ISR() yield()
 
