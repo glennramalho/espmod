@@ -95,9 +95,10 @@ SC_MODULE(espintr) {
       if (cpu == 0) return mask_pro.read();
       else return mask_app.read();
    }
-   int alloc(bool pro, int _ets, int _no) {
+   int alloc(int cpu, int _ets, int _no) {
       if (_ets < 0 || _ets >= ESPM_INTR_TABLE) return -1;
-      if (pro) table_pro[_ets] = _no;
+      if (cpu < 0 || cpu > 1) return -1;
+      if (cpu == 0) table_pro[_ets] = _no;
       else table_app[_ets] = _no;
       return 0;
    }
@@ -125,9 +126,10 @@ SC_MODULE(espintr) {
       }
       return 0;
    }
-   int deassignfn(bool pro, int _no) {
+   int deassignfn(int cpu, int _no) {
       if (_no < 0 || _no > 31) return -1;
-      if (pro) {
+      if (cpu < 0 || cpu > 1) return -1;
+      if (cpu == 0) {
          handler_pro[_no].fn = NULL;
          handler_pro[_no].arg = NULL;
       }
@@ -135,6 +137,12 @@ SC_MODULE(espintr) {
          handler_app[_no].fn = NULL;
          handler_app[_no].arg = NULL;
       }
+   }
+   bool has_handler(int cpu, int _no) {
+      if (_no < 0 || _no > 31) return -1;
+      if (cpu < 0 || cpu > 1) return -1;
+      if (cpu == 0) return handler_pro[_no].fn != NULL;
+      else return handler_app[_no].fn != NULL;
    }
    private:
    void initialize();

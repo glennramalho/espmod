@@ -23,6 +23,7 @@
 #include "freertos/task.h"
 #include <esp_types.h>
 #include "esp_err.h"
+#include "rom/ets_sys.h"
 //#define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
 #include "esp_log.h"
 #include "esp_intr_alloc.h"
@@ -302,13 +303,11 @@ typedef struct xt_handler_table_entry {
     void * handler;
     void * arg;
 } xt_handler_table_entry;
-extern xt_handler_table_entry _xt_interrupt_table[XCHAL_NUM_INTERRUPTS*portNUM_PROCESSORS];
-extern void xt_unhandled_interrupt(void * arg);
 
 //Returns true if handler for interrupt is not the default unhandled interrupt handler
 static bool int_has_handler(int intr, int cpu)
 {
-    return (_xt_interrupt_table[intr*portNUM_PROCESSORS+cpu].handler != xt_unhandled_interrupt);
+    return espintrptr->has_handler(cpu, intr);
 }
 
 static bool is_vect_desc_usable(vector_desc_t *vd, int flags, int cpu, int force)
@@ -655,8 +654,14 @@ esp_err_t esp_intr_free(intr_handle_t handle)
     if (!handle) return ESP_ERR_INVALID_ARG;
     //Assign this routine to the core where this interrupt is allocated on.
     if (handle->vector_desc->cpu!=xPortGetCoreID()) {
+        /* for now this makes no sense as the models do not specify any
+         * cpu ID.
+         */
+        /*
         esp_err_t ret = esp_ipc_call_blocking(handle->vector_desc->cpu, &esp_intr_free_cb, (void *)handle);
         return ret == ESP_OK ? ESP_OK : ESP_FAIL;
+        */
+        return ESP_FAIL;
     }
     portENTER_CRITICAL(&spinlock);
     esp_intr_disable(handle);
@@ -819,16 +824,6 @@ void esp_intr_noniram_enable()
 //These functions are provided in ROM, but the ROM-based functions use non-multicore-capable
 //virtualized interrupt levels. Thus, we disable them in the ld file and provide working
 //equivalents here.
-
-void ets_isr_unmask(unsigned int mask) {
-    int cpu=xPortGetCoreID();
-    espintrptr->set_mask(mask, cpu);
-}
-
-void ets_isr_mask(unsigned int mask) {
-    int cpu=xPortGetCoreID();
-    espintrptr->clr_mask(mask, cpu);
-}
 
 void ESP_INTR_ENABLE(unsigned int inum) { ets_isr_unmask(1<<inum); }
 void ESP_INTR_DISABLE(unsigned int inum) { ets_isr_mask(1<<inum); }
