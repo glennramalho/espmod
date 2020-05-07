@@ -26,10 +26,11 @@
 extern "C" {
 #endif
 
-/* After changing PCNT you must call this function to update the model. */
-void update_pcnt();
-/* After changing GPIO you must call one of these functions to update the model.
+/* After changing PCNT, LEDC or GPIO struct you must call one of these function
+ * to update the model.
  */
+void update_pcnt();
+void update_ledc();
 void update_gpio();
 void update_gpio_reg();
 void update_gpio_oe();

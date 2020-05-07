@@ -42,16 +42,31 @@
 typedef uint32_t StackType_t;
 typedef uint32_t TickType_t;
 typedef int BaseType_t;
+typedef int portBASE_TYPE;
 typedef unsigned int UBaseType_t;
 #define portTICK_RATE_MS 1
 #define portMAX_DELAY ( TickType_t ) 0xffffffffUL
 #define portNUM_CONFIGURABLE_REGIONS 1
+/* This is not quite it but will work for now. */
+#define portYIELD_FROM_ISR() yield()
 
 /* These were changed to call SystemC semaphores. The semaphore should
- * be declared locally. They should later also make sure it is not called
- * inside of ISRs.
+ * be declared locally. Some need to make sure they are not called from ISRs,
+ * the others are safe. Being we currently do not know, we have to just call
+ * the function and ignore this.
  */
-#define portENTER_CRITICAL(mux) mux.trywait()
-#define portEXIT_CRITICAL(mux) mux.post()
+#define portENTER_CRITICAL(mux) (mux)->trywait()
+#define portEXIT_CRITICAL(mux) (mux)->post()
+#define portENTER_CRITICAL_SAFE(mux) (mux)->trywait()
+#define portEXIT_CRITICAL_SAFE(mux) (mux)->post()
+#define portENTER_CRITICAL_ISR(mux) (mux)->trywait()
+#define portEXIT_CRITICAL_ISR(mux) (mux)->post()
+
+/* We do not really have a system to report which is the CPU in the simulation.
+ * Therefore for now we just return always cpu zero. Maybe in the future we
+ * could set some parameter for spawned processes to carry foreward. So we
+ * always return the app cpu.
+ */
+static inline uint32_t xPortGetCoreID() { return 1; }
 
 #endif

@@ -109,9 +109,11 @@ void doitesp32devkitv1::pininit() {
    adc2ptr = &i_adc2;
 
    /* Other modules. */
+   ledcptr = &i_ledc;
    pcntptr = &i_pcnt;
    gpiomatrixptr = &i_gpio_matrix;
    ctrlregsptr = &ctrlregs;
+   espintrptr = &i_espintr;
 
    /* We configure the serial protocols. Each TestSerial needs to be connected
     * to the channel it controls.
@@ -125,6 +127,7 @@ void doitesp32devkitv1::pininit() {
 }
 
 void doitesp32devkitv1::trace(sc_trace_file *tf) {
+   i_ledc.trace(tf);
    i_pcnt.trace(tf);
    sc_trace(tf, uart0rx, uart0rx.name());
    sc_trace(tf, uart0tx, uart0tx.name());
@@ -166,4 +169,20 @@ void doitesp32devkitv1::trace(sc_trace_file *tf) {
    sc_trace(tf, pcntbus_5, pcntbus_5.name());
    sc_trace(tf, pcntbus_6, pcntbus_6.name());
    sc_trace(tf, pcntbus_7, pcntbus_7.name());
+   sc_trace(tf, ledc_sig_hs_0, ledc_sig_hs_0.name());
+   sc_trace(tf, ledc_sig_hs_1, ledc_sig_hs_1.name());
+   sc_trace(tf, ledc_sig_hs_2, ledc_sig_hs_2.name());
+   sc_trace(tf, ledc_sig_hs_3, ledc_sig_hs_3.name());
+   sc_trace(tf, ledc_sig_hs_4, ledc_sig_hs_4.name());
+   sc_trace(tf, ledc_sig_hs_5, ledc_sig_hs_5.name());
+   sc_trace(tf, ledc_sig_hs_6, ledc_sig_hs_6.name());
+   sc_trace(tf, ledc_sig_hs_7, ledc_sig_hs_7.name());
+   sc_trace(tf, ledc_sig_ls_0, ledc_sig_ls_0.name());
+   sc_trace(tf, ledc_sig_ls_1, ledc_sig_ls_1.name());
+   sc_trace(tf, ledc_sig_ls_2, ledc_sig_ls_2.name());
+   sc_trace(tf, ledc_sig_ls_3, ledc_sig_ls_3.name());
+   sc_trace(tf, ledc_sig_ls_4, ledc_sig_ls_4.name());
+   sc_trace(tf, ledc_sig_ls_5, ledc_sig_ls_5.name());
+   sc_trace(tf, ledc_sig_ls_6, ledc_sig_ls_6.name());
+   sc_trace(tf, ledc_sig_ls_7, ledc_sig_ls_7.name());
 }

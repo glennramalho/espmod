@@ -56,6 +56,8 @@ struct gpio_matrix;
    i_mux_out##dg.uart0tx_i(uart0tx_i); \
    i_mux_out##dg.uart1tx_i(uart1tx_i); \
    i_mux_out##dg.uart2tx_i(uart2tx_i); \
+   i_mux_out##dg.ledc_sig_hs_i(ledc_sig_hs_i); \
+   i_mux_out##dg.ledc_sig_ls_i(ledc_sig_ls_i); \
 }
 
 SC_MODULE(gpio_matrix) {
@@ -88,7 +90,12 @@ SC_MODULE(gpio_matrix) {
    sc_inout<gn_mixed> d38_a2 {"d38_a2"};
    sc_inout<gn_mixed> d39_a3 {"d39_a3"};
 
+   /* PCNT and LEDC */
    sc_port<sc_signal_out_if<pcntbus_t>,8> pcntbus_o;
+   sc_port<sc_signal_in_if<bool>,8> ledc_sig_hs_i;
+   sc_port<sc_signal_in_if<bool>,8> ledc_sig_ls_i;
+
+   /* UARTS */
    sc_out<bool> uart0rx_o {"uart0rx_o"};
    sc_in<bool> uart0tx_i {"uart0tx_i"};
    sc_out<bool> uart1rx_o {"uart1rx_o"};

@@ -33,6 +33,8 @@ SC_MODULE(mux_out) {
    sc_in<bool> uart0tx_i{"uart0tx_i"};
    sc_in<bool> uart1tx_i{"uart1tx_i"};
    sc_in<bool> uart2tx_i{"uart2tx_i"};
+   sc_port<sc_signal_in_if<bool>,8> ledc_sig_hs_i{"ledc_sig_hs_i"};
+   sc_port<sc_signal_in_if<bool>,8> ledc_sig_ls_i{"ledc_sig_ls_i"};
 
    int function;
    sc_event fchange_ev;

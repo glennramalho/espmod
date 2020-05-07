@@ -132,5 +132,18 @@ void esp_log_write(esp_log_level_t level, const char* tag, const char* format, .
 }
 #endif
 
+/* Perhaps we can work on this later, but for now the early log is the same as
+ * the regular log.
+ */
+#define ESP_EARLY_LOGE ESP_LOGE
+/// macro to output logs in startup code at ``ESP_LOG_WARN`` level.  @see ``ESP_EARLY_LOGE``,``ESP_LOGE``, ``printf``
+#define ESP_EARLY_LOGW ESP_LOGW
+/// macro to output logs in startup code at ``ESP_LOG_INFO`` level.  @see ``ESP_EARLY_LOGE``,``ESP_LOGE``, ``printf``
+#define ESP_EARLY_LOGI ESP_LOGI
+/// macro to output logs in startup code at ``ESP_LOG_DEBUG`` level.  @see ``ESP_EARLY_LOGE``,``ESP_LOGE``, ``printf``
+#define ESP_EARLY_LOGD ESP_LOGD
+/// macro to output logs in startup code at ``ESP_LOG_VERBOSE`` level.  @see ``ESP_EARLY_LOGE``,``ESP_LOGE``, ``printf``
+#define ESP_EARLY_LOGV ESP_LOGV
+
 
 #endif /* __ESP_LOG_H__ */

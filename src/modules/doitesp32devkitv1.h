@@ -28,6 +28,8 @@
 #include "pcntbus.h"
 #include "gpio_matrix.h"
 #include "pcntmod.h"
+#include "ledcmod.h"
+#include "espintr.h"
 #include "adc_types.h"
 #include "gn_mixed.h"
 #include "ctrlregs.h"
@@ -75,6 +77,7 @@ SC_MODULE(doitesp32devkitv1) {
    /* Submodules */
    gpio_matrix i_gpio_matrix {"i_gpio_matrix"};
    pcntmod i_pcnt{"i_pcnt"};
+   ledcmod i_ledc{"i_ledc"};
    adc1 i_adc1{"i_adc1"};
    adc2 i_adc2{"i_adc2"};
    uart i_uart0 {"i_uart0", 64, 64};
@@ -82,6 +85,7 @@ SC_MODULE(doitesp32devkitv1) {
    uart i_uart2 {"i_uart2", 64, 64};
    cchan i_uflash {"i_uflash", 256*4, 256*4}; /* Actually this is a QSPI */
    uart i_ui2c {"i_ui2c", 32*8, 32*8};   /* to replace with an I2C */
+   espintr i_espintr{"i_espintr"};
 
    /* Not sure what is the real interface, but this one works as it is not
     * important exactly what the net packets look like going to the module.
@@ -103,6 +107,23 @@ SC_MODULE(doitesp32devkitv1) {
    sc_signal<pcntbus_t> pcntbus_5 {"pcntbus_5"};
    sc_signal<pcntbus_t> pcntbus_6 {"pcntbus_6"};
    sc_signal<pcntbus_t> pcntbus_7 {"pcntbus_7"};
+   sc_signal<bool> ledc_sig_hs_0{"ledc_sig_hs_0"};
+   sc_signal<bool> ledc_sig_hs_1{"ledc_sig_hs_1"};
+   sc_signal<bool> ledc_sig_hs_2{"ledc_sig_hs_2"};
+   sc_signal<bool> ledc_sig_hs_3{"ledc_sig_hs_3"};
+   sc_signal<bool> ledc_sig_hs_4{"ledc_sig_hs_4"};
+   sc_signal<bool> ledc_sig_hs_5{"ledc_sig_hs_5"};
+   sc_signal<bool> ledc_sig_hs_6{"ledc_sig_hs_6"};
+   sc_signal<bool> ledc_sig_hs_7{"ledc_sig_hs_7"};
+   sc_signal<bool> ledc_sig_ls_0{"ledc_sig_ls_0"};
+   sc_signal<bool> ledc_sig_ls_1{"ledc_sig_ls_1"};
+   sc_signal<bool> ledc_sig_ls_2{"ledc_sig_ls_2"};
+   sc_signal<bool> ledc_sig_ls_3{"ledc_sig_ls_3"};
+   sc_signal<bool> ledc_sig_ls_4{"ledc_sig_ls_4"};
+   sc_signal<bool> ledc_sig_ls_5{"ledc_sig_ls_5"};
+   sc_signal<bool> ledc_sig_ls_6{"ledc_sig_ls_6"};
+   sc_signal<bool> ledc_sig_ls_7{"ledc_sig_ls_7"};
+   sc_signal<bool> ledc_intr{"ledc_intr"};
 
    /* Processes */
    void dut(void);
@@ -158,6 +179,28 @@ SC_MODULE(doitesp32devkitv1) {
       i_gpio_matrix.pcntbus_o(pcntbus_2); i_gpio_matrix.pcntbus_o(pcntbus_3);
       i_gpio_matrix.pcntbus_o(pcntbus_4); i_gpio_matrix.pcntbus_o(pcntbus_5);
       i_gpio_matrix.pcntbus_o(pcntbus_6); i_gpio_matrix.pcntbus_o(pcntbus_7);
+      i_gpio_matrix.ledc_sig_hs_i(ledc_sig_hs_0);
+      i_gpio_matrix.ledc_sig_hs_i(ledc_sig_hs_1);
+      i_gpio_matrix.ledc_sig_hs_i(ledc_sig_hs_2);
+      i_gpio_matrix.ledc_sig_hs_i(ledc_sig_hs_3);
+      i_gpio_matrix.ledc_sig_hs_i(ledc_sig_hs_4);
+      i_gpio_matrix.ledc_sig_hs_i(ledc_sig_hs_5);
+      i_gpio_matrix.ledc_sig_hs_i(ledc_sig_hs_6);
+      i_gpio_matrix.ledc_sig_hs_i(ledc_sig_hs_7);
+      i_gpio_matrix.ledc_sig_ls_i(ledc_sig_ls_0);
+      i_gpio_matrix.ledc_sig_ls_i(ledc_sig_ls_1);
+      i_gpio_matrix.ledc_sig_ls_i(ledc_sig_ls_2);
+      i_gpio_matrix.ledc_sig_ls_i(ledc_sig_ls_3);
+      i_gpio_matrix.ledc_sig_ls_i(ledc_sig_ls_4);
+      i_gpio_matrix.ledc_sig_ls_i(ledc_sig_ls_5);
+      i_gpio_matrix.ledc_sig_ls_i(ledc_sig_ls_6);
+      i_gpio_matrix.ledc_sig_ls_i(ledc_sig_ls_7);
+
+      /* We connect the ADCs to the channels. */
+      i_adc1.channel_0(d36_a0);
+      i_adc1.channel_1(d37_a1);
+      i_adc1.channel_2(d38_a2);
+      i_adc1.channel_3(d39_a3);
 
       /* We connect the ADCs to the channels. */
       i_adc1.channel_0(d36_a0);
@@ -188,6 +231,19 @@ SC_MODULE(doitesp32devkitv1) {
       i_pcnt.pcntbus_i(pcntbus_5);
       i_pcnt.pcntbus_i(pcntbus_6);
       i_pcnt.pcntbus_i(pcntbus_7);
+
+      /* And the ledc. */
+      i_ledc.sig_out_hs_o(ledc_sig_hs_0); i_ledc.sig_out_hs_o(ledc_sig_hs_1);
+      i_ledc.sig_out_hs_o(ledc_sig_hs_2); i_ledc.sig_out_hs_o(ledc_sig_hs_3);
+      i_ledc.sig_out_hs_o(ledc_sig_hs_4); i_ledc.sig_out_hs_o(ledc_sig_hs_5);
+      i_ledc.sig_out_hs_o(ledc_sig_hs_6); i_ledc.sig_out_hs_o(ledc_sig_hs_7);
+      i_ledc.sig_out_ls_o(ledc_sig_ls_0); i_ledc.sig_out_ls_o(ledc_sig_ls_1);
+      i_ledc.sig_out_ls_o(ledc_sig_ls_2); i_ledc.sig_out_ls_o(ledc_sig_ls_3);
+      i_ledc.sig_out_ls_o(ledc_sig_ls_4); i_ledc.sig_out_ls_o(ledc_sig_ls_5);
+      i_ledc.sig_out_ls_o(ledc_sig_ls_6); i_ledc.sig_out_ls_o(ledc_sig_ls_7);
+      i_ledc.intr_o(ledc_intr);
+
+      i_espintr.ledc_intr_i(ledc_intr);
 
       SC_THREAD(dut);
    }

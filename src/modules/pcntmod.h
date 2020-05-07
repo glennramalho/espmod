@@ -34,7 +34,6 @@ SC_MODULE(pcntmod) {
    sc_signal<uint32_t> int_raw[8];
    sc_signal<uint32_t> int_st {"int_st"};
    sc_signal<uint32_t> int_ena {"int_ena"};
-   sc_signal<uint32_t> int_clr {"int_clr"};
    sc_signal<uint32_t> status_unit[8];
    sc_signal<uint32_t> ctrl {"ctrl"};
    pcnt_dev_t sv;

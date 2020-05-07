@@ -18,10 +18,14 @@
  *******************************************************************************
  */
 
+#define SC_INCLUDE_DYNAMIC_PROCESSES
 #include <systemc.h>
 #include "ledcmod.h"
+#include "setfield.h"
 #include "soc/ledc_struct.h"
 #include "soc/ledc_reg.h"
+#include "info.h"
+#include "Arduino.h"
 
 void ledcmod::updateth() {
    int ch;
@@ -29,55 +33,58 @@ void ledcmod::updateth() {
 
    while(true) {
       wait();
-      for(ch = 0; ch < 8; ch = ch + 1; {
-         conf0[un].write(LEDC.channel_group[0].channel[ch].conf0.val);
-         conf1[un].write(LEDC.channel_group[0].channel[ch].conf1.val);
-         hpoint[un].write(LEDC.channel_group[0].channel[ch].hpoint.val);
-         duty[un].write(LEDC.channel_group[0].channel[ch].duty.val);
-         conf0[un+8].write(LEDC.channel_group[1].channel[ch].conf0.val);
-         conf1[un+8].write(LEDC.channel_group[1].channel[ch].conf1.val);
-         hpoint[un+8].write(LEDC.channel_group[1].channel[ch].hpoint.val);
-         duty[un+8].write(LEDC.channel_group[1].channel[ch].duty.val);
+      for(ch = 0; ch < (LEDC_CHANNELS/2); ch = ch + 1) {
+         conf0[ch].write(LEDC.channel_group[0].channel[ch].conf0.val);
+         conf1[ch].write(LEDC.channel_group[0].channel[ch].conf1.val);
+         hpoint[ch].write(LEDC.channel_group[0].channel[ch].hpoint.val);
+         duty[ch].write(LEDC.channel_group[0].channel[ch].duty.val);
+         conf0[ch+8].write(LEDC.channel_group[1].channel[ch].conf0.val);
+         conf1[ch+8].write(LEDC.channel_group[1].channel[ch].conf1.val);
+         hpoint[ch+8].write(LEDC.channel_group[1].channel[ch].hpoint.val);
+         duty[ch+8].write(LEDC.channel_group[1].channel[ch].duty.val);
       }
 
       /* we do not actually build the timers, so we need to do some
        * precalculations for the channels.
        */
-      for(tim = 0; tim < 8; tim = tim + 1) {
+      for(tim = 0; tim < (LEDC_TIMERS/2); tim = tim + 1) {
          /* HSTIMER */
-         if (LEDC.timer_group[0].timer[tim].tick_sel == 0) {
-            PRINTF_WARNING("LEDC", "REF_TICK has not yet been implemented");
+         if (LEDC.timer_group[0].timer[tim].conf.tick_sel == 0) {
+            PRINTF_WARN("LEDC", "REF_TICK has not yet been implemented");
          }
          /* TODO -- do the decimal part */
-         timeinc[tim].write(
-            apb_clk * (LEDC.timer_group[0].timer[tim].clock_divider>>8));
-         timestep[tim].write(
-            apb_clk * (LEDC.timer_group[0].timer[tim].clock_divider>>8)
-            * (1<<LEDC.timer_group[0].timer[tim].duty_resolution));
-         period[tim].write(1<<LEDC.timer_group[0].timer[tim].duty_resolution);
+         timerinc[tim].write(
+            sc_time(APB_CLOCK_PERIOD
+               * (LEDC.timer_group[0].timer[tim].conf.clock_divider>>8), SC_NS));
 
-         if (LEDC.timer_group[0].timer[tim].rst
-               || LEDC.timer_group[0].timer[tim].pause)
+         if (LEDC.timer_group[0].timer[tim].conf.rst
+               || LEDC.timer_group[0].timer[tim].conf.pause)
             timer_ev[tim].notify();
 
          /* LSTIMER */
          /* TODO -- SLOW_CLK */
-         if (LEDC.timer_group[1].timer[tim].tick_sel == 0) {
-            PRINTF_WARNING("LEDC", "REF_TICK has not yet been implemented");
+         if (LEDC.timer_group[1].timer[tim].conf.tick_sel == 0) {
+            PRINTF_WARN("LEDC", "REF_TICK has not yet been implemented");
          }
          /* TODO -- do the decimal part */
          /* TODO -- do the pause */
-         if (LEDC.timer_group[1].timer[tim].rst
-               || LEDC.timer_group[1].timer[tim].pause)
+         if (LEDC.timer_group[1].timer[tim].conf.rst
+               || LEDC.timer_group[1].timer[tim].conf.pause)
             timer_ev[tim].notify();
-         if (LEDC.timer_group[1].timer[tim].low_speed_update) {
-            timeinc[tim].write(
-               apb_clk * (LEDC.timer_group[1].timer[tim].clock_divider>>8));
-            timestep[tim].write(
-               apb_clk * (LEDC.timer_group[1].timer[tim].clock_divider>>8)
-               * (1<<LEDC.timer_group[1].timer[tim].duty_resolution));
+         if (LEDC.timer_group[1].timer[tim].conf.low_speed_update) {
+            timerinc[tim].write(
+               sc_time(APB_CLOCK_PERIOD
+               * (LEDC.timer_group[1].timer[tim].conf.clock_divider>>8), SC_NS));
          }
       }
+
+      /* int_ena we simply copy. */
+      int_ena.write(LEDC.int_ena.val);
+
+      /* If we got a clear command, we trigger the event for the returnth to
+       * handle it.
+       */
+      if (LEDC.int_clr.val != 0x0) int_clr_ev.notify();
    }
 }
 
@@ -100,25 +107,18 @@ void ledcmod::returnth() {
          duty_r[10].value_changed_event()| duty_r[11].value_changed_event() |
          duty_r[12].value_changed_event()| duty_r[13].value_changed_event() |
          duty_r[14].value_changed_event()| duty_r[15].value_changed_event() |
-         int_raw[0].value_changed_event() | int_raw[1].value_changed_event() |
-         int_raw[2].value_changed_event() | int_raw[3].value_changed_event() |
-         int_raw[4].value_changed_event() | int_raw[5].value_changed_event() |
-         int_raw[6].value_changed_event() | int_raw[7].value_changed_event() |
-         int_raw[8].value_changed_event() | int_raw[9].value_changed_event() |
-         int_raw[10].value_changed_event()| int_raw[11].value_changed_event() |
-         int_raw[12].value_changed_event()| int_raw[13].value_changed_event() |
-         int_raw[14].value_changed_event()| int_raw[15].value_changed_event() |
-         int_raw[16].value_changed_event()| int_raw[17].value_changed_event() |
-         int_raw[18].value_changed_event()| int_raw[19].value_changed_event() |
-         int_raw[20].value_changed_event()| int_raw[21].value_changed_event() |
-         int_raw[22].value_changed_event()| int_raw[23].value_changed_event());
+         int_clr_ev |
+         int_ev[0] | int_ev[1] | int_ev[2] | int_ev[3] | int_ev[4] | int_ev[5] |
+         int_ev[6] | int_ev[7] | int_ev[8] | int_ev[9] | int_ev[10]| int_ev[11]|
+         int_ev[12]| int_ev[13]| int_ev[14]| int_ev[15]| int_ev[16]| int_ev[17]|
+         int_ev[18]| int_ev[19]| int_ev[20]| int_ev[21]| int_ev[22]| int_ev[23]);
 
-      for (un = 0; un < 16; un = un + 1) {
+      for (un = 0; un < LEDC_CHANNELS; un = un + 1) {
          LEDC.int_raw.val = 0x0;
          /* If we hit the maximum dither times, we have an interrupt and
           * clear the duty_start. */
-         if (int_raw[un+8].read()) {
-            LEDC.int_raw[un+8].val = LEDC.int_raw[un+8].val | (1<<un);
+         if (int_ev[un+8].triggered()) {
+            LEDC.int_raw.val = LEDC.int_raw.val | (1<<un);
             if (un < 8)
                LEDC.channel_group[0].channel[un].conf1.duty_start = false;
             else LEDC.channel_group[1].channel[un-8].conf1.duty_start = false;
@@ -130,17 +130,25 @@ void ledcmod::returnth() {
             duty_r[un-8].read();
       }
       /* We also copy over the timer values and interrupts. */
-      for(un = 0; un < 4; un = un + 1) {
-         LEDC.int_raw[un].val = LEDC.int_raw[un].val | int_raw[un].read();
-         LEDC.timer_group[0].timer[un].value.timer_cnt[un]
-            = timer_cnt[un].read();
+      for(un = 0; un < (LEDC_TIMERS/2); un = un + 1) {
+         if (int_ev[un].triggered())
+            LEDC.int_raw.val = LEDC.int_raw.val | (1<<un);
+         LEDC.timer_group[0].timer[un].value.timer_cnt = timer_cnt[un].read();
+         if (int_ev[un+4].triggered())
+            LEDC.int_raw.val = LEDC.int_raw.val | (1<<un+4);
+         LEDC.timer_group[1].timer[un].value.timer_cnt = timer_cnt[un].read();
+      }
 
+      /* If we have a clear event we take it too. */
+      if (int_clr_ev.triggered()) {
+         LEDC.int_raw.val = LEDC.int_raw.val & ~LEDC.int_clr.val;
+         LEDC.int_clr.val = 0;
       }
-      for(un = 0; un < 4; un = un + 1) {
-         LEDC.int_raw[un+4].val = LEDC.int_raw[un+4].val | int_raw[un+4].read();
-         LEDC.timer_group[1].timer[un].value.timer_cnt[un+8]
-            = timer_cnt[un].read();
-      }
+      /* We update the raw. */
+      LEDC.int_st.val = LEDC.int_raw.val & int_ena.read();
+
+      /* We also drive the interrupt line */
+      intr_o.write(LEDC.int_st.val != 0);
    }
 }
 
@@ -156,13 +164,27 @@ void ledcmod::initstruct() {
 void ledcmod::start_of_simulation() {
    /* We spawn a thread for each channel and timer. */
    int un;
-   for(un = 0; un < 16; un = un + 1) {
-      sc_spawn(sc_bind(&ledcmod::channel, this, un));
-      sig_out[un].write(false);
+   for(un = 0; un < LEDC_CHANNELS; un = un + 1) {
+      conf0[un].write(0);
+      conf1[un].write(0);
+      hpoint[un].write(0);
+      duty[un].write(0);
    }
-   for(un = 0; un < 8; un = un + 1)
+   for(un = 0; un < sig_out_hs_o.size(); un = un + 1) {
+      sc_spawn(sc_bind(&ledcmod::channel, this, un));
+      sig_out_hs_o[un]->write(false);
+   }
+   for(un = LEDC_CHANNELS/2; un < sig_out_ls_o.size(); un = un + 1) {
+      sc_spawn(sc_bind(&ledcmod::channel, this, un));
+      sig_out_ls_o[un-LEDC_CHANNELS/2]->write(false);
+   }
+   for(un = 0; un < LEDC_TIMERS; un = un + 1) {
       sc_spawn(sc_bind(&ledcmod::timer, this, un));
-
+      timer_cnt[un].write(0);
+      timer_lim[un].write(0);
+      timerinc[un].write(sc_time(0, SC_NS));
+   }
+   int_ena.write(0);
 }
 
 void ledcmod::calc_points(int un, bool start_dither) {
@@ -220,21 +242,21 @@ void ledcmod::calc_points(int un, bool start_dither) {
       }
       else {
          /* Other times we count the cycles and process it. */
-         dithcycles = dithcycles - 1;
+         dithcycles[un] = dithcycles[un] - 1;
 
          /* If we hit the target, we are done. */
-         if (dithcycles == 0 && duty_inc)
+         if (dithcycles == 0 && duty_inc) {
             lp = lp + duty_scale;
-            dithcycles = duty_cycle;
-            dithtimes = dithtimes - 1;
+            dithcycles[un] = duty_cycle;
+            dithtimes[un] = dithtimes[un] - 1;
          }
-         else if (dithcycles == 0) {
+         else if (dithcycles[un] == 0) {
             lp = lp - duty_scale;
-            dithcycles = duty_cycle;
-            dithtimes = dithtimes - 1;
+            dithcycles[un] = duty_cycle;
+            dithtimes[un] = dithtimes[un] - 1;
          }
 
-         int_raw[ch+8].write(1, SC_NS);
+         int_ev[un+8].notify();
       }
    }
 
@@ -252,15 +274,15 @@ void ledcmod::channel(int ch) {
       wait();
 
       /* We go ahead and grab the output enable as we use it quite often. */
-      if (un < 8) {
+      if (ch < 8) {
          outen =
-            RDFIELD(conf0[un], LEDC_SIG_OUT_EN_HSCH0_M, LEDC_SIG_OUT_EN_HSCH0_S);
-         sel= RDFIELD(conf0[un], LEDC_TIMER_SEL_HSCH0_M, LEDC_TIMER_SEL_HSCH0_S);
+            RDFIELD(conf0[ch], LEDC_SIG_OUT_EN_HSCH0_M, LEDC_SIG_OUT_EN_HSCH0_S);
+         sel= RDFIELD(conf0[ch], LEDC_TIMER_SEL_HSCH0_M, LEDC_TIMER_SEL_HSCH0_S);
       }
       else {
          outen =
-            RDFIELD(conf0[un], LEDC_SIG_OUT_EN_LSCH0_M, LEDC_SIG_OUT_EN_LSCH0_S);
-         sel= RDFIELD(conf0[un], LEDC_TIMER_SEL_LSCH0_M, LEDC_TIMER_SEL_LSCH0_S);
+            RDFIELD(conf0[ch], LEDC_SIG_OUT_EN_LSCH0_M, LEDC_SIG_OUT_EN_LSCH0_S);
+         sel= RDFIELD(conf0[ch], LEDC_TIMER_SEL_LSCH0_M, LEDC_TIMER_SEL_LSCH0_S);
       }
 
       /* First we process changes in the PWM. These can affect the rest. */
@@ -268,22 +290,21 @@ void ledcmod::channel(int ch) {
        * update the value.
        * The timer we ignore as the timer mux is done outside the channel.
        */
-      if (conf0[un].event() && !outen) {
-         if (un < 8) sig_out[un].write(
-            RDFIELD(conf0[un], LEDC_IDLE_LV_HSCH0_M, LEDC_IDLE_LV_HSCH0_S))
-         else sig_out[un].write(
-            RDFIELD(conf0[un], LEDC_IDLE_LV_LSCH0_M, LEDC_IDLE_LV_LSCH0_S))
-
+      if (conf0[ch].event() && !outen) {
+         if (ch < LEDC_CHANNELS/2) sig_out_hs_o[ch]->write(
+            RDFIELD(conf0[ch], LEDC_IDLE_LV_HSCH0_M, LEDC_IDLE_LV_HSCH0_S));
+         else sig_out_ls_o[ch-LEDC_CHANNELS/2]->write(
+            RDFIELD(conf0[ch], LEDC_IDLE_LV_LSCH0_M, LEDC_IDLE_LV_LSCH0_S));
       }
 
       /* If we see a change in the hpoint or the duty we need to recalculate
        * the lpoint. We also need to do this when the timer is switched or when
        * we start a new cycle.
        */
-      if (duty[un].event() || timer_sel[un].event()) {
-         calc_points(un, true);
+      if (duty[ch].event() || conf0[ch].event()) {
+         calc_points(ch, true);
          /* We restart the cycle calculation. */
-         thiscyc[un] = 0;
+         thiscyc[ch] = 0;
          /* And we will need to recheck the hpoint and lpoint. */
          recheckpoints = true;
       }
@@ -292,10 +313,10 @@ void ledcmod::channel(int ch) {
        */
       else if (timer_cnt[sel].read() == 0) {
          /* We start adjusting the cycle number for the dither. */
-         thiscyc[un] = thiscyc[un] + 1;
-         if (thiscyc[un] == 16) thiscyc[un] = 0;
+         thiscyc[ch] = thiscyc[ch] + 1;
+         if (thiscyc[ch] == LEDC_CYCLES) thiscyc[ch] = 0;
          /* We also calculate the lpoint. */
-         calc_points();
+         calc_points(ch, false);
          /* And we will need to recheck the hpoint and lpoint. */
          recheckpoints = true;
       }
@@ -304,77 +325,69 @@ void ledcmod::channel(int ch) {
       /* If it was a timer tick, we need to see if it affects us. */
       if (outen && (timer_cnt[sel].event() || recheckpoints)) {
          /* And we check where we are in the flow. */
-         if (timer_cnt[sel].read() >= thislp[un] + hpoint[un].read())
-            sig_out[un].write(false);
-         else if (timer_cnt[sel].read() >= hpoint[un]) sig_out[un].write(true);
-         else sig_out[un].write(false);
+         bool nv;
+         if (timer_cnt[sel].read() >= thislp[ch] + hpoint[ch].read()) nv = false;
+         else if (timer_cnt[sel].read() >= hpoint[ch]) nv = true;
+         else nv = false;
+         if (ch < LEDC_CHANNELS/2) sig_out_hs_o[ch]->write(nv);
+         else sig_out_ls_o[ch-LEDC_CHANNELS/2]->write(nv);
       }
    }
 }
 
 void ledcmod::timer(int tim) {
-   int ch;
    while(1) {
+      wait(timer_ev[tim].triggered());
       /* If we got a reset, we then restart the timer. */
-      if (rst) timer_cnt[tim].write(0);
+      if (LEDC.timer_group[0].timer[tim].conf.rst) timer_cnt[tim].write(0);
       /* We only count if we are not paused. */
-      if (!pause) {
+      if (!LEDC.timer_group[0].timer[tim].conf.pause) {
          /* If we are not paused, we increment. */
-         if (timer_cnt[tim].read() != timer_lim[tim].read() - 1) {
+         if (timer_cnt[tim].read() < timer_lim[tim].read() - 1)
             timer_cnt[tim].write(timer_cnt[tim].read() + 1);
-         }
          else {
             /* We hit the end we write a zero and raise the interrupt. */
             timer_cnt[tim].write(0);
-            int_raw[tim+8].write(true);
+            int_ev[tim+8].notify();
          }
+         /* And we sleep until the next event. */
+         if (timerinc[tim].read() == sc_time(0, SC_NS)) timer_ev[tim].cancel();
+         else timer_ev[tim].notify(timerinc[tim]);
       }
    }
 }
 
-void pcntmod::trace(sc_trace_file *tf) {
+void ledcmod::trace(sc_trace_file *tf) {
    int un;
    std::string sigb = name();
-   std::string sign = sigb + ".conf0_0";
-   int digit;
+   std::string sign;
 
-   digit = sign.length() - 1;
-   for(un = 0; un < 16; un = un + 1) {
-      sign[digit] = '0' + un; sc_trace(tf, conf0[un], sign.c_str());
+   for(un = 0; un < LEDC_CHANNELS; un = un + 1) {
+      sign = sigb + std::string(".conf0_") + std::to_string(un);
+      sc_trace(tf, conf0[un], sign.c_str());
    }
-   sign = sigb + ".conf1_0";
-   digit = sign.length() - 1;
-   for(un = 0; un < 8; un = un + 1) {
-      sign[digit] = '0' + un; sc_trace(tf, conf0[un], sign.c_str());
+   for(un = 0; un < LEDC_CHANNELS; un = un + 1) {
+      sign = sigb + std::string(".conf1_") + std::to_string(un);
+      sc_trace(tf, conf1[un], sign.c_str());
    }
-   sign = sigb + ".hpoint_0";
-   digit = sign.length() - 1;
-   for(un = 0; un < 8; un = un + 1) {
-      sign[digit] = '0' + un; sc_trace(tf, conf1[un], sign.c_str());
+   for(un = 0; un < LEDC_CHANNELS; un = un + 1) {
+      sign = sigb + std::string(".hpoint_") + std::to_string(un);
+      sc_trace(tf, hpoint[un], sign.c_str());
    }
-   sign = sigb + ".duty_0";
-   digit = sign.length() - 1;
-   for(un = 0; un < 8; un = un + 1) {
-      sign[digit] = '0' + un; sc_trace(tf, duty[un], sign.c_str());
+   for(un = 0; un < LEDC_CHANNELS; un = un + 1) {
+      sign = sigb + std::string(".duty_") + std::to_string(un);
+      sc_trace(tf, duty[un], sign.c_str());
    }
-   sign = sigb + ".duty_r_0";
-   digit = sign.length() - 1;
-   for(un = 0; un < 8; un = un + 1) {
-      sign[digit] = '0' + un; sc_trace(tf, duty_r[un], sign.c_str());
+   for(un = 0; un < LEDC_CHANNELS; un = un + 1) {
+      sign = sigb + std::string(".duty_r") + std::to_string(un);
+      sc_trace(tf, duty_r[un], sign.c_str());
    }
-   sign = sigb + ".timer_cnt_0";
-   digit = sign.length() - 1;
-   for(un = 0; un < 8; un = un + 1) {
-      sign[digit] = '0' + un; sc_trace(tf, timer_cnt[un], sign.c_str());
+   for(un = 0; un < LEDC_TIMERS; un = un + 1) {
+      sign = sigb + std::string(".timer_cnt_") + std::to_string(un);
+      sc_trace(tf, timer_cnt[un], sign.c_str());
    }
-   sign = sigb + ".timer_lim_0";
-   digit = sign.length() - 1;
-   for(un = 0; un < 8; un = un + 1) {
-      sign[digit] = '0' + un; sc_trace(tf, timer_lim[un], sign.c_str());
-   }
-   sign = sigb + ".int_raw_0";
-   digit = sign.length() - 1;
-   for(un = 0; un < 24; un = un + 1) {
-      sign[digit] = '0' + un; sc_trace(tf, int_raw[un], sign.c_str());
+   for(un = 0; un < LEDC_TIMERS; un = un + 1) {
+      sign = sigb + std::string(".timer_lim_") + std::to_string(un);
+      sc_trace(tf, timer_lim[un], sign.c_str());
    }
 }

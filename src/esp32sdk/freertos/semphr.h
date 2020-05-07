@@ -32,3 +32,20 @@
  *   FOR A PARTICULAR PURPOSE.  Full license text is available on the following
  *   link: http://www.freertos.org/a00114.html
  */
+
+#pragma once
+
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
+#define vSemaphoreDelete( xSemaphore )
+#define xSemaphoreCreateMutex()                     ((void*)(1))
+#define xSemaphoreGive( xSemaphore )
+#define xSemaphoreTake( xSemaphore, xBlockTime )    pdTRUE
+
+typedef void* SemaphoreHandle_t;
+
+#if defined(__cplusplus)
+}
+#endif

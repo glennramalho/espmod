@@ -23,19 +23,28 @@
 
 #include <systemc.h>
 
+#define LEDC_CHANNELS 16
+#define LEDC_CYCLES 16
+#define LEDC_TIMERS 8
+#define LEDC_INTR 24
+
 SC_MODULE(ledcmod) {
    public:
-   sc_out<bool> sig_out[16];
-   sc_signal<uint32_t> conf0[16];
-   sc_signal<uint32_t> conf1[16];
-   sc_signal<uint32_t> hpoint[16];
-   sc_signal<uint32_t> duty[16];
-   sc_signal<uint32_t> duty_r[16];
-   sc_signal<uint32_t> timer_cnt[8];
-   sc_signal<uint32_t> timer_lim[8];
-   sc_signal<uint32_t> int_st {"int_st"};
+   /* Ports */
+   sc_port<sc_signal_out_if<bool>,LEDC_CHANNELS> sig_out_hs_o;
+   sc_port<sc_signal_out_if<bool>,LEDC_CHANNELS> sig_out_ls_o;
+   sc_out<bool> intr_o;
+
+   /* Regs */
+   sc_signal<uint32_t> conf0[LEDC_CHANNELS];
+   sc_signal<uint32_t> conf1[LEDC_CHANNELS];
+   sc_signal<uint32_t> hpoint[LEDC_CHANNELS];
+   sc_signal<uint32_t> duty[LEDC_CHANNELS];
+   sc_signal<uint32_t> duty_r[LEDC_CHANNELS];
+   sc_signal<sc_time> timerinc[LEDC_TIMERS];
+   sc_signal<uint32_t> timer_cnt[LEDC_TIMERS];
+   sc_signal<uint32_t> timer_lim[LEDC_TIMERS];
    sc_signal<uint32_t> int_ena {"int_ena"};
-   sc_signal<uint32_t> int_clr {"int_clr"};
 
    /* Functions */
    void update();
@@ -49,15 +58,20 @@ SC_MODULE(ledcmod) {
    void returnth(void);
 
    /* Variables */
-   int thislp[16];
-   int thiscyc[16];
+   int dithtimes[LEDC_CHANNELS];
+   int dithcycles[LEDC_CHANNELS];
+   int thislp[LEDC_CHANNELS];
+   int thiscyc[LEDC_CHANNELS];
    sc_event update_ev;
+   sc_event timer_ev[LEDC_TIMERS];
+   sc_event int_ev[LEDC_INTR];
+   sc_event int_clr_ev;
 
    SC_CTOR(ledcmod) {
       initstruct();
 
       SC_THREAD(updateth);
-      sesitive << update_ev;
+      sensitive << update_ev;
 
       SC_THREAD(returnth);
    }
@@ -65,4 +79,6 @@ SC_MODULE(ledcmod) {
    void start_of_simulation();
    void trace(sc_trace_file *tf);
 };
-extern ledcmod *ledcpntr;
+extern ledcmod *ledcptr;
+
+#endif

@@ -21,6 +21,7 @@
 #include <systemc.h>
 #include "soc/gpio_sig_map.h"
 #include "mux_out.h"
+#include "info.h"
 
 void mux_out::mux(int funcsel) {
    if (function != funcsel) {
@@ -36,6 +37,7 @@ void mux_out::transfer() {
 
    while(true) {
       switch(function) {
+         /* UARTS */
          case U0TXD_OUT_IDX:
             min_o.write(uart0tx_i.read()); men_o.write(true);
             wait(fchange_ev | uart0tx_i.default_event());
@@ -47,6 +49,49 @@ void mux_out::transfer() {
          case U2TXD_OUT_IDX:
             min_o.write(uart2tx_i.read()); men_o.write(true);
             wait(fchange_ev | uart2tx_i.default_event());
+            break;
+         /* LEDC */
+         case LEDC_HS_SIG_OUT0_IDX:
+         case LEDC_HS_SIG_OUT1_IDX:
+         case LEDC_HS_SIG_OUT2_IDX:
+         case LEDC_HS_SIG_OUT3_IDX:
+         case LEDC_HS_SIG_OUT4_IDX:
+         case LEDC_HS_SIG_OUT5_IDX:
+         case LEDC_HS_SIG_OUT6_IDX:
+         case LEDC_HS_SIG_OUT7_IDX:
+            if (ledc_sig_hs_i.size() > function - LEDC_HS_SIG_OUT0_IDX) {
+               min_o.write(ledc_sig_hs_i[function-LEDC_HS_SIG_OUT0_IDX]->read());
+               men_o.write(true);
+               wait(fchange_ev |
+                 ledc_sig_hs_i[function-LEDC_HS_SIG_OUT0_IDX]->default_event());
+            }
+            else {
+               PRINTF_WARN("MUXOUT", "Illegal LEDC HS accessed");
+               min_o.write(false);
+               men_o.write(false);
+               wait(fchange_ev);
+            }
+            break;
+         case LEDC_LS_SIG_OUT0_IDX:
+         case LEDC_LS_SIG_OUT1_IDX:
+         case LEDC_LS_SIG_OUT2_IDX:
+         case LEDC_LS_SIG_OUT3_IDX:
+         case LEDC_LS_SIG_OUT4_IDX:
+         case LEDC_LS_SIG_OUT5_IDX:
+         case LEDC_LS_SIG_OUT6_IDX:
+         case LEDC_LS_SIG_OUT7_IDX:
+            if (ledc_sig_ls_i.size() > function - LEDC_LS_SIG_OUT0_IDX) {
+               min_o.write(ledc_sig_ls_i[function-LEDC_LS_SIG_OUT0_IDX]->read());
+               men_o.write(true);
+               wait(fchange_ev |
+                 ledc_sig_ls_i[function-LEDC_LS_SIG_OUT0_IDX]->default_event());
+            }
+            else {
+               PRINTF_WARN("MUXOUT", "Illegal LEDC LS accessed");
+               min_o.write(false);
+               men_o.write(false);
+               wait(fchange_ev);
+            }
             break;
          /* function 256 is logic 0 and function 257 is logic 1. This is
           * different from the spec, so the GPIO matrix selects the correct

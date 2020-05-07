@@ -20,19 +20,33 @@
 
 #include "gpio_matrix.h"
 #include "pcntmod.h"
+#include "ledcmod.h"
 #include "adc_types.h"
 #include "soc/gpio_struct.h"
 #include "soc/pcnt_struct.h"
+#include "soc/ledc_struct.h"
 #include "ctrlregs.h"
 #include "Arduino.h"
+#include "espintr.h"
 
+/* Pointers to blocks, not all are handled here, but this is a nice place to put
+ * them.
+ */
 gpio_matrix *gpiomatrixptr;
 pcntmod *pcntptr;
+ledcmod *ledcptr;
 adc1 *adc1ptr;
 adc2 *adc2ptr;
+espintr *espintrptr;
+/* These are the structs that get updated. */
 gpio_dev_t GPIO;
 pcnt_dev_t PCNT;
+ledc_dev_t LEDC;
 ctrlregs_t *ctrlregsptr;
+
+void update_ledc() {
+   ledcptr->update();
+}
 
 void update_pcnt() {
    pcntptr->update();
