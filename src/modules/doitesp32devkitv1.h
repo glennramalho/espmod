@@ -201,12 +201,6 @@ SC_MODULE(doitesp32devkitv1) {
       i_adc1.channel_1(d37_a1);
       i_adc1.channel_2(d38_a2);
       i_adc1.channel_3(d39_a3);
-
-      /* We connect the ADCs to the channels. */
-      i_adc1.channel_0(d36_a0);
-      i_adc1.channel_1(d37_a1);
-      i_adc1.channel_2(d38_a2);
-      i_adc1.channel_3(d39_a3);
       i_adc1.channel_4(d32_a4);
       i_adc1.channel_5(d33_a5);
       i_adc1.channel_6(d34_a6);
