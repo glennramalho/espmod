@@ -92,12 +92,14 @@ ESPSDK=$(ESPSDKDIR)/esp32/esp_system.cpp \
    $(ESPSDKDIR)/mbedtls/library/sha1.c \
    $(ESPSDKDIR)/mbedtls/library/platform_util.c \
    $(ESPSDKDIR)/soc/gpio_periph.c \
-   $(ESPSDKDIR)/freertos/task.cpp $(ESPSDKDIR)/driver/pcnt.cpp \
+   $(ESPSDKDIR)/freertos/task.cpp \
+   $(ESPSDKDIR)/ledc.cpp $(ESPSDKDIR)/driver/pcnt.cpp \
    $(ESPSDKDIR)/driver/gpio.cpp $(ESPSDKDIR)/esp32/rom/romgpio.cpp \
    $(ESPSDKDIR)/lwip/sockets.cpp $(ESPSDKDIR)/driver/adc.cpp \
    $(ESPSDKDIR)/esp32/esp_wifi.cpp $(ESPSDKDIR)/esp32/esp_wifi.cpp \
    $(ESPSDKDIR)/tcpip_adapter.cpp $(ESPSDKDIR)/simnetdb.c \
    $(ESPSDKDIR)/esp32/panic.cpp $(ESPSDKDIR)/esp32/reset_reason.cpp \
+   $(ESPSDKDIR)/esp32/intr_alloc.cpp \
    $(ESPSDKDIR)/esp32/rom/romrtc.cpp \
    $(ESPSDKDIR)/nvs_flash/src/nvs_api.cpp \
    $(ESPSDKDIR)/nvs_flash/src/nvs_item_hash_list.cpp \
@@ -120,7 +122,8 @@ MODULES=$(MODDIR)/cchan.cpp $(MODDIR)/cchanflash.cpp \
    $(MODDIR)/gn_mixed.cpp $(MODDIR)/ea_pullup.cpp $(MODDIR)/io_mux.cpp \
    $(MODDIR)/gpio_matrix.cpp $(MODDIR)/mux_pcnt.cpp $(MODDIR)/mux_in.cpp \
    $(MODDIR)/mux_out.cpp $(MODDIR)/pcntmod.cpp $(MODDIR)/clkgen.cpp \
-   $(MODDIR)/netcon.cpp $(MODDIR)/uart.cpp
+   $(MODDIR)/ledcmod.cpp $(MODDIR)/netcon.cpp $(MODDIR)/uart.cpp \
+   $(MODDIR)/espintr.cpp
 
 # Test Interface Modules
 TBMODULES=$(TBINTF)/tft.cpp $(TBINTF)/webclient.cpp $(TBINTF)/uartclient.cpp \
