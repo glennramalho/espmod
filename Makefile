@@ -92,7 +92,7 @@ ESPSDK=$(ESPSDKDIR)/esp32/esp_system.cpp \
    $(ESPSDKDIR)/mbedtls/library/sha1.c \
    $(ESPSDKDIR)/mbedtls/library/platform_util.c \
    $(ESPSDKDIR)/soc/gpio_periph.c \
-   $(ESPSDKDIR)/freertos/task.cpp \
+   $(ESPSDKDIR)/freertos/task.cpp $(ESPSDKDIR)/freertos/semphr.cpp \
    $(ESPSDKDIR)/ledc.cpp $(ESPSDKDIR)/driver/pcnt.cpp \
    $(ESPSDKDIR)/driver/gpio.cpp $(ESPSDKDIR)/esp32/rom/romgpio.cpp \
    $(ESPSDKDIR)/lwip/sockets.cpp $(ESPSDKDIR)/driver/adc.cpp \
@@ -100,6 +100,7 @@ ESPSDK=$(ESPSDKDIR)/esp32/esp_system.cpp \
    $(ESPSDKDIR)/tcpip_adapter.cpp $(ESPSDKDIR)/simnetdb.c \
    $(ESPSDKDIR)/esp32/panic.cpp $(ESPSDKDIR)/esp32/reset_reason.cpp \
    $(ESPSDKDIR)/esp32/intr_alloc.cpp \
+   $(ESPSDKDIR)/esp32/rom/ets_sys.cpp \
    $(ESPSDKDIR)/esp32/rom/romrtc.cpp \
    $(ESPSDKDIR)/nvs_flash/src/nvs_api.cpp \
    $(ESPSDKDIR)/nvs_flash/src/nvs_item_hash_list.cpp \

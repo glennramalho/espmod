@@ -44,7 +44,6 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "freertos/semphr.h"
 #include "esp32-hal.h"
 #include "esp8266-compat.h"
 #include "soc/gpio_reg.h"
