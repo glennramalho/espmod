@@ -48,8 +48,8 @@
 #define PCNT_EVT_TYPE_ERR_STR   "PCNT value type error"
 #define PCNT_LIMT_VAL_ERR_STR   "PCNT limit value error"
 
-#define PCNT_ENTER_CRITICAL(mux)    portENTER_CRITICAL(pcntsem)
-#define PCNT_EXIT_CRITICAL(mux)     portEXIT_CRITICAL(pcntsem)
+#define PCNT_ENTER_CRITICAL(mux)    portENTER_CRITICAL(mux)
+#define PCNT_EXIT_CRITICAL(mux)     portEXIT_CRITICAL(mux)
 
 #define PCNT_CHECK(a, str, ret_val) \
     if (!(a)) { \
@@ -64,9 +64,8 @@ typedef struct{
 
 static pcnt_isr_func_t *pcnt_isr_func = NULL;
 static pcnt_isr_handle_t pcnt_isr_service = NULL;
-//static portMUX_TYPE pcnt_spinlock = portMUX_INITIALIZER_UNLOCKED;
 static const char* PCNT_TAG = "pcnt";
-sc_semaphore pcntsem("pcntsem", 1);
+sc_semaphore pcnt_spinlock("pcntsem", 1);
 
 esp_err_t pcnt_unit_config(const pcnt_config_t *pcnt_config)
 {
