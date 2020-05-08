@@ -138,7 +138,6 @@ struct shared_vector_desc_t {
     shared_vector_desc_t *next;
 };
 
-
 #define VECDESC_FL_RESERVED     (1<<0)
 #define VECDESC_FL_INIRAM       (1<<1)
 #define VECDESC_FL_SHARED       (1<<2)
@@ -543,8 +542,8 @@ esp_err_t esp_intr_alloc_intrstatus(int source, int flags, uint32_t intrstatusre
     if (source==ETS_INTERNAL_PROFILING_INTR_SOURCE) force=ETS_INTERNAL_PROFILING_INTR_NO;
 
     //Allocate a return handle. If we end up not needing it, we'll free it later on.
-    //ret=heap_caps_malloc(sizeof(intr_handle_data_t), MALLOC_CAP_INTERNAL|MALLOC_CAP_8BIT);
-    //if (ret==NULL) return ESP_ERR_NO_MEM;
+    ret=(intr_handle_data_t *)malloc(sizeof(intr_handle_data_t));
+    if (ret==NULL) return ESP_ERR_NO_MEM;
 
     portENTER_CRITICAL(&spinlock);
     /* We do not have the CPU ID so we just put something. */

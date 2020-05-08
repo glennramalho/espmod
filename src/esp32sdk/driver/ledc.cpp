@@ -586,13 +586,13 @@ static esp_err_t ledc_fade_channel_init_check(ledc_mode_t speed_mode, ledc_chann
         }
 
         s_ledc_fade_rec[speed_mode][channel]->ledc_fade_sem =
-           (void *)(&s_ledc_fade_rec[speed_mode][channel]->ledc_fade_sem);
+           (void *)(&s_ledc_fade_rec[speed_mode][channel]->ledc_sem);
 #else
         s_ledc_fade_rec[speed_mode][channel]->ledc_fade_sem =
-           (void *)(&s_ledc_fade_rec[speed_mode][channel]->ledc_fade_sem);
+           (void *)(&s_ledc_fade_rec[speed_mode][channel]->ledc_sem);
 #endif
         s_ledc_fade_rec[speed_mode][channel]->ledc_fade_mux =
-           (void *)(&s_ledc_fade_rec[speed_mode][channel]->ledc_fade_mux);
+           (void *)(&s_ledc_fade_rec[speed_mode][channel]->ledc_mux);
         xSemaphoreGive(s_ledc_fade_rec[speed_mode][channel]->ledc_fade_sem);
     }
     if (s_ledc_fade_rec[speed_mode][channel]
