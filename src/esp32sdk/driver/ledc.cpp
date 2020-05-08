@@ -39,15 +39,19 @@ struct ledc_fade_t {
     int cycle_num;
     int scale;
     ledc_fade_mode_t mode;
-    gn_semaphore ledc_sem;
-    gn_semaphore ledc_mux;
     xSemaphoreHandle ledc_fade_sem;
     xSemaphoreHandle ledc_fade_mux;
-    ledc_fade_t(): ledc_sem("lc", 1), ledc_mux("lm", 1) {}
 };
 
 static ledc_fade_t *s_ledc_fade_rec[LEDC_SPEED_MODE_MAX][LEDC_CHANNEL_MAX];
 static ledc_isr_handle_t s_ledc_fade_isr_handle = NULL;
+
+/* We use an array of semaphores for the ledc_fade_t to point to. */
+struct sem_t {
+   gn_semaphore sem;
+   gn_semaphore mux;
+   sem_t(): sem("sem", 1), mux("mux", 1) {}
+} sem[LEDC_SPEED_MODE_MAX][LEDC_CHANNEL_MAX];
 
 #define LEDC_VAL_NO_CHANGE        (-1)
 #define LEDC_STEP_NUM_MAX         (1023)
@@ -578,21 +582,17 @@ static esp_err_t ledc_fade_channel_init_check(ledc_mode_t speed_mode, ledc_chann
         return ESP_FAIL;
     }
     if (s_ledc_fade_rec[speed_mode][channel] == NULL) {
-#if CONFIG_SPIRAM_USE_MALLOC
-        s_ledc_fade_rec[speed_mode][channel] = (ledc_fade_t *) heap_caps_calloc(1, sizeof(ledc_fade_t), MALLOC_CAP_INTERNAL|MALLOC_CAP_8BIT);
+        s_ledc_fade_rec[speed_mode][channel] =
+           (ledc_fade_t *) malloc(sizeof(ledc_fade_t));
         if (!s_ledc_fade_rec[speed_mode][channel]) {
             ledc_fade_channel_deinit(speed_mode, channel);
             return ESP_FAIL;
         }
 
         s_ledc_fade_rec[speed_mode][channel]->ledc_fade_sem =
-           (void *)(&s_ledc_fade_rec[speed_mode][channel]->ledc_sem);
-#else
-        s_ledc_fade_rec[speed_mode][channel]->ledc_fade_sem =
-           (void *)(&s_ledc_fade_rec[speed_mode][channel]->ledc_sem);
-#endif
+           (void *)(&sem[speed_mode][channel].sem);
         s_ledc_fade_rec[speed_mode][channel]->ledc_fade_mux =
-           (void *)(&s_ledc_fade_rec[speed_mode][channel]->ledc_mux);
+           (void *)(&sem[speed_mode][channel].mux);
         xSemaphoreGive(s_ledc_fade_rec[speed_mode][channel]->ledc_fade_sem);
     }
     if (s_ledc_fade_rec[speed_mode][channel]
