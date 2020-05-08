@@ -38,10 +38,14 @@ void ledcmod::updateth() {
          conf1[ch].write(LEDC.channel_group[0].channel[ch].conf1.val);
          hpoint[ch].write(LEDC.channel_group[0].channel[ch].hpoint.val);
          duty[ch].write(LEDC.channel_group[0].channel[ch].duty.val);
-         conf0[ch+8].write(LEDC.channel_group[1].channel[ch].conf0.val);
-         conf1[ch+8].write(LEDC.channel_group[1].channel[ch].conf1.val);
-         hpoint[ch+8].write(LEDC.channel_group[1].channel[ch].hpoint.val);
-         duty[ch+8].write(LEDC.channel_group[1].channel[ch].duty.val);
+         conf0[ch+LEDC_CHANNELS/2].write(
+             LEDC.channel_group[1].channel[ch].conf0.val);
+         conf1[ch+LEDC_CHANNELS/2].write(
+             LEDC.channel_group[1].channel[ch].conf1.val);
+         hpoint[ch+LEDC_CHANNELS/2].write(
+             LEDC.channel_group[1].channel[ch].hpoint.val);
+         duty[ch+LEDC_CHANNELS/2].write(
+             LEDC.channel_group[1].channel[ch].duty.val);
       }
 
       /* we do not actually build the timers, so we need to do some
@@ -65,14 +69,14 @@ void ledcmod::updateth() {
             timer_ev[tim].notify();
 
          /* LSTIMER */
-         timer_conf[tim+4] = LEDC.timer_group[1].timer[tim].conf.val;
+         timer_conf[tim+LEDC_TIMERS/2] = LEDC.timer_group[1].timer[tim].conf.val;
          if (LEDC.timer_group[1].timer[tim].conf.tick_sel == 0)
             base_period = clockpacer.get_ref_period();
          else base_period = clockpacer.get_rtc8m_period();
          /* TODO -- do the decimal part */
          /* TODO -- do the pause */
          if (LEDC.timer_group[1].timer[tim].conf.low_speed_update) {
-            timerinc[tim+4].write(sc_time(base_period
+            timerinc[tim+LEDC_TIMERS/2].write(sc_time(base_period
                * (LEDC.timer_group[1].timer[tim].conf.clock_divider>>8)));
          }
       }
@@ -134,8 +138,8 @@ void ledcmod::returnth() {
          if (int_ev[un].triggered())
             LEDC.int_raw.val = LEDC.int_raw.val | (1<<un);
          LEDC.timer_group[0].timer[un].value.timer_cnt = timer_cnt[un].read();
-         if (int_ev[un+4].triggered())
-            LEDC.int_raw.val = LEDC.int_raw.val | (1<<un+4);
+         if (int_ev[un+LEDC_TIMERS/2].triggered())
+            LEDC.int_raw.val = LEDC.int_raw.val | (1<<un+LEDC_TIMERS/2);
          LEDC.timer_group[1].timer[un].value.timer_cnt = timer_cnt[un].read();
       }
 
@@ -256,7 +260,7 @@ void ledcmod::calc_points(int un, bool start_dither) {
             dithtimes[un] = dithtimes[un] - 1;
          }
 
-         int_ev[un+8].notify();
+         int_ev[un+LEDC_CHANNELS/2].notify();
       }
    }
 
@@ -278,7 +282,7 @@ void ledcmod::channel(int ch) {
       if (sel < 0) wait(conf0[ch].value_changed_event());
       else wait(conf0[ch].value_changed_event() | conf1[ch].value_changed_event()
          | hpoint[ch].value_changed_event() | duty[ch].value_changed_event()
-         | timer_ev[sel]);
+         | timer_cnt[sel].value_changed_event());
 
       /* We go ahead and grab the output enable as we use it quite often. */
       if (ch < LEDC_CHANNELS/2) {
@@ -289,7 +293,8 @@ void ledcmod::channel(int ch) {
       else {
          outen =
             RDFIELD(conf0[ch], LEDC_SIG_OUT_EN_LSCH0_M, LEDC_SIG_OUT_EN_LSCH0_S);
-         sel= RDFIELD(conf0[ch], LEDC_TIMER_SEL_LSCH0_M, LEDC_TIMER_SEL_LSCH0_S);
+         sel= RDFIELD(conf0[ch], LEDC_TIMER_SEL_LSCH0_M, LEDC_TIMER_SEL_LSCH0_S)
+            + LEDC_TIMERS/2;
       }
 
       /* First we process changes in the PWM. These can affect the rest. */
@@ -378,18 +383,17 @@ void ledcmod::timer(int tim) {
       /* If the timer increment is zero, we do the same. */
       else if (timerinc[tim].read() == sc_time(0, SC_NS))
          { timer_ev[tim].cancel(); }
-      /* If we are not paused nor counting we then count. */
-      else {
-         /* We only count on timer event triggers. Configuration events should
-          * not change the timer value.
-          */
-         if (timer_ev[tim].triggered() &&
-            timer_cnt[tim].read() < timer_lim[tim].read() - 1)
+      /* We only count on timer event triggers. Configuration events should
+       * not change the timer value.
+       */
+      else if (timer_ev[tim].triggered()) {
+         /* We calculate the next value, whichever it is. */
+         if (timer_cnt[tim].read() < timer_lim[tim].read() - 1)
             timer_cnt[tim].write(timer_cnt[tim].read() + 1);
          else {
             /* We hit the end we write a zero and raise the interrupt. */
             timer_cnt[tim].write(0);
-            int_ev[tim+8].notify();
+            int_ev[tim+LEDC_CHANNELS/2].notify();
          }
          /* And we sleep until the next event. */
          timer_ev[tim].notify(timerinc[tim]);
