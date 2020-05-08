@@ -27,6 +27,9 @@
 #include "clockpacer.h"
 #include "info.h"
 
+#define LEDC_OVF_TIMER_INTR 0
+#define LEDC_DUTYEND_TIMER_INTR 8
+
 void ledcmod::updateth() {
    int ch;
    int tim;
@@ -117,7 +120,7 @@ void ledcmod::returnth() {
          LEDC.int_raw.val = 0x0;
          /* If we hit the maximum dither times, we have an interrupt and
           * clear the duty_start. */
-         if (int_ev[un+8].triggered()) {
+         if (int_ev[un+LEDC_DUTYEND_TIMER_INTR].triggered()) {
             LEDC.int_raw.val = LEDC.int_raw.val | (1<<un);
             if (un < LEDC_CHANNELS/2)
                LEDC.channel_group[0].channel[un].conf1.duty_start = false;
@@ -132,10 +135,10 @@ void ledcmod::returnth() {
       }
       /* We also copy over the timer values and interrupts. */
       for(un = 0; un < (LEDC_TIMERS/2); un = un + 1) {
-         if (int_ev[un].triggered())
+         if (int_ev[un+LEDC_OVF_TIMER_INTR].triggered())
             LEDC.int_raw.val = LEDC.int_raw.val | (1<<un);
          LEDC.timer_group[0].timer[un].value.timer_cnt = timer_cnt[un].read();
-         if (int_ev[un+LEDC_TIMERS/2].triggered())
+         if (int_ev[un+LEDC_OVF_TIMER_INTR+LEDC_TIMERS/2].triggered())
             LEDC.int_raw.val = LEDC.int_raw.val | (1<<un+LEDC_TIMERS/2);
          LEDC.timer_group[1].timer[un].value.timer_cnt = timer_cnt[un].read();
       }
@@ -268,7 +271,7 @@ void ledcmod::calc_points(int un, bool start_dither) {
             dithtimes[un] = dithtimes[un] - 1;
          }
 
-         int_ev[un+8].notify();
+         int_ev[un+LEDC_DUTYEND_TIMER_INTR].notify();
       }
    }
 
@@ -411,7 +414,7 @@ void ledcmod::timer(int tim) {
          else {
             /* We hit the end we write a zero and raise the interrupt. */
             timer_cnt[tim].write(0);
-            int_ev[tim+8].notify();
+            int_ev[tim+LEDC_OVF_TIMER_INTR].notify();
          }
          /* And we sleep until the next event. */
          timer_ev[tim].notify(timerinc[tim]);

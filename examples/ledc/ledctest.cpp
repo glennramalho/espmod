@@ -65,6 +65,7 @@ void ledctest::serflush() {
 
 void ledctest::t0(void) {
    SC_REPORT_INFO("TEST", "Running Test T0.");
+   wait(1, SC_MS); sc_stop();
 
    PRINTF_INFO("TEST", "Waiting for power-up");
    wait(500, SC_MS);
