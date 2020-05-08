@@ -24,8 +24,8 @@
 #include "setfield.h"
 #include "soc/ledc_struct.h"
 #include "soc/ledc_reg.h"
+#include "clockpacer.h"
 #include "info.h"
-#include "Arduino.h"
 
 void ledcmod::updateth() {
    int ch;
@@ -49,32 +49,32 @@ void ledcmod::updateth() {
        */
       for(tim = 0; tim < (LEDC_TIMERS/2); tim = tim + 1) {
          /* HSTIMER */
-         if (LEDC.timer_group[0].timer[tim].conf.tick_sel == 0) {
-            PRINTF_WARN("LEDC", "REF_TICK has not yet been implemented");
-         }
+         sc_time base_period;
+         if (LEDC.timer_group[0].timer[tim].conf.tick_sel == 0)
+            base_period = clockpacer.get_ref_period();
+         else base_period = clockpacer.get_apb_period();
+
          /* TODO -- do the decimal part */
          timerinc[tim].write(
-            sc_time(APB_CLOCK_PERIOD
-               * (LEDC.timer_group[0].timer[tim].conf.clock_divider>>8), SC_NS));
+            sc_time(base_period
+               * (LEDC.timer_group[0].timer[tim].conf.clock_divider>>8)));
 
          if (LEDC.timer_group[0].timer[tim].conf.rst
                || LEDC.timer_group[0].timer[tim].conf.pause)
             timer_ev[tim].notify();
 
          /* LSTIMER */
-         /* TODO -- SLOW_CLK */
-         if (LEDC.timer_group[1].timer[tim].conf.tick_sel == 0) {
-            PRINTF_WARN("LEDC", "REF_TICK has not yet been implemented");
-         }
+         if (LEDC.timer_group[1].timer[tim].conf.tick_sel == 0)
+            base_period = clockpacer.get_ref_period();
+         else base_period = clockpacer.get_rtc8m_period();
          /* TODO -- do the decimal part */
          /* TODO -- do the pause */
          if (LEDC.timer_group[1].timer[tim].conf.rst
                || LEDC.timer_group[1].timer[tim].conf.pause)
             timer_ev[tim].notify();
          if (LEDC.timer_group[1].timer[tim].conf.low_speed_update) {
-            timerinc[tim].write(
-               sc_time(APB_CLOCK_PERIOD
-               * (LEDC.timer_group[1].timer[tim].conf.clock_divider>>8), SC_NS));
+            timerinc[tim].write(sc_time(base_period
+               * (LEDC.timer_group[1].timer[tim].conf.clock_divider>>8)));
          }
       }
 
@@ -154,7 +154,7 @@ void ledcmod::returnth() {
 
 void ledcmod::update() {
    update_ev.notify();
-   wait_next_apb_clock();
+   clockpacer.wait_next_apb_clk();
 }
 
 void ledcmod::initstruct() {
@@ -268,10 +268,17 @@ void ledcmod::calc_points(int un, bool start_dither) {
 void ledcmod::channel(int ch) {
    bool outen;
    bool recheckpoints;
-   int sel;
+   /* Sel begins with -1 and it then is switched to the correct value. */
+   int sel = -1;
    while(1) {
-      /* We wait for a timer to tick or a change in the configuration. */
-      wait();
+      /* If there is no selected timer, all we do is wait for a configuration
+       * change. If there is a timer specified, we wait for a timer trigger
+       * or a configuration change.
+       */
+      if (sel < 0) wait(conf0[ch].value_changed_event());
+      else wait(conf0[ch].value_changed_event() | conf1[ch].value_changed_event()
+         | hpoint[ch].value_changed_event() | duty[ch].value_changed_event()
+         | timer_ev[sel]);
 
       /* We go ahead and grab the output enable as we use it quite often. */
       if (ch < 8) {
@@ -337,7 +344,7 @@ void ledcmod::channel(int ch) {
 
 void ledcmod::timer(int tim) {
    while(1) {
-      wait(timer_ev[tim].triggered());
+      wait(timer_ev[tim]);
       /* If we got a reset, we then restart the timer. */
       if (LEDC.timer_group[0].timer[tim].conf.rst) timer_cnt[tim].write(0);
       /* We only count if we are not paused. */

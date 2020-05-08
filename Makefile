@@ -114,7 +114,8 @@ ESPSDK=$(ESPSDKDIR)/esp32/esp_system.cpp \
 # Generic C++ to SystemC interface support files
 INTF=$(INTFDIR)/gpioset.cpp $(INTFDIR)/crccalc.cpp \
    $(INTFDIR)/TestSerial.cpp $(INTFDIR)/hfieldlist.cpp \
-   $(INTFDIR)/pins_arduino.c $(INTFDIR)/adc_types.cpp $(INTFDIR)/update.cpp
+   $(INTFDIR)/pins_arduino.c $(INTFDIR)/adc_types.cpp $(INTFDIR)/update.cpp \
+   $(INTFDIR)/clockpacer.cpp
 
 # SystemC Module Files
 MODULES=$(MODDIR)/cchan.cpp $(MODDIR)/cchanflash.cpp \

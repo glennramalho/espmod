@@ -61,7 +61,6 @@ void yield(void);
 
 /* We add here some SystemC links. */
 void del1cycle();
-void wait_next_apb_clock();
 
 /* In a model we do not have a volatile nor an address. We do not have yet a
  * TLM model, but when we implement one we can change this to be an access

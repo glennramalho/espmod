@@ -25,7 +25,7 @@
 #include "setfield.h"
 #include "soc/pcnt_struct.h"
 #include "soc/pcnt_reg.h"
-#include "Arduino.h"
+#include "clockpacer.h"
 
 void pcntmod::updateth() {
    int un;
@@ -105,7 +105,7 @@ void pcntmod::returnth() {
 
 void pcntmod::update() {
    update_ev.notify();
-   wait_next_apb_clock();
+   clockpacer.wait_next_apb_clk();
 }
 
 void pcntmod::initstruct() {
@@ -138,7 +138,7 @@ void pcntmod::capture(int un) {
       wait(pcntbus_i[un]->default_event());
 
       /* We wait until the next clock edge. */
-      wait_next_apb_clock();
+      clockpacer.wait_next_apb_clk();
 
       /* Now we sample the inputs. Note that we might have lost some thing
        * but that is expected as this is a sampled protocol.
@@ -164,7 +164,7 @@ void pcntmod::capture(int un) {
           */
          else if (filter_thres > 0) {
             fctrl0[un] = sc_time_stamp() +
-               sc_time(filter_thres * APB_CLOCK_PERIOD, SC_NS);
+               sc_time(filter_thres * clockpacer.get_apb_period());
          }
          /* If no filtering was specified, we toggle the signal now. */
          else fctrl0[un] = sc_time_stamp();
@@ -174,7 +174,7 @@ void pcntmod::capture(int un) {
          if (fctrl0[un] >= sc_time_stamp()) fctrl0[un] = sc_time(0, SC_NS);
          else if (filter_thres > 0) {
             fctrl1[un] = sc_time_stamp() +
-               sc_time(filter_thres * APB_CLOCK_PERIOD, SC_NS);
+               sc_time(filter_thres * clockpacer.get_apb_period());
          }
          else fctrl1[un] = sc_time_stamp();
       }
@@ -192,14 +192,16 @@ void pcntmod::capture(int un) {
              * it immediatedly.
              */
             if (filter_thres > 0)
-               filtered_sig0[un].notify(APB_CLOCK_PERIOD * filter_thres, SC_NS);
+               filtered_sig0[un].notify(
+                  clockpacer.get_apb_period() * filter_thres);
             else filtered_sig0[un].notify();
          }
 
          /* And we repeat for the other signal. */
          if (lvl.sig_ch1 != lastlvl.sig_ch1) {
             if (filter_thres > 0)
-               filtered_sig1[un].notify(APB_CLOCK_PERIOD * filter_thres, SC_NS);
+               filtered_sig1[un].notify(
+                  clockpacer.get_apb_period() * filter_thres);
             else filtered_sig1[un].notify();
          }
       }

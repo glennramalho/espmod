@@ -32,6 +32,7 @@
 
 #include <systemc.h>
 #include "Arduino.h"
+#include "clockpacer.h"
 #include <sys/time.h>
 #include <string.h>
 
@@ -54,13 +55,8 @@ unsigned long int micros() {
    return (unsigned long int)floor(sc_time_stamp().to_seconds() * 1000000);
 }
 
-void yield() { wait(125, SC_NS); }
-void del1cycle() { wait(125, SC_NS); }
-void wait_next_apb_clock() {
-   long int nanoseconds;
-   nanoseconds = (long int)floor(sc_time_stamp().to_seconds() * 1e9);
-   wait(APB_CLOCK_PERIOD - nanoseconds % APB_CLOCK_PERIOD, SC_NS);
-}
+void yield() { wait(clockpacer.get_apb_period()); }
+void del1cycle() { wait(clockpacer.get_cpu_period()); }
 
 unsigned int interruptsenabled;
 unsigned int xt_rsil(unsigned int lvl) {
