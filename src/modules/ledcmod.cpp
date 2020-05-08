@@ -30,6 +30,7 @@
 void ledcmod::updateth() {
    int ch;
    int tim;
+   sc_time base_period;
 
    while(true) {
       wait();
@@ -51,10 +52,9 @@ void ledcmod::updateth() {
       /* we do not actually build the timers, so we need to do some
        * precalculations for the channels.
        */
-      sc_time base_period;
       for(tim = 0; tim < (LEDC_TIMERS/2); tim = tim + 1) {
          /* HSTIMER */
-         timer_conf[tim] = LEDC.timer_group[1].timer[tim].conf.val;
+         timer_conf[tim].write(LEDC.timer_group[0].timer[tim].conf.val);
          if (LEDC.timer_group[0].timer[tim].conf.tick_sel == 0)
             base_period = clockpacer.get_ref_period();
          else base_period = clockpacer.get_apb_period();
@@ -64,12 +64,9 @@ void ledcmod::updateth() {
             sc_time(base_period
                * (LEDC.timer_group[0].timer[tim].conf.clock_divider>>8)));
 
-         if (LEDC.timer_group[0].timer[tim].conf.rst
-               || LEDC.timer_group[0].timer[tim].conf.pause)
-            timer_ev[tim].notify();
-
          /* LSTIMER */
-         timer_conf[tim+LEDC_TIMERS/2] = LEDC.timer_group[1].timer[tim].conf.val;
+         timer_conf[tim+LEDC_TIMERS/2].write(
+            LEDC.timer_group[1].timer[tim].conf.val);
          if (LEDC.timer_group[1].timer[tim].conf.tick_sel == 0)
             base_period = clockpacer.get_ref_period();
          else base_period = clockpacer.get_rtc8m_period();
@@ -163,6 +160,15 @@ void ledcmod::update() {
 
 void ledcmod::initstruct() {
    memset(&LEDC, 0, sizeof(ledc_dev_t));
+   /* The reset bits begin all on. */
+   LEDC.timer_group[0].timer[0].conf.rst = 1;
+   LEDC.timer_group[0].timer[1].conf.rst = 1;
+   LEDC.timer_group[0].timer[2].conf.rst = 1;
+   LEDC.timer_group[0].timer[3].conf.rst = 1;
+   LEDC.timer_group[1].timer[0].conf.rst = 1;
+   LEDC.timer_group[1].timer[1].conf.rst = 1;
+   LEDC.timer_group[1].timer[2].conf.rst = 1;
+   LEDC.timer_group[1].timer[3].conf.rst = 1;
 }
 
 void ledcmod::start_of_simulation() {
@@ -184,6 +190,8 @@ void ledcmod::start_of_simulation() {
    }
    for(un = 0; un < LEDC_TIMERS; un = un + 1) {
       sc_spawn(sc_bind(&ledcmod::timer, this, un));
+      /* The RST bit starts off high, the other bits all start off low. */
+      timer_conf[un].write(LEDC_HSTIMER0_RST_M);
       timer_cnt[un].write(0);
       timer_lim[un].write(0);
       timerinc[un].write(sc_time(0, SC_NS));
@@ -260,7 +268,7 @@ void ledcmod::calc_points(int un, bool start_dither) {
             dithtimes[un] = dithtimes[un] - 1;
          }
 
-         int_ev[un+LEDC_CHANNELS/2].notify();
+         int_ev[un+8].notify();
       }
    }
 
@@ -348,8 +356,9 @@ void ledcmod::channel(int ch) {
 }
 
 void ledcmod::timer(int tim) {
-   int rst;
-   int pause;
+   bool rst;
+   bool pause;
+   bool wasstoped = true;
    while(1) {
       /* We wait for a timer tick or a change to the configuration register. */
       wait(timer_ev[tim] | timer_conf[tim].value_changed_event() |
@@ -357,16 +366,14 @@ void ledcmod::timer(int tim) {
 
       /* We get the parameters first. */
       if (tim < LEDC_TIMERS/2) {
-         rst = RDFIELD(timer_conf[tim], LEDC_HSTIMER0_RST_M,
-            LEDC_HSTIMER0_RST_S);
+         rst = RDFIELD(timer_conf[tim], LEDC_HSTIMER0_RST_M, LEDC_HSTIMER0_RST_S)>0;
          pause = RDFIELD(timer_conf[tim], LEDC_HSTIMER0_PAUSE_M,
-            LEDC_HSTIMER0_PAUSE_S);
+            LEDC_HSTIMER0_PAUSE_S)>0;
       }
       else {
-         rst = RDFIELD(timer_conf[tim], LEDC_LSTIMER0_RST_M,
-            LEDC_LSTIMER0_RST_S);
+         rst = RDFIELD(timer_conf[tim], LEDC_LSTIMER0_RST_M, LEDC_LSTIMER0_RST_S)>0;
          pause = RDFIELD(timer_conf[tim], LEDC_LSTIMER0_PAUSE_M,
-            LEDC_LSTIMER0_PAUSE_S);
+            LEDC_LSTIMER0_PAUSE_S)>0;
       }
 
       /* If we are in reset, we clear any future time events and wait. The next
@@ -375,14 +382,25 @@ void ledcmod::timer(int tim) {
       if (rst) {
          timer_cnt[tim].write(0);
          timer_ev[tim].cancel();
+         wasstoped = true;
       }
       /* If we are paused, we just cancel any future events, but we do not
        * touch the counter value.
        */
-      else if (pause) { timer_ev[tim].cancel(); }
+      else if (pause) {
+         timer_ev[tim].cancel();
+         wasstoped = true;
+      }
       /* If the timer increment is zero, we do the same. */
       else if (timerinc[tim].read() == sc_time(0, SC_NS))
          { timer_ev[tim].cancel(); }
+      /* If we are comming out of reset or pause, we need to get the counter
+       * going.
+       */
+      else if (wasstoped) {
+         timer_ev[tim].notify(timerinc[tim]);
+         wasstoped = false;
+      }
       /* We only count on timer event triggers. Configuration events should
        * not change the timer value.
        */
@@ -393,7 +411,7 @@ void ledcmod::timer(int tim) {
          else {
             /* We hit the end we write a zero and raise the interrupt. */
             timer_cnt[tim].write(0);
-            int_ev[tim+LEDC_CHANNELS/2].notify();
+            int_ev[tim+8].notify();
          }
          /* And we sleep until the next event. */
          timer_ev[tim].notify(timerinc[tim]);
