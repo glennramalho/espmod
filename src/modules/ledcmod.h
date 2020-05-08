@@ -44,6 +44,7 @@ SC_MODULE(ledcmod) {
    sc_signal<sc_time> timerinc[LEDC_TIMERS];
    sc_signal<uint32_t> timer_cnt[LEDC_TIMERS];
    sc_signal<uint32_t> timer_lim[LEDC_TIMERS];
+   sc_signal<uint32_t> timer_conf[LEDC_TIMERS];
    sc_signal<uint32_t> int_ena {"int_ena"};
 
    /* Functions */
