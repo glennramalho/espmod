@@ -23,6 +23,7 @@
 #include <systemc.h>
 #include "info.h"
 #include "TestSerial.h"
+#include "clockpacer.h"
 #include "Arduino.h"
 
 TestSerial::TestSerial() {
@@ -116,14 +117,14 @@ int TestSerial::printf(const char *fmt, ...) {
    ptr = buff;
    if (to == NULL) return 0;
    while(*ptr != '\0') {
-      del1cycle();
+      clockpacer.wait_next_apb_clk();
       to->write(*ptr++);
    }
    return resp;
 }
 
 size_t TestSerial::write(uint8_t ch) {
-   del1cycle();
+   clockpacer.wait_next_apb_clk();
    if (to == NULL) return 0;
    to->write(ch);
    return 1;
@@ -131,7 +132,7 @@ size_t TestSerial::write(uint8_t ch) {
 
 size_t TestSerial::write(const char* buf) {
    size_t sent = 0;
-   del1cycle();
+   clockpacer.wait_next_apb_clk();
    while(*buf != '\0') {
       write(*buf);
       sent = sent + 1; 
@@ -142,7 +143,7 @@ size_t TestSerial::write(const char* buf) {
 
 size_t TestSerial::write(const char* buf, size_t len) {
    size_t sent = 0;
-   del1cycle();
+   clockpacer.wait_next_apb_clk();
    while(sent < len) {
       write(*buf);
       sent = sent + 1; 
@@ -163,6 +164,7 @@ int TestSerial::available() {
     * least one. If taken is false, then it depends on the number
     * available.
     */
+   clockpacer.wait_next_apb_clk();
    if (from == NULL) return 0;
    if (taken) return 1 + from->num_available();
    else return from->num_available();
@@ -179,7 +181,7 @@ int TestSerial::read() {
    /* Anytime we leave the CPU we need to do a dummy delay. This makes sure
     * time advances, in case we happen to be in a timeout loop.
     */
-   del1cycle();
+   clockpacer.wait_next_apb_clk();
    if (from == NULL) return -1;
    if (taken) {
       taken = false;
@@ -193,7 +195,7 @@ unsigned char TestSerial::bl_read() {
    /* Just like the one above but it does a blocking read. Useful to cut
     * on polled reads.
     */
-   del1cycle();
+   clockpacer.wait_next_apb_clk();
    if (from == NULL) return -1;
    if (taken) {
       taken = false;
@@ -203,7 +205,7 @@ unsigned char TestSerial::bl_read() {
 }
 
 int TestSerial::peek() {
-   del1cycle();
+   clockpacer.wait_next_apb_clk();
    if (from == NULL) return -1;
    if (taken) return waiting;
    else if (!from->num_available()) return -1;
@@ -215,7 +217,7 @@ int TestSerial::peek() {
 }
 
 unsigned char TestSerial::bl_peek() {
-   del1cycle();
+   clockpacer.wait_next_apb_clk();
    if (from == NULL) return -1;
    if (taken) return waiting;
    else {

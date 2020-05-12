@@ -805,8 +805,8 @@ void esp_intr_noniram_disable()
     int intmask=~non_iram_int_mask[cpu];
     if (non_iram_int_disabled_flag[cpu]) abort();
     non_iram_int_disabled_flag[cpu]=true;
-    oldint = espintrptr->get_mask(cpu == 0);
-    espintrptr->clr_mask(~intmask, cpu==0);
+    oldint = espintrptr->getintrmask(cpu);
+    espintrptr->clrintrmask(~intmask, cpu);
     //Save which ints we did disable
     non_iram_int_disabled[cpu]=oldint&non_iram_int_mask[cpu];
 }
@@ -817,7 +817,7 @@ void esp_intr_noniram_enable()
     int intmask=non_iram_int_disabled[cpu];
     if (!non_iram_int_disabled_flag[cpu]) espm_abort();
     non_iram_int_disabled_flag[cpu]=false;
-    espintrptr->set_mask(intmask, cpu==0);
+    espintrptr->setintrmask(intmask, cpu);
 }
 
 //These functions are provided in ROM, but the ROM-based functions use non-multicore-capable

@@ -26,23 +26,27 @@ clockpacer_t clockpacer;
 void clockpacer_t::wait_next_cpu_clk() {
    long int nanoseconds;
    nanoseconds = (long int)floor(sc_time_stamp().to_seconds() * 1e9);
-   wait(cpu_period - sc_time(nanoseconds, SC_NS));
+   long int offset = nanoseconds % cpu_period;
+   wait(sc_time(cpu_period - offset, SC_NS));
 }
 
 void clockpacer_t::wait_next_apb_clk() {
    long int nanoseconds;
    nanoseconds = (long int)floor(sc_time_stamp().to_seconds() * 1e9);
-   wait(apb_period - sc_time(nanoseconds, SC_NS));
+   long int offset = nanoseconds % apb_period;
+   wait(sc_time(apb_period - offset, SC_NS));
 }
 
 void clockpacer_t::wait_next_ref_clk() {
    long int nanoseconds;
    nanoseconds = (long int)floor(sc_time_stamp().to_seconds() * 1e9);
-   wait(ref_period - sc_time(nanoseconds, SC_NS));
+   long int offset = nanoseconds % ref_period;
+   wait(sc_time(ref_period - offset, SC_NS));
 }
 
 void clockpacer_t::wait_next_rtc8m_clk() {
    long int nanoseconds;
    nanoseconds = (long int)floor(sc_time_stamp().to_seconds() * 1e9);
-   wait(rtc8m_period - sc_time(nanoseconds, SC_NS));
+   long int offset = nanoseconds % rtc8m_period;
+   wait(sc_time(rtc8m_period - offset, SC_NS));
 }

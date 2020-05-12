@@ -78,21 +78,18 @@ void uart::intake() {
          continue;
       }
 
-      /* In the real circuit we should do a larger delay to make sure clock
-       * jitter and other errors do not kill us. In this simulation
-       * environment though, it is ok to wait a short time as we know
-       * the clocks are all lined up perfectly.
-       */
-      wait(125, SC_NS);
+      /* We jump halfway into the start pulse. */
+      wait(baudperiod/2);
       /* And we advance to the next bit. */
       wait(baudperiod);
       /* And we take one bit at a time and merge them together. */
       msg = 0;
       for(cnt = 0, pos = 1; cnt < 8; cnt = cnt + 1, pos = pos << 1) {
-         if (debug) {
-            PRINTF_INFO("UART", "[%s/%d]: received", name(), cnt);
-         }
          incomming = rx.read();
+         if (debug) {
+            PRINTF_INFO("UART", "[%s/%d]: received lvl %c", name(), cnt,
+               (incomming)?'h':'l');
+         }
          if (incomming == true) msg = msg | pos;
          else if (incomming != false) {
             snprintf(buffer, 100, "Got an '%c' on %s",
@@ -110,8 +107,11 @@ void uart::intake() {
       }
       else {
          from.write(msg);
-         if (debug) {
-            PRINTF_INFO("UART", "[%s] received-%c/%x\n", name(), msg, msg);
+         if (debug && isprint(msg)) {
+            PRINTF_INFO("UART", "[%s] received-'%c'/%02x\n", name(), msg, msg);
+         }
+         else if (debug) {
+            PRINTF_INFO("UART", "[%s] received-%02x\n", name(), msg);
          }
       }
    }
@@ -125,15 +125,19 @@ void uart::outtake() {
    while(true) {
       /* We block until we receive something to send. */
       msg = to.read();
-      if (debug) {
-         PRINTF_INFO("UART","[%s] sending-%c/%x", name(), msg, msg);
+      if (debug && isprint(msg)) {
+         PRINTF_INFO("UART","[%s] sending-'%c'/%02x", name(), msg, msg);
+      }
+      else if (debug) {
+         PRINTF_INFO("UART","[%s] sending-%02x", name(), msg);
       }
       /* Then we send the packet asynchronously. */
       tx.write(false);
       wait(baudperiod);
       for(cnt = 0, pos = 1; cnt < 8; cnt = cnt + 1, pos = pos << 1) {
          if(debug) {
-            PRINTF_INFO("UART", "[%s/%d]: sent", name(), cnt);
+            PRINTF_INFO("UART", "[%s/%d]: sent '%c'", name(), cnt,
+               ((pos & msg)>0)?'h':'l');
          }
          if ((pos & msg)>0) tx.write(true);
          else tx.write(false);

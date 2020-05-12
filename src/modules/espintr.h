@@ -79,19 +79,19 @@ SC_MODULE(espintr) {
       else
          edge_interrupt_app.write(edge_interrupt_app.read() & ~edgemask);
    }
-   void set_mask(unsigned int mask, int cpu) {
+   void setintrmask(unsigned int mask, int cpu) {
       newmask = mask;
       setunset = true;
       procpu = (cpu == 0);
       maskupdate_ev.notify();
    }
-   void clr_mask(unsigned int mask, int cpu) {
+   void clrintrmask(unsigned int mask, int cpu) {
       newmask = mask;
       setunset = false;
       procpu = (cpu == 0);
       maskupdate_ev.notify();
    }
-   unsigned int get_mask(int cpu) {
+   unsigned int getintrmask(int cpu) {
       if (cpu == 0) return mask_pro.read();
       else return mask_app.read();
    }
