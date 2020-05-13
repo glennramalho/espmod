@@ -855,7 +855,7 @@ void webclient::fillbuffers() {
             port = -1;
          }
 
-         /* We should look at the control charactyer to know what to do with it.
+         /* We should look at the control character to know what to do with it.
           */
          if (escaped == '!') {
             /* If this was a close, we then flush out until the next newline
@@ -913,7 +913,8 @@ void webclient::fillbuffers() {
          else {
             newind = getnotclosed(port);
             if (newind < 0) {
-               /* We did not find a matching port, so we issue an ERROR and dump it.
+               /* We did not find a matching port, so we issue an ERROR and
+                * dump it.
                 */
                PRINTF_ERROR("WEBCLI", "Got a SEND command to port %d", port);
                do escaped = i_uwifi.from.read();

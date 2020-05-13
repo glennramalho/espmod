@@ -54,7 +54,6 @@
 
 #define SC_INCLUDE_DYNAMIC_PROCESSES
 #include <systemc.h>
-#include "Arduino.h"
 #include "IPAddress.h"
 #include "tcpip_adapter.h"
 #include "sockets.h"
@@ -64,6 +63,7 @@
 #include <deque>
 #include "errno.h"
 #include "freertos/task.h"
+#include <string>
 
 #define ESCAPENONE 0
 #define ESCAPEALL 1
@@ -182,7 +182,7 @@ bool isopen(int fd);
 static int __espm_sendmsg(int port, const char *msg, int size = -1,
    int escape = ESCAPENONE, bool wait = true);
 static int __espm_receive(int s, void *mem, size_t len, int flags);
-static int __espm_readline(int s, String *msg, bool usetimeout = false);
+static int __espm_readline(int s, std::string *msg, bool usetimeout = false);
 int espm_getind(int fd);
 void fillbuffers();
 void takerequest(int *ind);
@@ -376,7 +376,7 @@ int espm_setsockopt(int s, int level, int optname, const void *optval,
 int espm_connect(int s, const struct sockaddr *name, socklen_t namelen) {
    int ind = espm_getind(s);
    const struct sockaddr_in *rip;
-   String msg;
+   std::string msg;
    char request_ipstr[50]; /* Quite long in case it is IPv6. */
 
    errno = 0;
@@ -421,7 +421,7 @@ int espm_connect(int s, const struct sockaddr *name, socklen_t namelen) {
    /* Then we check the message, if it starts with a control followed by a "y"
     * we then tag the socket as connected and return successful.
     */
-   if (msg.startsWith("\xffy")) {
+   if (msg.find("\xffy") == 0) {
       _fdlist[ind].connected = true;
       _fdlist[ind].bound = false;
       PRINTF_INFO("SOCK", "Connected socket %d to IP %s port %d", s,
@@ -483,7 +483,7 @@ int espm_listen(int socket, int backlog) {
 int espm_accept(int s, struct sockaddr *addr, socklen_t *addrlen) {
    int a1, a2, a3, a4, port;
    int afd, aind;
-   String msg;
+   std::string msg;
    int ind = espm_getind(s);
    errno = 0;
    /* We do the basic checking. */
@@ -548,11 +548,12 @@ int espm_accept(int s, struct sockaddr *addr, socklen_t *addrlen) {
    __onewrite.post();
    if (resp <= 0) { espm_close(afd); errno = ECONNABORTED; return -1; }
 
-   PRINTF_INFO("SOCK", "Accepted socket %d lidstening %d from IP %s port %d", afd,
-         s, _fdlist[ind].ip.toString().c_str(), _fdlist[ind].port);
+   PRINTF_INFO("SOCK", "Accepted socket %d lidstening %d from IP %s port %d",
+         afd, s, _fdlist[ind].ip.toString().c_str(), _fdlist[ind].port);
 
    /* If the address is not null, then we fill the struct with the connection
-    * data. It should never fail as we should have done all the checking already.
+    * data. It should never fail as we should have done all the checking
+    * already.
     */
    if (addr != NULL) (void)espm_getsockname(afd, addr, addrlen);
 
@@ -751,7 +752,7 @@ int espm_read(int s, void *mem, size_t len) {
    return espm_recv(s, mem, len, MSG_WAITALL);
 }
 
-int __espm_readline(int s, String *msg, bool usetimeout) {
+int __espm_readline(int s, std::string *msg, bool usetimeout) {
    char nchar;
    int starttime = millis();
    int ind;
@@ -1183,7 +1184,7 @@ void fillbuffers() {
    int port;
    int ind;
    unsigned char token, escaped;
-   String msg;
+   std::string msg;
 
    /* We also need a control socket. It should be attached to the control
     * port -1. We then create it now.
@@ -1310,7 +1311,7 @@ void fillbuffers() {
  */
 void takerequest(int *ind) {
    unsigned char rec;
-   String msg;
+   std::string msg;
    int a1, a2, a3, a4, port;
    int it;
    bool connect;
@@ -1369,25 +1370,33 @@ void takerequest(int *ind) {
       *ind = it;
       return;
    }
-    
-   /* SOCK_STREAM packets need a connection. We then check that the number
-    * of connections has been exceeded, we reject it. We also reject bad
-    * messages. We respond by sending the request back so that the correct
-    * client knows the message is for him.
+
+   /* We check the message. If this is a UDP send command and the port is
+    * illegal, we simply discard the message. UDP is unreliable, meaning
+    * the packets get no acknowledgement.
     */
-   if (it == (int)_fdlist.size()
-         || _fdlist[it].connections == _fdlist[it].maxconnect) {
-      msg = _fdlist[it].port + msg;
-      msg = String("\xff") + msg;
+   if (!connect && it == (int)_fdlist.size()) return;
+   /* For connect messages, we check. There should be a listening port and
+    * the limit should not have been exceeded.
+    */
+   else if (connect && (it == (int)_fdlist.size()
+         || _fdlist[it].connections == _fdlist[it].maxconnect)) {
+      /* If one was violated, we return a no. The port was provided on
+       * the connect line.
+       */
+      char buff [10];
+      snprintf(buff, 10, "\xff%dn", port);
+      msg = buff +  msg;
+      PRINTF_INFO("SOCK", "Rejecting connect to non-listening port.");
       __onewrite.wait();
       (void)__espm_sendmsg(_controlport, msg.c_str());
       __onewrite.post();
    }
+   /* The others we put in the list to be accepted. We already count it
+    * as an accepted connection although the accept function is the one
+    * that does the accepting.
+    */
    else {
-      /* The others we put in the list to be accepted. We already count it
-       * as an accepted connection although the accept function is the one
-       * that does the accepting.
-       */
       unsigned int p;
       _fdlist[it].buffer.push_back((unsigned char)0xff);
       _fdlist[it].buffer.push_back((unsigned char)'c');
