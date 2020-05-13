@@ -1387,7 +1387,12 @@ void takerequest(int *ind) {
       char buff [10];
       snprintf(buff, 10, "\xff%dn", port);
       msg = buff +  msg;
-      PRINTF_INFO("SOCK", "Rejecting connect to non-listening port.");
+      if (it == (int)_fdlist.size()) {
+         PRINTF_INFO("SOCK", "Rejecting connect to non-listening port.");
+      }
+      else {
+         PRINTF_INFO("SOCK", "Rejecting connect to maxed-out port.");
+      }
       __onewrite.wait();
       (void)__espm_sendmsg(_controlport, msg.c_str());
       __onewrite.post();
