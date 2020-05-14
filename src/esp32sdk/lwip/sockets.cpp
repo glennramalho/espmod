@@ -820,12 +820,12 @@ int espm_send(int socket, const void *buffer, size_t length, int flags) {
    int ind = espm_getind(socket);
    errno = 0;
    if (ind < 0) { errno = EBADF; return -1; }
-   if (length > 1460) { errno = EMSGSIZE; return -1; }
    /* SOCK_DGRAM needs to be bound to have an address. */
    if (!_fdlist[ind].bound && _fdlist[ind].type == SOCK_DGRAM) {
       errno = EDESTADDRREQ; return -1;
    }
-   /* SOCK_STREAM must be connected, either via a connect() or listening accept(). */
+   /* SOCK_STREAM must be connected, either via a connect() or listening
+    * accept(). */
    else if (!_fdlist[ind].connected && _fdlist[ind].type != SOCK_DGRAM) {
       errno = ENOTCONN; return -1;
    }
@@ -995,7 +995,8 @@ int __espm_receive(int s, void *mem, size_t len, int flags) {
       return -1;
    }
 
-   /* To read a SOCK_STREAM must be set to connected. SOCK_DGRAM need to be bound. */
+   /* To read a SOCK_STREAM must be set to connected. SOCK_DGRAM need to be
+    * bound. */
    if (_fdlist[ind].type == SOCK_STREAM && !_fdlist[ind].connected) {
       errno = ENOTCONN;
       return -1;
