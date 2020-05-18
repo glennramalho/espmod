@@ -192,6 +192,71 @@ private:
     gn_signal_mix( const this_type& );
 };
 
+class gn_tie_mix : public gn_signal_mix {
+public:
+
+    // typedefs
+
+    typedef gn_tie_mix    this_type;
+    typedef gn_signal_mix base_type;
+    typedef gn_mixed      value_type;
+
+public:
+
+    // constructors
+
+    gn_tie_mix()
+      : base_type( sc_gen_unique_name( "tie_mix" ) )
+    {}
+
+    explicit gn_tie_mix( const char* name_ )
+      : base_type( name_ ) {}
+
+    gn_tie_mix( const char* name_, const value_type& initial_value_ )
+      : base_type( name_, initial_value_ ) {}
+
+    // interface methods
+
+    virtual void register_port( sc_port_base&, const char* ) {}
+
+    /* There should not be any writes to a tie. */
+    virtual void write(const value_type& value_) { writewarn(); }
+    virtual void write(const gn_mixed::gn_logic_t value_) { writewarn(); }
+    virtual void write(const sc_logic& value_) { writewarn(); }
+    virtual void write(const float& value_) { writewarn(); }
+    virtual void write(const char value_) { writewarn(); }
+    virtual void write(const bool value_) { writewarn(); }
+
+    // other methods
+    virtual const char* kind() const { return "gn_tie_mix"; }
+
+    // assignment
+    this_type& operator = ( const value_type& a ) { writewarn(); return *this; }
+    this_type& operator = ( const sc_signal_resolved& a )
+      { writewarn(); return *this; }
+    this_type& operator = ( const sc_signal_in_if<value_type>& a )
+      { writewarn(); return *this; }
+    this_type& operator = ( const sc_signal_in_if<sc_logic>& a )
+      { writewarn(); return *this; }
+    this_type& operator = ( const sc_signal_in_if<float>& a )
+      { writewarn(); return *this; }
+    this_type& operator = ( const this_type& a )
+      { writewarn(); return *this; }
+
+protected:
+    virtual void update();
+
+private:
+
+    void writewarn() {
+       char buffer[256];
+       snprintf(buffer, 256, "Attempting to write to a supply %s", name());
+       SC_REPORT_WARNING("MIX", buffer);
+    }
+    // disabled
+    gn_tie_mix( const this_type& );
+};
+
 inline void sc_trace(sc_trace_file *tf, const gn_mixed &object,
       const std::string &name) {
    sc_trace(tf, object.logic, name + "_d");

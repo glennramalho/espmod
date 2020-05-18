@@ -299,3 +299,8 @@ void gn_signal_mix::update()
    gn_mixed_resolve( m_new_val, m_val_vec );
    base_type::update();
 }
+
+void gn_tie_mix::update()
+{
+   base_type::update();
+}
