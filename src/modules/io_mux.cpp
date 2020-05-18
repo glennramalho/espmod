@@ -100,7 +100,7 @@ bool io_mux::set_ie() {
       ie = true;
       PRINTF_INFO("IOMUX", "Set IE to pin %s", name());
       /* We might have to drive a value. */
-      updatedriver.notify();
+      updatereturn.notify();
 
       return true;
    }

@@ -157,9 +157,8 @@ void uart::set_baud(unsigned int rate) {
 }
 
 int uart::getautorate() {
-      /* If autodetect is still true, it is not done, we return 0. */
-      if (autodetect) { return 0; }
-      /* if it is false, we return the rate. */
-      else { return get_baud(); }
-   }
-
+   /* If autodetect is still true, it is not done, we return 0. */
+   if (autodetect) { return 0; }
+   /* if it is false, we return the rate. */
+   else { return get_baud(); }
+}

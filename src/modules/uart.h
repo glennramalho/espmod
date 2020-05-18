@@ -24,8 +24,8 @@
 #include <systemc.h>
 
 SC_MODULE(uart) {
-   sc_in<bool> rx;
-   sc_out<bool> tx;
+   sc_in<bool> rx {"rx"};
+   sc_out<bool> tx {"tx"};
 
    sc_fifo<unsigned char> from;
    sc_fifo<unsigned char> to;
