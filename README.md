@@ -127,7 +127,41 @@ to get a VCD file and view it using gtkwaves or some other viewer. If the file i
 
 # Setting up a new simulation
 
-Probably the best way to do this is by copying one of the existing examples into your work area and then replace the .ino file with your firmware. If you are using the ESP-IDF style, then have the setup function in the .ino call your app_main() function and include the file in the Makefile.
+Probably the best way to do this is by copying one of the existing examples into
+your work area and then replace the .ino file with your firmware. Depending on
+if you are using Arduino-IDF or ESP-IDF, you will need to setup a directory with
+the make file and your .ino file, for Arduino or appmain for ESP-IDF.
+
+As an example for Arduino-IDF, create a directory, copy in your .ino file (or link
+it), then you need your test files. Look at examples/Blink for an example. The
+directory should be as below. All files you can copy from examples/Blink. Then
+modify sc_main.cpp, Makefile to change the name of the test. The test.h instantiates
+the model and connects the wires. The test.cpp drives the signals and checks the
+results.
+
+* <yourmain>/<yourmain>.ino
+* <yourmain>/<yourmain>test.cpp
+* <yourmain>/<yourmain>test.h
+* <yourmain>/sc_main.cpp
+* <yourmain>/Makefile
+
+For ESP-IDF, you can look at examples/ledc. For this one you will need the folloing
+files. As above, the test.h instantiates the module and hooks it up. test.cpp drives
+and checks the results. main.cpp and main.h you just copy in, they will invoke the
+app_main() function. sc_main.cpp and Makefile need to be modified to have the name
+of your test and the Makefile should have the name of <yourmain>.c. More on this
+soon. Note: although SystemC runs on C++ your code can be all pure C. All functions
+that the ESP-IDF need are in C.
+
+* <yourdir>/<yourmain>.c
+* <yourdir>/<yourdir>test.cpp
+* <yourdir>/<yourdir>test.h
+* <yourdir>/main.cpp
+* <yourdir>/main.h
+* <yourdir>/sc_main.cpp
+* <yourdir>/Makefile
+
+you are using the ESP-IDF style, then have the setup function in the .ino call your app_main() function and include the file in the Makefile.
 
 # Status
 
@@ -141,6 +175,7 @@ There is still a lot to implement, as of yet the following has been done:
 * ADC1 and ADC2
 * UART0, 1 and 2
 * I2C (partially done, implemented via cchan)
+* LEDc and Interrupts are work in progress.
 
 The model has been tested successfully with the Arduino or ESP-IDF libraries:
 
