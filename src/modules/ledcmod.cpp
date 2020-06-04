@@ -448,6 +448,10 @@ void ledcmod::trace(sc_trace_file *tf) {
       sc_trace(tf, duty_r[un], sign.c_str());
    }
    for(un = 0; un < LEDC_TIMERS; un = un + 1) {
+      sign = sigb + std::string(".timer_conf_") + std::to_string(un);
+      sc_trace(tf, timer_conf[un], sign.c_str());
+   }
+   for(un = 0; un < LEDC_TIMERS; un = un + 1) {
       sign = sigb + std::string(".timer_cnt_") + std::to_string(un);
       sc_trace(tf, timer_cnt[un], sign.c_str());
    }
