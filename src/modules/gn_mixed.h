@@ -94,6 +94,13 @@ struct gn_mixed {
    char to_char() const;
    gn_logic_t value();
 
+   /* Some helper functions to make checking simpler */
+   bool isdigital() const { return (logic != LOGIC_A); }
+   bool islogic() const { return (logic == LOGIC_0 || logic == LOGIC_1 ||
+         logic == LOGIC_W0 || logic == LOGIC_W1); }
+   bool ishigh() const { return ( logic == LOGIC_1 || logic == LOGIC_W1); }
+   bool islow() const { return ( logic == LOGIC_0 || logic == LOGIC_W0); }
+
    void print(std::ostream &os = std::cout) const {
       if (logic != LOGIC_A) os << to_char();
       else os << lvl;
@@ -103,6 +110,7 @@ struct gn_mixed {
    float guess_lvl(sc_logic &l);
    gn_param_t guess_param(gn_logic_t g);
 };
+
 bool operator==(const gn_mixed &a, const gn_mixed &b);
 bool operator==(const gn_mixed &a, const sc_logic &b);
 inline bool operator!=(const gn_mixed &a, const gn_mixed &b) {
@@ -250,6 +258,12 @@ private:
 
     void writewarn() {
        char buffer[256];
+       /* If we get a write, we give a warning so one can know what happened
+        * but we do not take the write. Note: we do not issue the warning at
+        * time zero as there are a lot of signals switching from X to some
+        * defined value at this time.
+        */
+       if (sc_time_stamp() == sc_time(0, SC_NS)) return;
        snprintf(buffer, 256, "Attempting to write to a supply %s", name());
        SC_REPORT_WARNING("MIX", buffer);
     }
