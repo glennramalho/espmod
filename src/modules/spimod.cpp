@@ -26,33 +26,52 @@
 #include "clockpacer.h"
 #include "info.h"
 
-void spimod::updateth() {
-   int ch;
-   int tim;
-   sc_time base_period;
-
+void spimod::update_th() {
    while(true) {
       wait();
-      cmd.write(*spistruct.cmd.val);
-      addr.write(*spistruct.addr.val);
-      ctrl.write(*spistruct.ctrl.val);
-      ctrl2.write(*spistruct.ctrl2.val);
-      clock.write(*spistruct.clock.val);
-      user.write(*spistruct.user.val);
-      user1.write(*spistruct.user1.val);
-      user2.write(*spistruct.user2.val);
-      mosi_dlen.write(*spistruct.mosi_dlen.val);
-      pin.write(*spistruct.pin.val);
-      slave.write(*spistruct.slave.val);
-      slave1.write(*spistruct.slave1.val);
-      slave2.write(*spistruct.slave2.val);
-      slv_wrbuf_dlen.write(*spistruct.slv_wrbuf_dlen.val);
-      slv_rdbuf_dlen.write(*spistruct.slv_rdbuf_dlen.val);
-      slv_rd_bit.write(*spistruct.slv_rd_bit.val);
+
+      /* We check the pointer. If it is null or went null, something went wrong, so
+       * we raise an alarm.
+       */
+      if (spistruct == NULL) {
+         SC_REPORT_FATAL("SPIMOD", "spistruct pointer is not set");
+      }
+
+      /* If we got a lower USR bit, we lower it. */
+      if (lowerusrbit_ev.triggered) {
+         *spistruct.cmd.usr = 0;
+         WRFIELD(cmd, SPI_USR_M, SPI_USR_S) = 0;
+      }
+
+      /* In other cases, we take in the updated bits. */
+      if (update_ev.triggered()) {
+         /* Most registers we simply copy in. This is useful for debugging issues. */
+         cmd.write(*spistruct.cmd.val);
+         addr.write(*spistruct.addr.val);
+         ctrl.write(*spistruct.ctrl.val);
+         ctrl2.write(*spistruct.ctrl2.val);
+         clock.write(*spistruct.clock.val);
+         user.write(*spistruct.user.val);
+         user1.write(*spistruct.user1.val);
+         user2.write(*spistruct.user2.val);
+         mosi_dlen.write(*spistruct.mosi_dlen.val);
+         miso_dlen.write(*spistruct.miso_dlen.val);
+         pin.write(*spistruct.pin.val);
+         slave.write(*spistruct.slave.val);
+         slave1.write(*spistruct.slave1.val);
+         slave2.write(*spistruct.slave2.val);
+         slv_wrbuf_dlen.write(*spistruct.slv_wrbuf_dlen.val);
+         slv_rdbuf_dlen.write(*spistruct.slv_rdbuf_dlen.val);
+         slv_rd_bit.write(*spistruct.slv_rd_bit.val);
+
+         /* We also trigger the events, if needed. */
+         if (*spistruct.cmd.usr) start_ev.notify();
+         if (*spistruct.slave.sync_reset) reset_ev.notify();
+      }
    }
 }
 
-void spimod::returnth() {
+void spimod::return_th() {
    int un;
    /* We wait for one of the responses to get triggered, and then we copy the
     * R/O register back to the struct.
@@ -72,6 +91,7 @@ void spimod::update() {
 void spimod::initstruct(spi_struct *_spistruct) {
    spistruct = _spistruct;
    memset(spistruct, 0, sizeof(spi_struct));
+   actclk = false;
 }
 
 void spimod::start_of_simulation() {
@@ -123,8 +143,7 @@ void spimod::calcnextbit(int bitpos, bool littleendian, bool msbfirst) {
    }
 }
 
-int spimod::calclastbit(pos, littleendian, msbfirst) {
-
+int spimod::converttoendian(littleendian, msbfirst, pos) {
    /* First we check the msb/lsb. For this we jump to the end of the selected bit.*/
    if (msbfirst) pos = pos & ~0x7 | (7 - (pos & 0x7));
 
@@ -148,7 +167,139 @@ int spimod::getdly(int mode) {
    return dlyout;
 }
 
-void spimod::transfer() {
+void spimod::activatecs(bool withdelay) {
+   if (!RDFIELD(pin, SPI_CS2_DIS_M, SPI_CS2_DIS_S)) cs2_o.write(false);
+   else cs0_o.write(true);
+   if (!RDFIELD(pin, SPI_CS1_DIS_M, SPI_CS1_DIS_S)) cs1_o.write(false);
+   else cs1_o.write(true);
+   if (!RDFIELD(pin, SPI_CS0_DIS_M, SPI_CS0_DIS_S)) cs0_o.write(false);
+   else cs2_o.write(true);
+
+   /* We wait the setup time, if one was defined */
+   if (withdelay && RDFIELD(user, SPI_CS_SETUP_M, SPI_CS_SETUP_S)) {
+      wait(period * RDFIELD(ctrl2, SPI_SETUP_M, SPI_SETUP_S));
+   }
+}
+
+void spimod::deactivatecs(bool withdelay) {
+   /* If there is a delay to switch off we wait for it too. */
+   if (withdelay && RDFIELD(user, SPI_CS_HOLD_M, SPI_CS_HOLD_S)) {
+      wait(period * RDFIELD(ctrl2, SPI_HOLD_M, SPI_HOLD_S));
+   }
+
+   if (!RDFIELD(pin, SPI_CS2_DIS_M, SPI_CS2_DIS_S)) cs2_o.write(false);
+   else cs0_o.write(true);
+   if (!RDFIELD(pin, SPI_CS1_DIS_M, SPI_CS1_DIS_S)) cs1_o.write(false);
+   else cs1_o.write(true);
+   if (!RDFIELD(pin, SPI_CS0_DIS_M, SPI_CS0_DIS_S)) cs0_o.write(false);
+   else cs2_o.write(true);
+}
+
+void spimod::setupmasterslave() {
+   clockpacer.wait_next_apb_clk();
+
+   /* Whenever we get a reset, we lower all data lines. */
+   d_o.write(false);
+   q_o.write(false);
+   wp_o.write(false);
+   hd_o.write(false);
+
+   /* We get the idle clock edge style and set it as the clock should be
+    * idle now. Note: the variable has the active time, not the idle time.
+    */
+   actclk = RDFIELD(pin, SPI_CK_IDLE_EDGE_M, SPI_CK_IDLE_EDGE_S) == 0;
+   clk_o.write(!actclk);
+
+   /* If we are in master mode and the customer set the keepactive bit, we set the
+    * CS bits immediately.
+    */
+   if (master.read() && RDFIELD(pin, SPI_CS_KEEP_ACTIVE_M, SPI_CS_KEEP_ACTIVE_S))
+      activate_cs(false);
+   /* In slave mode, we shut off the CS bits. Not really necessary as we have
+    * already changed the CS OE bits, but it is nice to do.
+    */
+   else deactivatecs(false);
+
+   /* Not sure if this is needed, but it is nice to have. When a reset is issued,
+    * we lower the USR bit.
+    */
+   lowerusrbit_ev.notify();
+}
+
+void spimod::setupmaster() {
+   /* First we check if the clock is to be the SYSCLK. */
+   if (RDFIELD(clock, SPI_CLK_EQU_SYSCLK_M, SPI_CLK_EQU_SUSCLK_S)) {
+      /* The system clock for the SPI is always the APB clock. */
+      period = clockpacer.get_apb_period();
+      halftime = sc_time(clockpacer.get_apb_period()/2);
+      lowtime = period - halftime;
+   }
+   /* If not, we get the clock configuraion. */
+   else {
+      period = sc_time(clockpacer.get_apb_period() *
+        (RDFIELD(clock, SPI_CLKDIV_PRE_M, SPI_CLKDIV_PRE_S) + 1)
+        (RDFIELD(clock, SPI_CLKDIV_N_M, SPI_CLKDIV_N_S) + 1));
+      hightime = sc_time(clockpacer.get_apb_period() *
+        (RDFIELD(clock, SPI_CLKDIV_PRE_M, SPI_CLKDIV_PRE_S) + 1)
+        (RDFIELD(clock, SPI_CLKDIV_H_M, SPI_CLKDIV_H_S) + 1));
+      /* We ignore the L field as it must be equal to the N register. */
+      lowtime = period - halftime;
+   }
+
+   /* We need to determine where the data when data will change relative
+    * to the clock. The MOSI and MISO have the same rules but they come from
+    * different registers. Note that there are many possible illegal combinations.
+    * Firmware has to get it right.
+    */
+   dlywr = getdly(RDFIELD(ctrl2, SPI_MOSI_DELAY_M, SPI_MOSI_DELAY_MODE_S));
+   dlyrd = getdly(RDFIELD(ctrl2, SPI_MISO_DELAY_M, SPI_MISO_DELAY_MODE_S));
+
+   /* We also have these extra delays to add to the beginning of a transfer. */
+   precycwr = RDFIELD(ctrl2, SPI_MOSI_DELAY_NUM_M, SPI_MOSI_DELAY_NUM_S);
+   precycrd = RDFIELD(ctrl2, SPI_MISO_DELAY_NUM_M, SPI_MISO_DELAY_NUM_S);
+
+   /* If the field is enabled, we can transmit it. */
+   if (RDFIELD(user, SPI_MOSI_M, SPI_MOSI_S) == 0) {
+      limitbit = -1;
+      startbit = -1;
+   }
+   else {
+      wrlittleendian = RDFIELD(user, SPI_WR_BYTE_ORDER_M, SPI_WR_BYTE_ORDER_S) == 0;
+      wrmsbfirst = RDFIELD(ctrl, SPI_WR_BIT_ORDER_M, SPI_WR_BIT_ORDER_S) == 0;
+      /* For the start bit, we guess for the LSB firsrt/little endian case and then
+       * we adjust the value.
+       */
+      startbit = 32 * ((RDFIELD(user,
+         SPI_USR_MOSI_HIGHPART_M, SPI_USR_MOSI_HIGHPART_S) == 1)?8:0);
+      lastbitrd = converttoendian(wrlittleendian, wrmsbfirst,
+            startbit + mosi_dlen.read());
+      startbitrd = converttoendian(wrlittleendian, wrmsbfirst, startbit);
+   }
+
+   /* We do the same for reading. */
+   if (RDFIELD(user, SPI_MISO_M, SPI_MISO_S) == 0) {
+      limitbitrd = -1;
+      startbitrd = -1;
+   }
+   else {
+      rdlittleendian = RDFIELD(user, SPI_RD_BYTE_ORDER_M, SPI_RD_BYTE_ORDER_S) == 0;
+      rdmsbfirst = RDFIELD(ctrl, SPI_RD_BIT_ORDER_M, SPI_RD_BIT_ORDER_S) == 0;
+      /* For the start bit, we guess for the LSB firsrt/little endian case and then
+       * we adjust the value.
+       */
+      startbitrd = 32 * ((RDFIELD(user,
+         SPI_USR_MISO_HIGHPART_M, SPI_USR_MISO_HIGHPART_S) == 1)?8:0);
+      lastbitrd = converttoendian(rdlittleendian, rdmsbfirst,
+            startbitrd + miso_dlen.read());
+      startbitrd = converttoendian(rdlittleendian, rdmsbfirst, startbitrd);
+   }
+}
+
+void spimod::setupslave() {
+   SC_REPORT_FATAL("SPIMOD", "SPI Slave mode not yet ready");
+}
+
+void spimod::transfer_th() {
    bool bittosend;
    bool bitreceived;
 
@@ -165,12 +316,22 @@ void spimod::transfer() {
 
       /* We now have to check for master or reset events. We treat both as resets. */
       if (master.event() || reset_ev.triggered()) {
+         setupmasterslave();
          bit = -1;
          continue;
       }
 
-      /* If the bit was -1, we need to set it to the correct starting point. */
-      if (bit == -1) bit = startbit;
+      /* If we are starting a new command, we need to reset the bit counters and
+       * perhaps activate the cs bits.
+       */
+      if (start_ev.triggered()) {
+         clockpacer.wait_next_apb_clk();
+         if (master.read()) setupmaster();
+         else setupslave();
+         bit = startbit;
+         bitrd = startbitrd;
+         if (master.read()) activatecs(true);
+      }
 
       /********************** DELAY 0 *******************************************/
       /* We need to find out what bit we send. If we are in the pre-write phase, we
@@ -202,6 +363,7 @@ void spimod::transfer() {
       }
       else wait(clk_i | master | reset_ev);
       if (master.event() || reset_ev.triggered()) {
+         setupmasterslave();
          bit = -1;
          continue;
       }
@@ -218,6 +380,7 @@ void spimod::transfer() {
       }
       else wait(clk_i | master | reset_ev);
       if (master.event() || reset_ev.triggered()) {
+         setupmasterslave();
          bit = -1;
          continue;
       }
@@ -249,206 +412,66 @@ void spimod::transfer() {
       if (rdbit == lastrdbit) rdbit = -1;
       else rdbit = calcnextbit(rdbit, rdlittleendian, rdmsbfirst);
 
+      /* If both read and write went idle we need to lower the USR bit. If we do not
+       * have the keepactive, we also deactivate the CS lines.
+       */
+      if (bit == -1 && rdbit == -1) {
+         lowerusrbit_ev.notify();
+         if (!RDFIELD(pin, SPI_CS_KEEP_ACTIVE_M, SPI_CS_KEEP_ACTIVE_S))
+            deactivatecs(true);
+      }
+
       /* We also need to decrement the hold counters. */
       if (precycwr == 0) precycwr = precycwr - 1;
       if (precycrd == 0) precycrd = precycrd - 1;
    }
 }
 
-void spimod::configure() {
-   while(1) {
-      wait();
+/*****************
+ * Method: configure_meth()
+ * Inputs: none
+ * Outputs: none
+ * Return Value: none
+ * Description:
+ *    Loads the configuration registers and sets all that must take place imediately.
+ *    The transfer task handles all configurations which can wait for the end of the
+ *    command.
+ */
+void spimod::configure_meth() {
+   /* If we get a reset, we reset the configuration part. */
+   if (reset_ev.triggered()) {
+      cs0_oen_o.write(false);
+      cs1_oen_o.write(false);
+      cs2_oen_o.write(false);
+   }
 
-      /* If we get a reset, we stop the clock, CS and data lines. */
-      if (sync.event() && RDFIELD(slave, SPI_SYNC_RESET_M, SPI_SYNC_RESET_S)) {
-         /* We take the lines low, but we do not change the master/slave mode or
-          * clock polarity.
-          */
-         d_o.write(false);
-         q_o.write(false);
-         wp_o.write(false);
-         hd_o.write(false);
-         /* We do not check the clock polarity as the clock is only used if
-          * configured in the io matrix.
-          */
-         if (RDFIELD(pin, SPI_CK_IDLE_EDGE_M, SPI_CK_IDLE_EDGE_S)) clk_o.write(true);
-         else clk_o.write(false);
-         cs0_oen_o.write(false);
-         cs1_oen_o.write(false);
-         cs2_oen_o.write(false);
-         in_data = 0;
-         out_data = 0;
-         /* We lower the USR bit. */
-         lowerusrbit_ev.notify();
-         /* We also need to notify the task. */
-         reset_ev.notify();
-      }
-
-      /* We use the slave enable bit to decide if we can or cannot have a clock.
-       * We also go through this when there was a change in the clock definition.
+   /* Master/slave configurations we take in only if the SPI is not running.
+    * We then change the pin directions immediately.
+    */
+   if (master.read() && !RDFIELD(slave, SPI_SLAVE_MODE_M, SPI_SLAVE_MODE_S)) {
+      master.write(false);
+      d_oen_o.write(false);
+      q_oen_o.write(true);
+      wp_oen_o.write(false);
+      hd_oen_o.write(false);
+      cs0_oen_o.write(false);
+      cs1_oen_o.write(false);
+      cs2_oen_o.write(false);
+   }
+   else if (!master.read() && RDFIELD(slave,SPI_SLAVE_MODE_M,SPI_SLAVE_MODE_S)) {
+      master.write(true);
+      d_oen_o.write(true);
+      q_oen_o.write(false);
+      wp_oen_o.write(true);
+      hd_oen_o.write(true);
+      /* Perhaps this is not the right way, but we set the output enables to the
+       * CS OEN bits all high. If one does not want them, he can disable them
+       * in the matrix. Then the DIS bits in the pin register just specifies if
+       * they will be high or low.
        */
-      if (slave.event() || clock.event()) {
-         if (!RDFIELD(slave, SPI_SLAVE_MODE, SPI_CLK_EQU_SUSCLK_S)) {
-            /* Master Mode. */
-            master.write(true);
-            d_o.write(false); d_oen_o.write(true);
-            q_o.write(false); q_oen_o.write(false);
-            wp_o.write(false); wp_oen_o.write(true);
-            hd_o.write(false); hd_oen_o.write(true);
-
-            /* If we are in master mode, we need to define the clock. */
-            if (RDFIELD(slave, SPI_CLK_EQU_SYSCLK_M, SPI_CLK_EQU_SUSCLK_S)) {
-               period = clockpacer.get_apb_period();
-               halftime = sc_time(clockpacer.get_apb_period()/2);
-               lowtime = period - halftime;
-            }
-            else {
-               period = sc_time(clockpacer.get_apb_period() *
-                 (RDFIELD(clock, SPI_CLKDIV_PRE_M, SPI_CLKDIV_PRE_S) + 1)
-                 (RDFIELD(clock, SPI_CLKDIV_N_M, SPI_CLKDIV_N_S) + 1));
-               hightime = sc_time(clockpacer.get_apb_period() *
-                 (RDFIELD(clock, SPI_CLKDIV_PRE_M, SPI_CLKDIV_PRE_S) + 1)
-                 (RDFIELD(clock, SPI_CLKDIV_H_M, SPI_CLKDIV_H_S) + 1));
-               /* We ignore the L field as it must be equal to the N register. */
-               lowtime = period - halftime;
-            }
-
-            /* The master clock can be active low or high. */
-            clk_oen_o.write(true);
-            if (RDFIELD(pin, SPI_CK_IDLE_EDGE_M, SPI_CK_IDLE_EDGE_S))
-               clk_o.write(true);
-            else clk_o.write(false);
-         }
-         else {
-            /* Slave Mode */
-            master.write(false);
-            d_o.write(false); d_oen_o.write(false);
-            q_o.write(false); q_oen_o.write(true);
-            wp_o.write(false); wp_oen_o.write(false);
-            hd_o.write(false); hd_oen_o.write(false);
-
-            /* The master clock we deactivate. */
-            clk_oen_o.write(false);
-            if (RDFIELD(pin, SPI_CK_IDLE_EDGE_M, SPI_CK_IDLE_EDGE_S))
-               clk_o.write(true);
-            else clk_o.write(false);
-         }
-      }
-
-      /* The select pins we also check when we change them or change the mode. */
-      if ((slave.event() || pin.event()) {
-         if (!RDFIELD(slave, SPI_SLAVE_MODE, SPI_CLK_EQU_SUSCLK_S)) {
-
-            /* If we are in the keep active mode, we need to switch these guys now.
-             * We activate the CS pins.
-             */
-            cs0_oen_o.write(true);
-            cs1_oen_o.write(true);
-            cs2_oen_o.write(true);
-            if (RDFIELD(pin, SPI_CS_KEEP_ACTIVE_M,
-                  SPI_CS_KEEP_ACTIVE_S)) {
-               if (!RDFIELD(pin, SPI_CS2_DIS_M, SPI_CS2_DIS_S)) cs2_o.write(false);
-               else cs0_o.write(true);
-               if (!RDFIELD(pin, SPI_CS1_DIS_M, SPI_CS1_DIS_S)) cs1_o.write(false);
-               else cs1_o.write(true);
-               if (!RDFIELD(pin, SPI_CS0_DIS_M, SPI_CS0_DIS_S)) cs0_o.write(false);
-               else cs2_o.write(true);
-            }
-            else {
-               cs0_o.write(true);
-               cs1_o.write(true);
-               cs2_o.write(true);
-            }
-         }
-         else {
-            /* If we are switching to slave mode or got a write to the pin register
-             * but did not change anything, we lower the activity signals just in
-             * case.
-             */
-            cs0_oen_o.write(false);
-            cs1_oen_o.write(false);
-            cs2_oen_o.write(false);
-            cs0_o.write(true);
-            cs1_o.write(true);
-            cs2_o.write(true);
-         }
-      }
-
-      /* When we see the start bit and we are in master mode we begin. */
-      if (master.read() && usr.event() && usr.read() != 0) {
-         clockpacer.wait_next_apb_clk();
-
-         /* We activate the CS pins. */
-         if (!RDFIELD(pin, SPI_CS2_DIS_M, SPI_CS2_DIS_S)) cs2_o.write(false);
-         if (!RDFIELD(pin, SPI_CS1_DIS_M, SPI_CS1_DIS_S)) cs1_o.write(false);
-         if (!RDFIELD(pin, SPI_CS0_DIS_M, SPI_CS0_DIS_S)) cs0_o.write(false);
-
-         /* We wait the setup time. */
-         if (RDFIELD(user, SPI_CS_SETUP_M, SPI_CS_SETUP_S)) {
-            wait(period * RDFIELD(ctrl2, SPI_SETUP_M, SPI_SETUP_S));
-         }
-
-         /* We need to determine where the data when data will change relative
-          * to the clock. The MOSI and MISO have slightly different rules.
-          */
-         dlywr = getdly(RDFIELD(ctrl2, SPI_MOSI_DELAY_M, SPI_MOSI_DELAY_MODE_S));
-         dlyrd = getdly(RDFIELD(ctrl2, SPI_MISO_DELAY_M, SPI_MISO_DELAY_MODE_S));
-
-         /* If the field is enabled, we can transmit it. */
-         if (RDFIELD(user, SPI_MOSI_M, SPI_MOSI_S) == 0) {
-            limitbit = -1;
-            startbit = -1;
-         }
-         else {
-            wrlittleendian = RDFIELD(user,
-               SPI_WR_BYTE_ORDER_M, SPI_WR_BYTE_ORDER_S) == 0;
-            wrmsbfirst = RDFIELD(user,
-               SPI_WR_BIT_ORDER_M, SPI_WR_BIT_ORDER_S) == 0;
-            startbit = 32 * ((RDFIELD(user,
-               SPI_USR_MOSI_HIGHPART_M, SPI_USR_MOSI_HIGHPART_S) == 1)?8:0);
-            lastbit = calclastbit(startbit + mosi_dlen.read());
-            if (wrlittleendian && wrmsbfirst) startbit = startbit + 31;
-            else if (!wrlittleendian && wrmsbfirst) startbit = startbit + 7;
-            else if (wrlittleendian && !wrmsbfirst) startbit = startbit + 24;
-
-            /* And we can start. */
-            start_ev.notify();
-         }
-
-         /* We do the same for reading. */
-         if (RDFIELD(user, SPI_MISO_M, SPI_MISO_S) == 0) {
-            limitbitrd = -1;
-            startbitrd = -1;
-         }
-         else {
-            rdlittleendian = RDFIELD(user,
-               SPI_RD_BYTE_ORDER_M, SPI_RD_BYTE_ORDER_S) == 0;
-            rdmsbfirst = RDFIELD(user,
-               SPI_RD_BIT_ORDER_M, SPI_RD_BIT_ORDER_S) == 0;
-            startbitrd = 32 * ((RDFIELD(user,
-               SPI_USR_MOSI_HIGHPART_M, SPI_USR_MOSI_HIGHPART_S) == 1)?8:0);
-            lastbitrd = calclastbit(startbit + miso_dlen.read());
-            if (rdlittleendian && wrmsbfirst) startbit = startbit + 31;
-            else if (!rdlittleendian && rdmsbfirst) startbit = startbit + 7;
-            else if (rdlittleendian && !rdmsbfirst) startbit = startbit + 24;
-
-            /* And we can start. */
-            start_ev.notify();
-         }
-      }
-
-         /* If we do not have the keep active, we deactivate the CS. */
-      if (donewithwrite_ev.triggered()) {
-         if (RDFIELD(user, SPI_CS_SETUP_M, SPI_CS_SETUP_S)) {
-            wait(period * RDFIELD(ctrl2, SPI_SETUP_M, SPI_SETUP_S));
-         }
-         if (RDFIELD(pin, SPI_CS_KEEP_ACTIVE_M, SPI_CS_KEEP_ACTIVE_S)) {
-            cs2_o.write(true);
-            cs1_o.write(true);
-            cs0_o.write(true);
-         }
-         lowerusrbit_ev.notify();
-      }
+      cs0_oen_o.write(true);
+      cs1_oen_o.write(true);
+      cs2_oen_o.write(true);
    }
 }
 

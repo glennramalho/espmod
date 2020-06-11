@@ -81,38 +81,46 @@ SC_MODULE(spimod) {
    bool wrmsbfirst, rdmsbfirst;
    sc_event start_ev, reset_ev, loweruser_ev;
 
-   /* Functions */
+   /* Simulation Interface Functions */
    void update();
+   void trace(sc_trace_file *tf);
+
+   /* Internal Functions */
    private:
    void initstruct();
+   void start_of_simulation();
    int calcnextbit(int bitpos, bool littleendian, bool msbfirst);
-   int calclastbit(pos, littleendian, msbfirst);
+   int converttoendian(bool littleendian, bool msbfirst, int pos);
    int getdly(int mode);
+   void activatecs(bool withdelay);
+   void deactivatecs(bool withdelay);
+   void setupmasterslave();
+   void setupmaster();
+   void setupslave();
 
    /* Threads */
    public:
-   void updateth();
-   void returnth();
-   void transfer();
-   void configure();
+   void update_th();
+   void return_th();
+   void transfer_th();
+   void configure_meth();
 
    // Constructor
    spimod(sc_module_name name, spi_struct *_spistruct): sc_module(name) {
       intistruct(_spistruct);
 
-      SC_THREAD(updateth);
+      SC_THREAD(update_th);
+      sensitive << update_ev << lowerusrbit_ev;
+
+      SC_THREAD(return_th);
       sensitive << updategpioreg_ev << updategpiooe_ev << update_ev;
 
-      SC_THREAD(returnth);
-      sensitive << updategpioreg_ev << updategpiooe_ev << update_ev;
+      SC_THREAD(transfer_th);
 
-      SC_METHOD(configure);
-      sensitive << sync << slave << clock << pin;
+      SC_METHOD(configure_meth);
+      sensitive << reset_ev << slave;
    }
    SC_HAS_PROCESS(spimod);
-
-   void start_of_simulation();
-   void trace(sc_trace_file *tf);
 };
 extern spimod *hspiptr;
 extern spimod *vspiptr;
