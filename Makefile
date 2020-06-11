@@ -125,7 +125,7 @@ MODULES=$(MODDIR)/cchan.cpp $(MODDIR)/cchanflash.cpp \
    $(MODDIR)/gpio_matrix.cpp $(MODDIR)/mux_pcnt.cpp $(MODDIR)/mux_in.cpp \
    $(MODDIR)/mux_out.cpp $(MODDIR)/pcntmod.cpp $(MODDIR)/clkgen.cpp \
    $(MODDIR)/ledcmod.cpp $(MODDIR)/netcon.cpp $(MODDIR)/uart.cpp \
-   $(MODDIR)/espintr.cpp
+   $(MODDIR)/spimod.cpp $(MODDIR)/espintr.cpp
 
 # Test Interface Modules
 TBMODULES=$(TBINTF)/tft.cpp $(TBINTF)/webclient.cpp $(TBINTF)/uartclient.cpp \
