@@ -58,7 +58,42 @@ struct gpio_matrix;
    i_mux_out##dg.uart2tx_i(uart2tx_i); \
    i_mux_out##dg.ledc_sig_hs_i(ledc_sig_hs_i); \
    i_mux_out##dg.ledc_sig_ls_i(ledc_sig_ls_i); \
+   i_mux_out##dg.hspi_d_oen_i(hspi_d_oen_i); \
+   i_mux_out##dg.hspi_d_out_i(hspi_d_out_i); \
+   i_mux_out##dg.hspi_q_oen_i(hspi_q_oen_i); \
+   i_mux_out##dg.hspi_q_out_i(hspi_q_out_i); \
+   i_mux_out##dg.hspi_cs0_oen_i(hspi_cs0_oen_i); \
+   i_mux_out##dg.hspi_cs0_out_i(hspi_cs0_out_i); \
+   i_mux_out##dg.hspi_clk_oen_i(hspi_clk_oen_i); \
+   i_mux_out##dg.hspi_clk_out_i(hspi_clk_out_i); \
+   i_mux_out##dg.hspi_wp_oen_i(hspi_wp_oen_i); \
+   i_mux_out##dg.hspi_wp_out_i(hspi_wp_out_i); \
+   i_mux_out##dg.hspi_hd_oen_i(hspi_hd_oen_i); \
+   i_mux_out##dg.hspi_hd_out_i(hspi_hd_out_i); \
+   i_mux_out##dg.vspi_d_oen_i(vspi_d_oen_i); \
+   i_mux_out##dg.vspi_d_out_i(vspi_d_out_i); \
+   i_mux_out##dg.vspi_q_oen_i(vspi_q_oen_i); \
+   i_mux_out##dg.vspi_q_out_i(vspi_q_out_i); \
+   i_mux_out##dg.vspi_cs0_oen_i(vspi_cs0_oen_i); \
+   i_mux_out##dg.vspi_cs0_out_i(vspi_cs0_out_i); \
+   i_mux_out##dg.vspi_cs1_oen_i(vspi_cs1_oen_i); \
+   i_mux_out##dg.vspi_cs1_out_i(vspi_cs1_out_i); \
+   i_mux_out##dg.vspi_cs2_oen_i(vspi_cs2_oen_i); \
+   i_mux_out##dg.vspi_cs2_out_i(vspi_cs2_out_i); \
+   i_mux_out##dg.vspi_clk_oen_i(vspi_clk_oen_i); \
+   i_mux_out##dg.vspi_clk_out_i(vspi_clk_out_i); \
+   i_mux_out##dg.vspi_wp_oen_i(vspi_wp_oen_i); \
+   i_mux_out##dg.vspi_wp_out_i(vspi_wp_out_i); \
+   i_mux_out##dg.vspi_hd_oen_i(vspi_hd_oen_i); \
+   i_mux_out##dg.vspi_hd_out_i(vspi_hd_out_i); \
 }
+
+#define CONNECTINMUX(block, outsig, directsig) \
+   block.out_o(outsig); \
+   for(g = 0; g < GPIOMATRIX_CNT; g = g + 1) block.mout_i(mout_s[g]); \
+   block.mout_i(directsig); \
+   block.mout_i(logic_0); \
+   block.mout_i(logic_1);
 
 SC_MODULE(gpio_matrix) {
    sc_inout<gn_mixed> d0_a11 {"d0_a11"}; /* BOOT button */
@@ -103,8 +138,66 @@ SC_MODULE(gpio_matrix) {
    sc_out<bool> uart2rx_o {"uart2rx_o"};
    sc_in<bool> uart2tx_i {"uart2tx_i"};
 
+   /* SPI */
+   sc_in<bool> hspi_d_oen_i {"hspi_d_oen_i"};
+   sc_in<bool> hspi_d_out_i {"hspi_d_out_i"};
+   sc_out<bool> hspi_d_in_o {"hspi_d_in_o"};
+   sc_in<bool> hspi_q_oen_i {"hspi_q_oen_i"};
+   sc_in<bool> hspi_q_out_i {"hspi_q_out_i"};
+   sc_out<bool> hspi_q_in_o {"hspi_q_in_o"};
+   sc_in<bool> hspi_cs0_oen_i {"hspi_cs0_oen_i"};
+   sc_in<bool> hspi_cs0_out_i {"hspi_cs0_out_i"};
+   sc_out<bool> hspi_cs0_in_o {"hspi_cs0_in_o"};
+   sc_in<bool> hspi_clk_oen_i {"hspi_clk_oen_i"};
+   sc_in<bool> hspi_clk_out_i {"hspi_clk_out_i"};
+   sc_out<bool> hspi_clk_in_o {"hspi_clk_in_o"};
+   sc_in<bool> hspi_wp_oen_i {"hspi_wp_oen_i"};
+   sc_in<bool> hspi_wp_out_i {"hspi_wp_out_i"};
+   sc_out<bool> hspi_wp_in_o {"hspi_wp_in_o"};
+   sc_in<bool> hspi_hd_oen_i {"hspi_hd_oen_i"};
+   sc_in<bool> hspi_hd_out_i {"hspi_hd_out_i"};
+   sc_out<bool> hspi_hd_in_o {"hspi_hd_in_o"};
+   sc_in<bool> vspi_d_oen_i {"vspi_d_oen_i"};
+   sc_in<bool> vspi_d_out_i {"vspi_d_out_i"};
+   sc_out<bool> vspi_d_in_o {"vspi_d_in_o"};
+   sc_in<bool> vspi_q_oen_i {"vspi_q_oen_i"};
+   sc_in<bool> vspi_q_out_i {"vspi_q_out_i"};
+   sc_out<bool> vspi_q_in_o {"vspi_q_in_o"};
+   sc_in<bool> vspi_cs0_oen_i {"vspi_cs0_oen_i"};
+   sc_in<bool> vspi_cs0_out_i {"vspi_cs0_out_i"};
+   sc_out<bool> vspi_cs0_in_o {"vspi_cs0_in_o"};
+   sc_in<bool> vspi_cs1_oen_i {"vspi_cs1_oen_i"};
+   sc_in<bool> vspi_cs1_out_i {"vspi_cs1_out_i"};
+   sc_out<bool> vspi_cs1_in_o {"vspi_cs1_in_o"};
+   sc_in<bool> vspi_cs2_oen_i {"vspi_cs2_oen_i"};
+   sc_in<bool> vspi_cs2_out_i {"vspi_cs2_out_i"};
+   sc_out<bool> vspi_cs2_in_o {"vspi_cs2_in_o"};
+   sc_in<bool> vspi_clk_oen_i {"vspi_clk_oen_i"};
+   sc_in<bool> vspi_clk_out_i {"vspi_clk_out_i"};
+   sc_out<bool> vspi_clk_in_o {"vspi_clk_in_o"};
+   sc_in<bool> vspi_wp_oen_i {"vspi_wp_oen_i"};
+   sc_in<bool> vspi_wp_out_i {"vspi_wp_out_i"};
+   sc_out<bool> vspi_wp_in_o {"vspi_wp_in_o"};
+   sc_in<bool> vspi_hd_oen_i {"vspi_hd_oen_i"};
+   sc_in<bool> vspi_hd_out_i {"vspi_hd_out_i"};
+   sc_out<bool> vspi_hd_in_o {"vspi_hd_in_o"};
+
    /* Submodules */
    mux_pcnt i_mux_pcnt {"i_mux_pcnt"};
+   mux_in i_mux_hspi_d {"i_mux_hspi_d", GPIOMATRIX_LOGIC1};
+   mux_in i_mux_hspi_q {"i_mux_hspi_q", GPIOMATRIX_LOGIC1};
+   mux_in i_mux_hspi_hd {"i_mux_hspi_hd", GPIOMATRIX_LOGIC1};
+   mux_in i_mux_hspi_wp {"i_mux_hspi_wp", GPIOMATRIX_LOGIC1};
+   mux_in i_mux_hspi_clk {"i_mux_hspi_clk", GPIOMATRIX_LOGIC1};
+   mux_in i_mux_hspi_cs0 {"i_mux_hspi_cs0", GPIOMATRIX_LOGIC1};
+   mux_in i_mux_vspi_d {"i_mux_vspi_d", GPIOMATRIX_LOGIC1};
+   mux_in i_mux_vspi_q {"i_mux_vspi_q", GPIOMATRIX_LOGIC1};
+   mux_in i_mux_vspi_hd {"i_mux_vspi_hd", GPIOMATRIX_LOGIC1};
+   mux_in i_mux_vspi_wp {"i_mux_vspi_wp", GPIOMATRIX_LOGIC1};
+   mux_in i_mux_vspi_clk {"i_mux_vspi_clk", GPIOMATRIX_LOGIC1};
+   mux_in i_mux_vspi_cs0 {"i_mux_vspi_cs0", GPIOMATRIX_LOGIC1};
+   mux_in i_mux_vspi_cs1 {"i_mux_vspi_cs1", GPIOMATRIX_LOGIC1};
+   mux_in i_mux_vspi_cs2 {"i_mux_vspi_cs2", GPIOMATRIX_LOGIC1};
    mux_in i_mux_uart0 {"i_mux_uart0", GPIOMATRIX_LOGIC1};
    mux_in i_mux_uart1 {"i_mux_uart1", GPIOMATRIX_LOGIC1};
    mux_in i_mux_uart2 {"i_mux_uart2", GPIOMATRIX_LOGIC1};
@@ -247,6 +340,20 @@ SC_MODULE(gpio_matrix) {
       GPIOMODE_NONE | GPIOMODE_INPUT, GPIOMODE_NONE, true, 3};
 
    /* Signals */
+   sc_signal<bool> d_hspi_d_in_s {"d_hspi_d_in_s"};
+   sc_signal<bool> d_hspi_q_in_s {"d_hspi_q_in_s"};
+   sc_signal<bool> d_hspi_clk_in_s {"d_hspi_clk_in_s"};
+   sc_signal<bool> d_hspi_hd_in_s {"d_hspi_hd_in_s"};
+   sc_signal<bool> d_hspi_wp_in_s {"d_hspi_wp_in_s"};
+   sc_signal<bool> d_hspi_cs0_in_s {"d_hspi_cs0_in_s"};
+   sc_signal<bool> d_vspi_d_in_s {"d_vspi_d_in_s"};
+   sc_signal<bool> d_vspi_q_in_s {"d_vspi_q_in_s"};
+   sc_signal<bool> d_vspi_clk_in_s {"d_vspi_clk_in_s"};
+   sc_signal<bool> d_vspi_hd_in_s {"d_vspi_hd_in_s"};
+   sc_signal<bool> d_vspi_wp_in_s {"d_vspi_wp_in_s"};
+   sc_signal<bool> d_vspi_cs0_in_s {"d_vspi_cs0_in_s"};
+   sc_signal<bool> d_vspi_cs1_in_s {"d_vspi_cs1_in_s"};
+   sc_signal<bool> d_vspi_cs2_in_s {"d_vspi_cs2_in_s"};
    sc_signal<bool> d_u0rx_s {"d_u0rx_s"};
    sc_signal<bool> d_u1rx_s {"d_u1rx_s"};
    sc_signal<bool> d_u2rx_s {"d_u2rx_s"};
@@ -324,7 +431,8 @@ SC_MODULE(gpio_matrix) {
       /* GPIO 2 */
       i_mux_d2.pin(d2_a12);
       CONNECTFUNC(i_mux_d2, l0_f1,     l1_f1, sig_open);     /* F1 GPIO */
-      CONNECTFUNC(i_mux_d2, l0_f2,     l1_f2, sig_open);     /* F2 HSPI-WP*/
+      CONNECTFUNC(i_mux_d2, hspi_wp_out_i,
+                               hspi_wp_oen_i,d_hspi_wp_in_s);/* F2 HSPI-WP*/
       CONNECTFUNC(i_mux_d2,min_s[2],men_s[2],mout_s[2]);     /* F3 GPIO */
       /* F1: GPIO -- built-in */
       /* F2: HSPIWP -- not yet supported */
@@ -343,7 +451,8 @@ SC_MODULE(gpio_matrix) {
       /* GPIO 4 */
       i_mux_d4.pin(d4_a10);
       CONNECTFUNC(i_mux_d4,  l0_f1, l1_f1, sig_open);        /* F1 skipped */
-      CONNECTFUNC(i_mux_d4,  l0_f2, l1_f2, sig_open);        /* F2 HSPID */
+      CONNECTFUNC(i_mux_d4, hspi_hd_out_i,
+                               hspi_hd_oen_i,d_hspi_hd_in_s);/* F2 HSPI-HD*/
       CONNECTFUNC(i_mux_d4,min_s[4],men_s[4],mout_s[4]);     /* F3 GPIO */
       CONNECTFUNC(i_mux_d4,  l0_f4, l1_f4, sig_open);        /* F4 HS2_DATA1 */
       CONNECTFUNC(i_mux_d4,  l0_f5, l1_f5, sig_open);        /* F5 SD_DATA1 */
@@ -355,7 +464,8 @@ SC_MODULE(gpio_matrix) {
       CONNECTOUTMUX(4);
       i_mux_d5.pin(d5);
       CONNECTFUNC(i_mux_d5,  l0_f1, l1_f1, sig_open);        /* F1 skipped */
-      CONNECTFUNC(i_mux_d5,  l0_f2, l1_f2, sig_open);        /* F2 VSPICS0 */
+      CONNECTFUNC(i_mux_d5,  vspi_cs0_out_i,
+                             vspi_cs0_oen_i,d_vspi_cs0_in_s);/* F2 VSPICS0 */
       CONNECTFUNC(i_mux_d5,min_s[5],men_s[5],mout_s[5]);     /* F3 GPIO */
       /* F4: HS1_DATA6 -- not supported. */
       CONNECTOUTMUX(5);
@@ -368,7 +478,8 @@ SC_MODULE(gpio_matrix) {
       /* GPIO 12 */
       i_mux_d12.pin(d12_a15);
       CONNECTFUNC(i_mux_d12,  l0_f1, l1_f1, sig_open);       /* F1 MTDO */
-      CONNECTFUNC(i_mux_d12,  l0_f2, l1_f2, sig_open);       /* F2 HSPIQ */
+      CONNECTFUNC(i_mux_d12, hspi_q_out_i,
+                               hspi_q_oen_i, d_hspi_q_in_s); /* F2 HSPIQ */
       CONNECTFUNC(i_mux_d12,min_s[12],men_s[12],mout_s[12]); /* F3 GPIO */
       /* F4: HS2_DATA2 -- not supported. */
       /* F5: SD_DATA2 -- not supported. */
@@ -376,7 +487,8 @@ SC_MODULE(gpio_matrix) {
       CONNECTOUTMUX(12);
       i_mux_d13.pin(d13_a14);
       CONNECTFUNC(i_mux_d13,  l0_f1, l1_f1, sig_open);       /* F1 MTCK */
-      CONNECTFUNC(i_mux_d13,  l0_f2, l1_f2, sig_open);       /* F2 HSPID */
+      CONNECTFUNC(i_mux_d13, hspi_d_out_i,
+                               hspi_d_oen_i, d_hspi_d_in_s); /* F2 HSPID */
       CONNECTFUNC(i_mux_d13,min_s[13],men_s[13],mout_s[13]); /* F3 GPIO */
       /* F4: HS2_DATA3 -- not supported. */
       /* F5: SD_DATA3 -- not supported. */
@@ -384,7 +496,8 @@ SC_MODULE(gpio_matrix) {
       CONNECTOUTMUX(13);
       i_mux_d14.pin(d14_a16);
       CONNECTFUNC(i_mux_d14, l0_f1, l1_f1, sig_open);        /* F1 MTMS */
-      CONNECTFUNC(i_mux_d14, l0_f2, l1_f2, sig_open);        /* F2 HSPICLK */
+      CONNECTFUNC(i_mux_d14, hspi_clk_out_i,
+                            hspi_clk_oen_i, d_hspi_clk_in_s);/* F2 HSPICLK */
       CONNECTFUNC(i_mux_d14,min_s[14],men_s[14],mout_s[14]); /* F3 GPIO */
       /* F4: HS2_CLK -- not supported. */
       /* F5: SD_CLK -- not supported. */
@@ -392,7 +505,8 @@ SC_MODULE(gpio_matrix) {
       CONNECTOUTMUX(14);
       i_mux_d15(d15_a13);
       CONNECTFUNC(i_mux_d15, l0_f1, l1_f1, sig_open);        /* F1 MTDO */
-      CONNECTFUNC(i_mux_d15, l0_f2, l1_f2, sig_open);        /* F2 HSPICS0 */
+      CONNECTFUNC(i_mux_d15, hspi_cs0_out_i,
+                            hspi_cs0_oen_i, d_hspi_cs0_in_s);/* F2 HSPICS0 */
       CONNECTFUNC(i_mux_d15,min_s[15],men_s[15],mout_s[15]); /* F3 GPIO */
       /* F4: HS2_CMD -- not supported. */
       /* F5: SD_CMD -- not supported. */
@@ -417,13 +531,15 @@ SC_MODULE(gpio_matrix) {
       CONNECTOUTMUX(17);
       i_mux_d18.pin(d18);
       CONNECTFUNC(i_mux_d18, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
-      CONNECTFUNC(i_mux_d18, l0_f2, l1_f2, sig_open);        /* F2: VSPICLK */
-      CONNECTFUNC(i_mux_d18,min_s[18],men_s[18],mout_s[18]); /* F3: GPIO */
+      CONNECTFUNC(i_mux_d18, vspi_clk_out_i,
+                            vspi_clk_oen_i, d_vspi_clk_in_s);/* F2 VSPICLK */
+      CONNECTFUNC(i_mux_d18,min_s[18],men_s[18],mout_s[18]); /* F3 GPIO */
       /* F4: HS1_DATA7 -- not supported. */
       CONNECTOUTMUX(18);
       i_mux_d19.pin(d19);
       CONNECTFUNC(i_mux_d19, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
-      CONNECTFUNC(i_mux_d19, l0_f2, l1_f2, sig_open);        /* F2 VSPIQ */
+      CONNECTFUNC(i_mux_d19, vspi_q_out_i,
+                                vspi_q_oen_i, d_vspi_q_in_s);/* F2 VSPIQ */
       CONNECTFUNC(i_mux_d19,min_s[19],men_s[19],mout_s[19]); /* F3 GPIO */
       /* F4: U0CTS -- not supported. */
       /* F5: -- not used. */
@@ -431,7 +547,8 @@ SC_MODULE(gpio_matrix) {
       CONNECTOUTMUX(19);
       i_mux_d21.pin(d21);
       CONNECTFUNC(i_mux_d21, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
-      CONNECTFUNC(i_mux_d21, l0_f2, l1_f2, sig_open);        /* F2 VSPIHD */
+      CONNECTFUNC(i_mux_d21, vspi_hd_out_i,
+                              vspi_hd_oen_i, d_vspi_hd_in_s);/* F2 VSPIHD */
       CONNECTFUNC(i_mux_d21,min_s[21],men_s[21],mout_s[21]); /* F3 GPIO */
       /* F4: -- not used. */
       /* F5: -- not used. */
@@ -439,7 +556,8 @@ SC_MODULE(gpio_matrix) {
       CONNECTOUTMUX(21);
       i_mux_d22.pin(d22);
       CONNECTFUNC(i_mux_d22, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
-      CONNECTFUNC(i_mux_d22, l0_f2, l1_f2, sig_open);        /* F2 VSPIWP */
+      CONNECTFUNC(i_mux_d22, vspi_wp_out_i,
+                              vspi_wp_oen_i, d_vspi_wp_in_s);/* F2 VSPIWP */
       CONNECTFUNC(i_mux_d22,min_s[22],men_s[22],mout_s[22]); /* F3 GPIO */
       /* F4: U0RTS -- not supported. */
       /* F5: -- not used. */
@@ -447,7 +565,8 @@ SC_MODULE(gpio_matrix) {
       CONNECTOUTMUX(22);
       i_mux_d23.pin(d23);
       CONNECTFUNC(i_mux_d23, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
-      CONNECTFUNC(i_mux_d23, l0_f2, l1_f2, sig_open);        /* F2 VSPID */
+      CONNECTFUNC(i_mux_d23, vspi_d_out_i,
+                                vspi_d_oen_i, d_vspi_d_in_s);/* F2 VSPID */
       CONNECTFUNC(i_mux_d23,min_s[23],men_s[23],mout_s[23]); /* F3 GPIO */
       /* F4: HS1_STROBE -- not supported. */
       /* F5: -- not used. */
@@ -528,22 +647,26 @@ SC_MODULE(gpio_matrix) {
       i_mux_pcnt.mout_i(logic_0);
       i_mux_pcnt.mout_i(logic_1);
 
+      /* HSPI Muxes */
+      CONNECTINMUX(i_mux_hspi_d, hspi_d_in_o, d_hspi_d_in_s);
+      CONNECTINMUX(i_mux_hspi_q, hspi_q_in_o, d_hspi_q_in_s);
+      CONNECTINMUX(i_mux_hspi_clk, hspi_clk_in_o, d_hspi_clk_in_s);
+      CONNECTINMUX(i_mux_hspi_hd, hspi_hd_in_o, d_hspi_hd_in_s);
+      CONNECTINMUX(i_mux_hspi_wp, hspi_wp_in_o, d_hspi_wp_in_s);
+      CONNECTINMUX(i_mux_hspi_cs0, hspi_cs0_in_o, d_hspi_cs0_in_s);
+      CONNECTINMUX(i_mux_vspi_d, vspi_d_in_o, d_vspi_d_in_s);
+      CONNECTINMUX(i_mux_vspi_q, vspi_q_in_o, d_vspi_q_in_s);
+      CONNECTINMUX(i_mux_vspi_clk, vspi_clk_in_o, d_vspi_clk_in_s);
+      CONNECTINMUX(i_mux_vspi_hd, vspi_hd_in_o, d_vspi_hd_in_s);
+      CONNECTINMUX(i_mux_vspi_wp, vspi_wp_in_o, d_vspi_wp_in_s);
+      CONNECTINMUX(i_mux_vspi_cs0, vspi_cs0_in_o, d_vspi_cs0_in_s);
+      CONNECTINMUX(i_mux_vspi_cs1, vspi_cs1_in_o, d_vspi_cs1_in_s);
+      CONNECTINMUX(i_mux_vspi_cs2, vspi_cs2_in_o, d_vspi_cs2_in_s);
+
       /* UART Muxes */
-      i_mux_uart0.out_o(uart0rx_o);
-      for(g = 0; g < GPIOMATRIX_CNT; g = g + 1) i_mux_uart0.mout_i(mout_s[g]);
-      i_mux_uart0.mout_i(d_u0rx_s); /* Direct signal */
-      i_mux_uart0.mout_i(logic_0);
-      i_mux_uart0.mout_i(logic_1);
-      i_mux_uart1.out_o(uart1rx_o);
-      for(g = 0; g < GPIOMATRIX_CNT; g = g + 1) i_mux_uart1.mout_i(mout_s[g]);
-      i_mux_uart1.mout_i(l0_f1); /* UART1 does not have a direct signal. */
-      i_mux_uart1.mout_i(logic_0);
-      i_mux_uart1.mout_i(logic_1);
-      i_mux_uart2.out_o(uart2rx_o);
-      for(g = 0; g < GPIOMATRIX_CNT; g = g + 1) i_mux_uart2.mout_i(mout_s[g]);
-      i_mux_uart2.mout_i(d_u2rx_s); /* Direct signal */
-      i_mux_uart2.mout_i(logic_0);
-      i_mux_uart2.mout_i(logic_1);
+      CONNECTINMUX(i_mux_uart0, uart0rx_o, d_u0rx_s);
+      CONNECTINMUX(i_mux_uart1, uart1rx_o, d_u1rx_s);
+      CONNECTINMUX(i_mux_uart2, uart2rx_o, d_u2rx_s);
 
       initptr();
 

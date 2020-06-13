@@ -28,6 +28,7 @@
 #include "Wire.h"
 #include "driver/adc.h"
 #include "reset_reason.h"
+#include "soc/spi_struct.h"
 
 void doitesp32devkitv1::dut(void) {
    wait(125, SC_NS);
@@ -114,6 +115,13 @@ void doitesp32devkitv1::pininit() {
    gpiomatrixptr = &i_gpio_matrix;
    ctrlregsptr = &ctrlregs;
    espintrptr = &i_espintr;
+   /* We point the module pointers to their modules and the struct pointers in
+    * the modules to their struct.
+    */
+   hspiptr = &i_hspi;
+   vspiptr = &i_vspi;
+   i_hspi.configure(&SPI2);
+   i_vspi.configure(&SPI3);
 
    /* We configure the serial protocols. Each TestSerial needs to be connected
     * to the channel it controls.

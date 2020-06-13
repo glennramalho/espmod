@@ -37,6 +37,91 @@ void mux_out::transfer() {
 
    while(true) {
       switch(function) {
+         /* SPI */
+         case HSPICLK_OUT_IDX:
+            min_o.write(hspi_clk_out_i.read());
+            men_o.write(hspi_clk_oen_i.read());
+            wait(fchange_ev | hspi_clk_out_i.default_event()
+               | hspi_clk_oen_i.default_event());
+            break;
+         case HSPIQ_OUT_IDX:
+            min_o.write(hspi_q_out_i.read());
+            men_o.write(hspi_q_oen_i.read());
+            wait(fchange_ev | hspi_q_out_i.default_event()
+               | hspi_q_oen_i.default_event());
+            break;
+         case HSPID_OUT_IDX:
+            min_o.write(hspi_d_out_i.read());
+            men_o.write(hspi_d_oen_i.read());
+            wait(fchange_ev | hspi_d_out_i.default_event()
+               | hspi_d_oen_i.default_event());
+            break;
+         case HSPIHD_OUT_IDX:
+            min_o.write(hspi_hd_out_i.read());
+            men_o.write(hspi_hd_oen_i.read());
+            wait(fchange_ev | hspi_hd_out_i.default_event()
+               | hspi_hd_oen_i.default_event());
+            break;
+         case HSPIWP_OUT_IDX:
+            min_o.write(hspi_wp_out_i.read());
+            men_o.write(hspi_wp_oen_i.read());
+            wait(fchange_ev | hspi_wp_out_i.default_event()
+               | hspi_wp_oen_i.default_event());
+            break;
+         case HSPICS0_OUT_IDX:
+            min_o.write(hspi_cs0_out_i.read());
+            men_o.write(hspi_cs0_oen_i.read());
+            wait(fchange_ev | hspi_cs0_out_i.default_event()
+               | hspi_cs0_oen_i.default_event());
+            break;
+         case VSPICLK_OUT_IDX:
+            min_o.write(vspi_clk_out_i.read());
+            men_o.write(vspi_clk_oen_i.read());
+            wait(fchange_ev | vspi_clk_out_i.default_event()
+               | vspi_clk_oen_i.default_event());
+            break;
+         case VSPIQ_OUT_IDX:
+            min_o.write(vspi_q_out_i.read());
+            men_o.write(vspi_q_oen_i.read());
+            wait(fchange_ev | vspi_q_out_i.default_event()
+               | vspi_q_oen_i.default_event());
+            break;
+         case VSPID_OUT_IDX:
+            min_o.write(vspi_d_out_i.read());
+            men_o.write(vspi_d_oen_i.read());
+            wait(fchange_ev | vspi_d_out_i.default_event()
+               | vspi_d_oen_i.default_event());
+            break;
+         case VSPIHD_OUT_IDX:
+            min_o.write(vspi_hd_out_i.read());
+            men_o.write(vspi_hd_oen_i.read());
+            wait(fchange_ev | vspi_hd_out_i.default_event()
+               | vspi_hd_oen_i.default_event());
+            break;
+         case VSPIWP_OUT_IDX:
+            min_o.write(vspi_wp_out_i.read());
+            men_o.write(vspi_wp_oen_i.read());
+            wait(fchange_ev | vspi_wp_out_i.default_event()
+               | vspi_wp_oen_i.default_event());
+            break;
+         case VSPICS0_OUT_IDX:
+            min_o.write(vspi_cs0_out_i.read());
+            men_o.write(vspi_cs0_oen_i.read());
+            wait(fchange_ev | vspi_cs0_out_i.default_event()
+               | vspi_cs0_oen_i.default_event());
+            break;
+         case VSPICS1_OUT_IDX:
+            min_o.write(vspi_cs1_out_i.read());
+            men_o.write(vspi_cs1_oen_i.read());
+            wait(fchange_ev | vspi_cs0_out_i.default_event()
+               | vspi_cs1_oen_i.default_event());
+            break;
+         case VSPICS2_OUT_IDX:
+            min_o.write(vspi_cs2_out_i.read());
+            men_o.write(vspi_cs2_oen_i.read());
+            wait(fchange_ev | vspi_cs2_out_i.default_event()
+               | vspi_cs2_oen_i.default_event());
+            break;
          /* UARTS */
          case U0TXD_OUT_IDX:
             min_o.write(uart0tx_i.read()); men_o.write(true);

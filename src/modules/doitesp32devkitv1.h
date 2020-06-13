@@ -33,6 +33,7 @@
 #include "adc_types.h"
 #include "gn_mixed.h"
 #include "ctrlregs.h"
+#include "spimod.h"
 
 SC_MODULE(doitesp32devkitv1) {
    /* Pins */
@@ -78,6 +79,8 @@ SC_MODULE(doitesp32devkitv1) {
    gpio_matrix i_gpio_matrix {"i_gpio_matrix"};
    pcntmod i_pcnt{"i_pcnt"};
    ledcmod i_ledc{"i_ledc"};
+   spimod i_vspi{"i_vspi"};
+   spimod i_hspi{"i_hspi"};
    adc1 i_adc1{"i_adc1"};
    adc2 i_adc2{"i_adc2"};
    uart i_uart0 {"i_uart0", 64, 64};
@@ -124,6 +127,53 @@ SC_MODULE(doitesp32devkitv1) {
    sc_signal<bool> ledc_sig_ls_6{"ledc_sig_ls_6"};
    sc_signal<bool> ledc_sig_ls_7{"ledc_sig_ls_7"};
    sc_signal<bool> ledc_intr{"ledc_intr"};
+   sc_signal<bool> hspi_d_out{"hspi_d_out"};
+   sc_signal<bool> hspi_d_in{"hspi_d_in"};
+   sc_signal<bool> hspi_d_oe{"hspi_d_oe"};
+   sc_signal<bool> hspi_q_out{"hspi_q_out"};
+   sc_signal<bool> hspi_q_in{"hspi_q_in"};
+   sc_signal<bool> hspi_q_oe{"hspi_q_oe"};
+   sc_signal<bool> hspi_hd_out{"hspi_hd_out"};
+   sc_signal<bool> hspi_hd_in{"hspi_hd_in"};
+   sc_signal<bool> hspi_hd_oe{"hspi_hd_oe"};
+   sc_signal<bool> hspi_wp_out{"hspi_wp_out"};
+   sc_signal<bool> hspi_wp_in{"hspi_wp_in"};
+   sc_signal<bool> hspi_wp_oe{"hspi_wp_oe"};
+   sc_signal<bool> hspi_clk_out{"hspi_clk_out"};
+   sc_signal<bool> hspi_clk_in{"hspi_clk_in"};
+   sc_signal<bool> hspi_clk_oe{"hspi_clk_oe"};
+   sc_signal<bool> hspi_cs0_out{"hspi_cs0_out"};
+   sc_signal<bool> hspi_cs0_oe{"hspi_cs0_oe"};
+   sc_signal<bool> hspi_cs0_in{"hspi_cs0_in"};
+   sc_signal<bool> hspi_cs1_out{"hspi_cs1_out"};
+   sc_signal<bool> hspi_cs1_oe{"hspi_cs1_oe"};
+   sc_signal<bool> hspi_cs2_out{"hspi_cs2_out"};
+   sc_signal<bool> hspi_cs2_oe{"hspi_cs2_oe"};
+   sc_signal<bool> vspi_d_out{"vspi_d_out"};
+   sc_signal<bool> vspi_d_in{"vspi_d_in"};
+   sc_signal<bool> vspi_d_oe{"vspi_d_oe"};
+   sc_signal<bool> vspi_q_out{"vspi_q_out"};
+   sc_signal<bool> vspi_q_in{"vspi_q_in"};
+   sc_signal<bool> vspi_q_oe{"vspi_q_oe"};
+   sc_signal<bool> vspi_hd_out{"vspi_hd_out"};
+   sc_signal<bool> vspi_hd_in{"vspi_hd_in"};
+   sc_signal<bool> vspi_hd_oe{"vspi_hd_oe"};
+   sc_signal<bool> vspi_wp_out{"vspi_wp_out"};
+   sc_signal<bool> vspi_wp_in{"vspi_wp_in"};
+   sc_signal<bool> vspi_wp_oe{"vspi_wp_oe"};
+   sc_signal<bool> vspi_clk_out{"vspi_clk_out"};
+   sc_signal<bool> vspi_clk_in{"vspi_clk_in"};
+   sc_signal<bool> vspi_clk_oe{"vspi_clk_oe"};
+   sc_signal<bool> vspi_cs0_out{"vspi_cs0_out"};
+   sc_signal<bool> vspi_cs0_oe{"vspi_cs0_oe"};
+   sc_signal<bool> vspi_cs0_in{"vspi_cs0_in"};
+   sc_signal<bool> vspi_cs1_out{"vspi_cs1_out"};
+   sc_signal<bool> vspi_cs1_oe{"vspi_cs1_oe"};
+   sc_signal<bool> vspi_cs1_in{"vspi_cs1_in"};
+   sc_signal<bool> vspi_cs2_out{"vspi_cs2_out"};
+   sc_signal<bool> vspi_cs2_oe{"vspi_cs2_oe"};
+   sc_signal<bool> vspi_cs2_in{"vspi_cs2_in"};
+   sc_signal<bool> logic_0 {"logic_0", false};
 
    /* Processes */
    void dut(void);
@@ -215,6 +265,56 @@ SC_MODULE(doitesp32devkitv1) {
       i_adc2.channel_7(d27_a17);
       i_adc2.channel_8(d26_a19);
       i_adc2.channel_9(d25_a18);
+
+      /* And the SPIs. */
+      i_hspi.d_o(hspi_d_out); i_gpio_matrix.hspi_d_out_i(hspi_d_out);
+      i_hspi.d_oen_o(hspi_d_oe); i_gpio_matrix.hspi_d_oen_i(hspi_d_oe);
+      i_hspi.d_i(hspi_d_in); i_gpio_matrix.hspi_d_in_o(hspi_d_in);
+      i_hspi.q_o(hspi_q_out); i_gpio_matrix.hspi_q_out_i(hspi_q_out);
+      i_hspi.q_oen_o(hspi_q_oe); i_gpio_matrix.hspi_q_oen_i(hspi_q_oe);
+      i_hspi.q_i(hspi_q_in); i_gpio_matrix.hspi_q_in_o(hspi_q_in);
+      i_hspi.clk_o(hspi_clk_out); i_gpio_matrix.hspi_clk_out_i(hspi_clk_out);
+      i_hspi.clk_oen_o(hspi_clk_oe); i_gpio_matrix.hspi_clk_oen_i(hspi_clk_oe);
+      i_hspi.clk_i(hspi_clk_in); i_gpio_matrix.hspi_clk_in_o(hspi_clk_in);
+      i_hspi.hd_o(hspi_hd_out); i_gpio_matrix.hspi_hd_out_i(hspi_hd_out);
+      i_hspi.hd_oen_o(hspi_hd_oe); i_gpio_matrix.hspi_hd_oen_i(hspi_hd_oe);
+      i_hspi.hd_i(hspi_hd_in); i_gpio_matrix.hspi_hd_in_o(hspi_hd_in);
+      i_hspi.wp_o(hspi_wp_out); i_gpio_matrix.hspi_wp_out_i(hspi_wp_out);
+      i_hspi.wp_oen_o(hspi_wp_oe); i_gpio_matrix.hspi_wp_oen_i(hspi_wp_oe);
+      i_hspi.wp_i(hspi_wp_in); i_gpio_matrix.hspi_wp_in_o(hspi_wp_in);
+      i_hspi.cs0_o(hspi_cs0_out); i_gpio_matrix.hspi_cs0_out_i(hspi_cs0_out);
+      i_hspi.cs0_oen_o(hspi_cs0_oe); i_gpio_matrix.hspi_cs0_oen_i(hspi_cs0_oe);
+      i_hspi.cs0_i(hspi_cs0_in); i_gpio_matrix.hspi_cs0_in_o(hspi_cs0_in);
+      /* These don't exist, so we connect them to dummies. */
+      i_hspi.cs1_o(hspi_cs1_out); i_hspi.cs1_oen_o(hspi_cs1_oe);
+      i_hspi.cs1_i(logic_0);
+      i_hspi.cs2_o(hspi_cs2_out); i_hspi.cs2_oen_o(hspi_cs2_oe);
+      i_hspi.cs2_i(logic_0);
+
+      i_vspi.d_o(vspi_d_out); i_gpio_matrix.vspi_d_out_i(vspi_d_out);
+      i_vspi.d_oen_o(vspi_d_oe); i_gpio_matrix.vspi_d_oen_i(vspi_d_oe);
+      i_vspi.d_i(vspi_d_in); i_gpio_matrix.vspi_d_in_o(vspi_d_in);
+      i_vspi.q_o(vspi_q_out); i_gpio_matrix.vspi_q_out_i(vspi_q_out);
+      i_vspi.q_oen_o(vspi_q_oe); i_gpio_matrix.vspi_q_oen_i(vspi_q_oe);
+      i_vspi.q_i(vspi_q_in); i_gpio_matrix.vspi_q_in_o(vspi_q_in);
+      i_vspi.clk_o(vspi_clk_out); i_gpio_matrix.vspi_clk_out_i(vspi_clk_out);
+      i_vspi.clk_oen_o(vspi_clk_oe); i_gpio_matrix.vspi_clk_oen_i(vspi_clk_oe);
+      i_vspi.clk_i(vspi_clk_in); i_gpio_matrix.vspi_clk_in_o(vspi_clk_in);
+      i_vspi.hd_o(vspi_hd_out); i_gpio_matrix.vspi_hd_out_i(vspi_hd_out);
+      i_vspi.hd_oen_o(vspi_hd_oe); i_gpio_matrix.vspi_hd_oen_i(vspi_hd_oe);
+      i_vspi.hd_i(vspi_hd_in); i_gpio_matrix.vspi_hd_in_o(vspi_hd_in);
+      i_vspi.wp_o(vspi_wp_out); i_gpio_matrix.vspi_wp_out_i(vspi_wp_out);
+      i_vspi.wp_oen_o(vspi_wp_oe); i_gpio_matrix.vspi_wp_oen_i(vspi_wp_oe);
+      i_vspi.wp_i(vspi_wp_in); i_gpio_matrix.vspi_wp_in_o(vspi_wp_in);
+      i_vspi.cs0_o(vspi_cs0_out); i_gpio_matrix.vspi_cs0_out_i(vspi_cs0_out);
+      i_vspi.cs0_oen_o(vspi_cs0_oe); i_gpio_matrix.vspi_cs0_oen_i(vspi_cs0_oe);
+      i_vspi.cs0_i(vspi_cs0_in); i_gpio_matrix.vspi_cs0_in_o(vspi_cs0_in);
+      i_vspi.cs1_o(vspi_cs1_out); i_gpio_matrix.vspi_cs1_out_i(vspi_cs1_out);
+      i_vspi.cs1_oen_o(vspi_cs1_oe); i_gpio_matrix.vspi_cs1_oen_i(vspi_cs1_oe);
+      i_vspi.cs1_i(vspi_cs1_in); i_gpio_matrix.vspi_cs1_in_o(vspi_cs1_in);
+      i_vspi.cs2_o(vspi_cs2_out); i_gpio_matrix.vspi_cs2_out_i(vspi_cs2_out);
+      i_vspi.cs2_oen_o(vspi_cs2_oe); i_gpio_matrix.vspi_cs2_oen_i(vspi_cs2_oe);
+      i_vspi.cs2_i(vspi_cs2_in); i_gpio_matrix.vspi_cs2_in_o(vspi_cs2_in);
 
       /* And we connect the PCNT. */
       i_pcnt.pcntbus_i(pcntbus_0);

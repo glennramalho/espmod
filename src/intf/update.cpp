@@ -21,10 +21,12 @@
 #include "gpio_matrix.h"
 #include "pcntmod.h"
 #include "ledcmod.h"
+#include "spimod.h"
 #include "adc_types.h"
 #include "soc/gpio_struct.h"
 #include "soc/pcnt_struct.h"
 #include "soc/ledc_struct.h"
+#include "soc/spi_struct.h"
 #include "ctrlregs.h"
 #include "Arduino.h"
 #include "espintr.h"
@@ -35,6 +37,8 @@
 gpio_matrix *gpiomatrixptr;
 pcntmod *pcntptr;
 ledcmod *ledcptr;
+spimod *vspiptr;
+spimod *hspiptr;
 adc1 *adc1ptr;
 adc2 *adc2ptr;
 espintr *espintrptr;
@@ -42,6 +46,8 @@ espintr *espintrptr;
 gpio_dev_t GPIO;
 pcnt_dev_t PCNT;
 ledc_dev_t LEDC;
+spi_dev_t SPI2;
+spi_dev_t SPI3;
 ctrlregs_t *ctrlregsptr;
 
 void update_ledc() {

@@ -21,6 +21,9 @@
 #ifndef _SPIMOD_H
 #define _SPIMOD_H
 
+#include <systemc.h>
+#include "soc/spi_struct.h"
+
 SC_MODULE(spimod) {
    public:
    sc_out<bool> d_oen_o {"d_oen_o"};
@@ -73,21 +76,24 @@ SC_MODULE(spimod) {
 
    /* Variables */
    unsigned int buffer[16];
-   spi_struct *spistruct;
+   spi_dev_t *spistruct;
+   bool actclk;
    int dlywr, dlyrd;
-   int limitbit, limitrdbit;
-   int startbit, startrdbit;
+   int precycwr, precycrd;
+   int startbit, startbitrd;
+   int lastbit, lastbitrd;
    bool wrlittleendian, rdlittleendian;
    bool wrmsbfirst, rdmsbfirst;
-   sc_event start_ev, reset_ev, loweruser_ev;
+   sc_event update_ev, start_ev, reset_ev, lowerusrbit_ev;
+   sc_time period, hightime, lowtime;
 
    /* Simulation Interface Functions */
    void update();
+   void configure(spi_dev_t *_spistruct);
    void trace(sc_trace_file *tf);
 
    /* Internal Functions */
    private:
-   void initstruct();
    void start_of_simulation();
    int calcnextbit(int bitpos, bool littleendian, bool msbfirst);
    int converttoendian(bool littleendian, bool msbfirst, int pos);
@@ -106,21 +112,21 @@ SC_MODULE(spimod) {
    void configure_meth();
 
    // Constructor
-   spimod(sc_module_name name, spi_struct *_spistruct): sc_module(name) {
-      intistruct(_spistruct);
+   SC_CTOR(spimod) {
+      spistruct = NULL;
+      actclk = false;
 
       SC_THREAD(update_th);
       sensitive << update_ev << lowerusrbit_ev;
 
       SC_THREAD(return_th);
-      sensitive << updategpioreg_ev << updategpiooe_ev << update_ev;
+      sensitive << slv_wr_status;
 
       SC_THREAD(transfer_th);
 
       SC_METHOD(configure_meth);
       sensitive << reset_ev << slave;
    }
-   SC_HAS_PROCESS(spimod);
 };
 extern spimod *hspiptr;
 extern spimod *vspiptr;
