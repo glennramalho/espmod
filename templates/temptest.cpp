@@ -23,7 +23,7 @@
 #include <string>
 #include <vector>
 #include "info.h"
-#include "main.h"
+<IFESPIDF>#include "main.h"
 
 /**********************
  * Function: trace()

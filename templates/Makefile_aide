@@ -45,9 +45,10 @@ COMPILE.cpp = $(CXX) $(DEPFLAGS) $(CPPFLAGS) -c
 ARDUINOHOME=/opt/arduino/arduino-1.8.10
 ARDUINOLIB=$(ARDUINOHOME)/hardware/espressif/esp32/libraries
 ESPIDF=$(ARDUINOHOME)/hardware/espressif/esp32/tools/sdk/include
-ESPMOD=<ESPPATH>
-include $(ESPMOD)/Makefile.vars
-ESPLIB=$(ESPMOD)/libespmod.a $(ESPMOD)/libardidfmod.a
+ESPMODDIR=<ESPPATH>
+ESPMOD=$(ESPMODDIR)/src
+include $(ESPMODDIR)/Makefile.vars
+ESPLIB=$(ESPMODDIR)/libespmod.a $(ESPMODDIR)/libardidfmod.a
 ESPLIBINC=-Wl,--start-group $(ESPLIB) -Wl,--end-group
 INCDIR=-I. -I$(SRCDIR) $(INCLUDES)
 DEFINES=-DDEBUG -DESP32 -DSYSCMOD
@@ -68,7 +69,7 @@ SRCC=$(SRCS:%.c=%.o)
 OBJC=$(foreach a,$(notdir $(SRCC:%.cpp=%.o)),$(OBJDIR)/$a)
 DEFC=$(SRCS:%.c=%.d)
 DEPFILES=$(foreach a,$(notdir $(DEFC:%.cpp=%.d)),$(DEPDIR)/$a)
-OBJS=$(OBJC) $(TESTOBJ)
+OBJS=$(OBJC)
 
 VPATH=.:$(SRCDIR)
 
@@ -76,12 +77,12 @@ all: $(PROJECT).x
 
 # The main simulation executable
 $(PROJECT).x: $(OBJS) $(SYSTEMC_LIB_DIR)/libsystemc.a $(ESPLIB)
-	cd $(ESPMOD)/.. && make
+	cd $(ESPMODDIR) && make
 	g++ -o$@ $(CPPFLAGS) $(OBJS) $(ESPLIBINC) $(SYSTEMC_LDFLAGS) \
            $(SYSTEMC_LIBS)
 
 $(ESPLIB):
-	cd $(ESPMOD)/.. && make
+	cd $(ESPMODDIR) && make
 
 $(OBJDIR)/%.o: %.cpp $(DEPDIR)/%.d | $(DEPDIR) $(OBJDIR)
 	$(COMPILE.cpp) $(OUTPUT_OPTION) $<
