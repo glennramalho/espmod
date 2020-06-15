@@ -116,13 +116,8 @@ then
    TESTFILES="sc_main.cpp temptest.cpp temptest.h"
    IFAIDELINE="s#<IFAIDE>##"
    IFESPLINE="s#<IFESPIDF>.*##"
-   cat <<EOF >$DIRNAME/$DIRNAME/$DIRNAME.ino
-void setup() {
-}
-
-void loop() {
-}
-EOF
+   echo "Coping <TEMPLATE>/basic.ino to $DIRNAME/$DIRNAME/$DIRNAME.ino"
+   cp $TEMPLATE/basic.ino $DIRNAME/$DIRNAME/$DIRNAME.ino
 else
    MAKESRC=Makefile_esp
    TESTFILES="sc_main.cpp temptest.cpp temptest.h main.cpp main.h"
