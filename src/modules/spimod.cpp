@@ -30,8 +30,8 @@ void spimod::update_th() {
    while(true) {
       wait();
 
-      /* We check the pointer. If it is null or went null, something went wrong, so
-       * we raise an alarm.
+      /* We check the pointer. If it is null or went null, something went
+       * wrong, so we raise an alarm.
        */
       if (spistruct == NULL) {
          SC_REPORT_FATAL("SPIMOD", "spistruct pointer is not set");
@@ -120,6 +120,7 @@ void spimod::start_of_simulation() {
    clk_oen_o.write(false); clk_o.write(false);
    wp_oen_o.write(false); wp_o.write(false);
    hd_oen_o.write(false); hd_o.write(false);
+   master.write(true);
 }
 
 int spimod::calcnextbit(int bitpos, bool littleendian, bool msbfirst) {
@@ -222,8 +223,8 @@ void spimod::setupmasterslave() {
    actclk = RDFIELD(pin, SPI_CK_IDLE_EDGE_M, SPI_CK_IDLE_EDGE_S) == 0;
    clk_o.write(!actclk);
 
-   /* If we are in master mode and the customer set the keepactive bit, we set the
-    * CS bits immediately.
+   /* If we are in master mode and the customer set the keepactive bit, we set
+    * the CS bits immediately.
     */
    if (master.read() && RDFIELD(pin,SPI_CS_KEEP_ACTIVE_M,SPI_CS_KEEP_ACTIVE_S))
       activatecs(false);
@@ -232,8 +233,8 @@ void spimod::setupmasterslave() {
     */
    else deactivatecs(false);
 
-   /* Not sure if this is needed, but it is nice to have. When a reset is issued,
-    * we lower the USR bit.
+   /* Not sure if this is needed, but it is nice to have. When a reset is
+    * issued, we lower the USR bit.
     */
    lowerusrbit_ev.notify();
 }
@@ -469,7 +470,7 @@ void spimod::configure_meth() {
    /* Master/slave configurations we take in only if the SPI is not running.
     * We then change the pin directions immediately.
     */
-   if (master.read() && !RDFIELD(slave, SPI_SLAVE_MODE_M, SPI_SLAVE_MODE_S)) {
+   if (RDFIELD(slave, SPI_SLAVE_MODE_M, SPI_SLAVE_MODE_S) == 1) {
       master.write(false);
       d_oen_o.write(false);
       q_oen_o.write(true);
@@ -479,7 +480,7 @@ void spimod::configure_meth() {
       cs1_oen_o.write(false);
       cs2_oen_o.write(false);
    }
-   else if (!master.read() && RDFIELD(slave,SPI_SLAVE_MODE_M,SPI_SLAVE_MODE_S)) {
+   else {
       master.write(true);
       d_oen_o.write(true);
       q_oen_o.write(false);
