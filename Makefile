@@ -54,6 +54,7 @@ CORES=$(CORESDIR)/Arduino.cpp $(CORESDIR)/HardwareSerial.cpp \
    $(CORESDIR)/esp32-hal-log.cpp \
    $(CORESDIR)/esp32-hal-psram.cpp \
    $(CORESDIR)/esp32-hal-spi.cpp \
+   $(CORESDIR)/esp32-hal-cpu.cpp \
    $(CORESDIR)/esp32-hal-gpio.cpp \
    $(CORESDIR)/esp32-hal-ledc.c \
    $(CORESDIR)/esp32-hal-matrix.c \
@@ -72,9 +73,8 @@ LIBRARIES=$(LIBDIR)/WebServer/WebServer.cpp \
    $(LIBDIR)/WiFi/WiFiAP.cpp $(LIBDIR)/WiFi/WiFi.cpp \
    $(LIBDIR)/WiFi/WiFiClient.cpp $(LIBDIR)/WiFi/WiFiServer.cpp \
    $(LIBDIR)/WiFi/WiFiGeneric.cpp $(LIBDIR)/WiFi/WiFiSTA.cpp \
-   $(LIBDIR)/WiFi/WiFiUdp.cpp \
-   $(ESPSDKDIR)/lwip/dns.cpp \
-   $(LIBDIR)/Wire/Wire.cpp
+   $(LIBDIR)/WiFi/WiFiUdp.cpp $(ESPSDKDIR)/lwip/dns.cpp \
+   $(LIBDIR)/Wire/Wire.cpp $(ARDUINOLIB)/SPI/src/SPI.cpp
 
 # ESP IDF SDK Files
 ESPSDK=$(ESPSDKDIR)/esp32/esp_system.cpp \
@@ -158,7 +158,7 @@ DEPFILES=$(ADEFS) $(EDEFS)
 # use some other trick, but for now this works.
 VPATH=\
    $(CORESDIR):$(INTFDIR):$(LIBDIR)/WebServer:$(LIBDIR)/WebServer/detail:\
-   $(LIBDIR)/WiFi:$(LIBDIR)/Wire:$(LIBDIR)/SPI:$(MODDIR):$(TBINTF):\
+   $(LIBDIR)/WiFi:$(LIBDIR)/Wire:$(ARDUINOLIB)/SPI/src:$(MODDIR):$(TBINTF):\
    $(ESPSDKDIR):$(ESPSDKDIR)/freertos:$(ESPSDKDIR)/esp32:$(ESPSDKDIR)/soc:\
    $(ESPSDKDIR)/tcp_transport:$(ESPSDKDIR)/spi_flash:\
    $(ESPSDKDIR)/nvs_flash/src:$(ESPSDKDIR)/nvs_flash/test_nvs_host:\
