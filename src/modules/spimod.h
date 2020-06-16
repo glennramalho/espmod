@@ -89,6 +89,7 @@ SC_MODULE(spimod) {
 
    /* Simulation Interface Functions */
    void update();
+   void waitdone();
    void configure(spi_dev_t *_spistruct);
    void trace(sc_trace_file *tf);
 

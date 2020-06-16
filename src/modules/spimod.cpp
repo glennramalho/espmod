@@ -73,6 +73,11 @@ void spimod::update_th() {
    }
 }
 
+void spimod::waitdone() {
+   wait(lowerusrbit_ev);
+   clockpacer.wait_next_apb_clk();
+}
+
 void spimod::return_th() {
    /* We wait for one of the responses to get triggered, and then we copy the
     * R/O register back to the struct.
