@@ -99,9 +99,21 @@
  * To use this the gn_semaphore must have previously been created with a
  * cell of one position and available to be taken.
  */
-void xSemaphoreTake( xSemaphoreHandle xSemaphore, int xBlockTime ) {
-   ((gn_semaphore *)xSemaphore)->wait(
+BaseType_t xSemaphoreTake( xSemaphoreHandle xSemaphore, int xBlockTime ) {
+   /* If we get a NULL pointer, we return false as there is nothing we can
+    * wait for.
+    */
+   if (xSemaphore == NULL) return pdFALSE;
+   /* If it is valid, we call the task.  We need to check the time. If it is
+    * negative, there is no timeout.
+    */
+   int resp;
+   if (xBlockTime < 0) resp = ((gn_semaphore *)xSemaphore)->wait();
+   else resp = ((gn_semaphore *)xSemaphore)->wait(
       sc_time((xBlockTime) / (portTICK_PERIOD_MS),SC_MS));
+   /* We now return pdTRUE or pdFALSE indicating if it timedout or not. */
+   if (resp < 0) return pdFALSE;
+   else return pdTRUE;
 }
 
 /*************************

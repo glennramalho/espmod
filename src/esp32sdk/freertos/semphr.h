@@ -98,7 +98,7 @@ typedef void* xSemaphoreHandle;
  * To use this the gn_semaphore must have previously been created with a
  * cell of one position and available to be taken.
  */
-void xSemaphoreTake( xSemaphoreHandle xSemaphore, int xBlockTime );
+BaseType_t xSemaphoreTake( xSemaphoreHandle xSemaphore, int xBlockTime );
 
 /*************************
  * Task: xSemaphoreTakeRecursive()
