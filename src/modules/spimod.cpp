@@ -287,7 +287,7 @@ void spimod::setupmaster() {
          SPI_USR_MOSI_HIGHPART_M, SPI_USR_MOSI_HIGHPART_S) == 1)?8:0);
       lastbit = converttoendian(wrlittleendian, wrmsbfirst,
             startbit + mosi_dlen.read());
-      startbitrd = converttoendian(wrlittleendian, wrmsbfirst, startbit);
+      startbit = converttoendian(wrlittleendian, wrmsbfirst, startbit);
    }
 
    /* We do the same for reading. */
@@ -358,7 +358,7 @@ void spimod::transfer_th() {
        * could pass in an odd case, if the customer gave unalined requests. We
        * then give him zeroes.
        */
-      if (precycwr > 0 || bit > lastbit) bittosend = false;
+      if (precycwr > 0 || bit == -1) bittosend = false;
       else bittosend = ((buffer[bit >> 5] & (1<<(bit & 0x1f)))>0);
 
       /* The clock could be wrong, so we go ahead and drive it. This should be
@@ -417,10 +417,10 @@ void spimod::transfer_th() {
        * delay area. We also need to make sure the bit position is inside the
        * valid range.
        */
-      if (bitrd <= lastbitrd && precycrd == 0 && bitreceived == true) {
+      if (bitrd != -1 && precycrd == 0 && bitreceived == true) {
          buffer[bitrd >> 5] = buffer[bitrd >> 5] | (1<<(bitrd & 0x1f));
       }
-      else if (bitrd <= lastbitrd && precycrd == 0 && bitreceived == false) {
+      else if (bitrd != -1 && precycrd == 0 && bitreceived == false) {
          buffer[bitrd >> 5] = buffer[bitrd >> 5] & ~(1<<(bitrd & 0x1f));
       }
 
