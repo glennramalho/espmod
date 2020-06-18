@@ -250,11 +250,11 @@ void spimod::setupmaster() {
    /* If not, we get the clock configuraion. */
    else {
       period = sc_time(clockpacer.get_apb_period() *
-        (RDFIELD(clock, SPI_CLKDIV_PRE_M, SPI_CLKDIV_PRE_S) +
-        RDFIELD(clock, SPI_CLKCNT_N_M, SPI_CLKCNT_N_S) + 2));
+        ((RDFIELD(clock, SPI_CLKDIV_PRE_M, SPI_CLKDIV_PRE_S)+1)
+        * (RDFIELD(clock, SPI_CLKCNT_N_M, SPI_CLKCNT_N_S) + 1)));
       hightime = sc_time(clockpacer.get_apb_period() *
-        (RDFIELD(clock, SPI_CLKDIV_PRE_M, SPI_CLKDIV_PRE_S) +
-        RDFIELD(clock, SPI_CLKCNT_H_M, SPI_CLKCNT_H_S) + 2));
+        ((RDFIELD(clock, SPI_CLKDIV_PRE_M, SPI_CLKDIV_PRE_S) + 1)
+        * (RDFIELD(clock, SPI_CLKCNT_H_M, SPI_CLKCNT_H_S) + 1)));
       /* We ignore the L field as it must be equal to the N register. */
       lowtime = period - hightime;
    }
@@ -285,7 +285,7 @@ void spimod::setupmaster() {
        */
       startbit = 32 * ((RDFIELD(user,
          SPI_USR_MOSI_HIGHPART_M, SPI_USR_MOSI_HIGHPART_S) == 1)?8:0);
-      lastbitrd = converttoendian(wrlittleendian, wrmsbfirst,
+      lastbit = converttoendian(wrlittleendian, wrmsbfirst,
             startbit + mosi_dlen.read());
       startbitrd = converttoendian(wrlittleendian, wrmsbfirst, startbit);
    }
