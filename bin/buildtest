@@ -125,6 +125,13 @@ else
    IFESPLINE="s#<IFESPIDF>##"
 fi
 
+# If the ESPMODPATH is relative, we need to add two directory level changes
+# to return to the place the script was ran from.
+if [[ ${ESPMODPATH#/} == ${ESPMODPATH} ]]
+then
+   ESPMODPATH="../../$ESPMODPATH"
+fi
+
 # We build the SED command
 SEDCMD="
 s#<DIRNAME>#$DIRNAME#g

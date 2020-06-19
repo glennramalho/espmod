@@ -51,7 +51,7 @@ void <DIRNAME>test::trace(sc_trace_file *tf) {
  *
  * Runs commands at the beginning of the simulation.
  */
-void <DIRNAME>::start_of_simulation() {
+void <DIRNAME>test::start_of_simulation() {
    /* We add a deadtime to the uart client as the ESP sends a glitch down the
     * UART0 at power-up.
     */
