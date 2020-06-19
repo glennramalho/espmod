@@ -98,4 +98,5 @@ SC_MODULE(<DIRNAME>test) {
    }
 
    void trace(sc_trace_file *tf);
+   void start_of_simulation();
 };

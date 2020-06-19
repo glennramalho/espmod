@@ -43,6 +43,22 @@ void <DIRNAME>test::trace(sc_trace_file *tf) {
 }
 
 /**********************
+ * Task: start_of_simulation():
+ * inputs: none
+ * outputs: none
+ * return: none
+ * globals: none
+ *
+ * Runs commands at the beginning of the simulation.
+ */
+void <DIRNAME>::start_of_simulation() {
+   /* We add a deadtime to the uart client as the ESP sends a glitch down the
+    * UART0 at power-up.
+    */
+   i_uartclient.i_uart.set_deadtime(sc_time(5, SC_US));
+}
+
+/**********************
  * Task: serflush():
  * inputs: none
  * outputs: none
@@ -52,6 +68,7 @@ void <DIRNAME>test::trace(sc_trace_file *tf) {
  * Dumps everything comming from the serial interface.
  */
 void <DIRNAME>test::serflush() {
+   //i_uartclient.i_uart.set_debug(true);
    i_uartclient.dump();
 }
 

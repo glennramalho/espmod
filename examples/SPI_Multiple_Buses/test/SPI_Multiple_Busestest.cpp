@@ -51,6 +51,22 @@ void SPI_Multiple_Busestest::trace(sc_trace_file *tf) {
 }
 
 /**********************
+ * Task: start_of_simulation():
+ * inputs: none
+ * outputs: none
+ * return: none
+ * globals: none
+ *
+ * Runs commands at the beginning of the simulation.
+ */
+void SPI_Multiple_Busestest::start_of_simulation() {
+   /* We add a deadtime to the uart client as the ESP sends a glitch down the
+    * UART0 at power-up.
+    */
+   i_uartclient.i_uart.set_deadtime(sc_time(5, SC_US));
+}
+
+/**********************
  * Task: serflush():
  * inputs: none
  * outputs: none
@@ -62,13 +78,6 @@ void SPI_Multiple_Busestest::trace(sc_trace_file *tf) {
 void SPI_Multiple_Busestest::serflush() {
    //i_uartclient.i_uart.set_debug(true);
    i_uartclient.dump();
-}
-
-void SPI_Multiple_Busestest::start_of_simulation() {
-   /* We add a deadtime to the uart client as the ESP sends a glitch down the
-    * UART0 at power-up.
-    */
-   i_uartclient.i_uart.set_deadtime(sc_time(5, SC_US));
 }
 
 /*******************************************************************************
