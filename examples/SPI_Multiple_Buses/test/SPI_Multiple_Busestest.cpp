@@ -71,14 +71,20 @@ void SPI_Multiple_Busestest::t0(void) {
    int i, v, vret;
    SC_REPORT_INFO("TEST", "Running Test T0.");
 
-   PRINTF_INFO("TEST", "Waiting for VSPI");
-   hspi_miso.write(GN_LOGIC_0);
+   hspi_miso.write(GN_LOGIC_0); vspi_miso.write(GN_LOGIC_0);
 
    v = 0;
    vret = 0x79;
+   /* We wait for the VSPI to turn on. For that we look at the SS signal. */
+   PRINTF_INFO("TEST", "Waiting for VSPI");
+   do {
+      wait(sc_time(100, SC_MS), vspi_ss.value_changed_event());
+   } while (vspi_ss.read() != GN_LOGIC_0);
+   PRINTF_INFO("TEST", "SS went low");
+
+   /* Then we can take the data, one bit at a time. */
    for(i = 7; i >= 0; i = i - 1) {
       vspi_miso.write(((vret & (1 << i))>0)?GN_LOGIC_1:GN_LOGIC_0);
-      wait(vspi_sck.value_changed_event());
       do {
          wait(sc_time(100, SC_MS), vspi_sck.value_changed_event());
          if (!vspi_sck.event()) {
@@ -86,7 +92,9 @@ void SPI_Multiple_Busestest::t0(void) {
                "Timed out while waiting for bit %d of the VSPI", i);
          }
       } while (vspi_sck.read() != GN_LOGIC_0);
-      v = v | (1<<i);
+      PRINTF_INFO("TEST", "Sampled bit %d on MOSI at %c", i,
+         vspi_mosi.read().to_char());
+      if (vspi_mosi.read() == GN_LOGIC_1) v = v | (1<<i);
    }
    PRINTF_INFO("TEST", "Sent %02x and received %02x from VSPI", vret, v);
 
@@ -96,7 +104,6 @@ void SPI_Multiple_Busestest::t0(void) {
    vret = 0xa3;
    for(i = 7; i >= 0; i = i - 1) {
       hspi_miso.write(((vret & (1 << i))>0)?GN_LOGIC_1:GN_LOGIC_0);
-      wait(hspi_sck.value_changed_event());
       do {
          wait(sc_time(100, SC_MS), hspi_sck.value_changed_event());
          if (!hspi_sck.event()) {
@@ -104,7 +111,9 @@ void SPI_Multiple_Busestest::t0(void) {
                "Timed out while waiting for bit %d of the HSPI", i);
          }
       } while (hspi_sck.read() != GN_LOGIC_0);
-      v = v | (1<<i);
+      PRINTF_INFO("TEST", "Sampled bit %d on MOSI at %c", i,
+         hspi_mosi.read().to_char());
+      if (hspi_mosi.read() == GN_LOGIC_1) v = v | (1<<i);
    }
    PRINTF_INFO("TEST", "Sent %02x and received %02x from HSPI", vret, v);
 }
