@@ -138,6 +138,8 @@ void doitesp32devkitv1::trace(sc_trace_file *tf) {
    i_ledc.trace(tf);
    i_pcnt.trace(tf);
    i_gpio_matrix.trace(tf);
+   i_vspi.trace(tf);
+   i_hspi.trace(tf);
    sc_trace(tf, uart0rx, uart0rx.name());
    sc_trace(tf, uart0tx, uart0tx.name());
    sc_trace(tf, uart2rx, uart2rx.name());
