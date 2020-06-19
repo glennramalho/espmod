@@ -196,6 +196,25 @@ void gpio_matrix::updateth() {
       i_mux_uart0.mux(GPIO.func_in_sel_cfg[U0RXD_IN_IDX].func_sel);
       i_mux_uart1.mux(GPIO.func_in_sel_cfg[U1RXD_IN_IDX].func_sel);
       i_mux_uart2.mux(GPIO.func_in_sel_cfg[U2RXD_IN_IDX].func_sel);
+
+      /* VSPI */
+      i_mux_vspi_d.mux(GPIO.func_in_sel_cfg[VSPID_IN_IDX].func_sel);
+      i_mux_vspi_q.mux(GPIO.func_in_sel_cfg[VSPIQ_IN_IDX].func_sel);
+      i_mux_vspi_clk.mux(GPIO.func_in_sel_cfg[VSPICLK_IN_IDX].func_sel);
+      i_mux_vspi_hd.mux(GPIO.func_in_sel_cfg[VSPIHD_IN_IDX].func_sel);
+      i_mux_vspi_wp.mux(GPIO.func_in_sel_cfg[VSPIWP_IN_IDX].func_sel);
+      i_mux_vspi_cs0.mux(GPIO.func_in_sel_cfg[VSPICS0_IN_IDX].func_sel);
+      i_mux_vspi_cs1.mux(GPIO.func_in_sel_cfg[VSPICS1_IN_IDX].func_sel);
+      i_mux_vspi_cs2.mux(GPIO.func_in_sel_cfg[VSPICS2_IN_IDX].func_sel);
+
+      /* HSPI */
+      i_mux_hspi_d.mux(GPIO.func_in_sel_cfg[HSPID_IN_IDX].func_sel);
+      i_mux_hspi_q.mux(GPIO.func_in_sel_cfg[HSPIQ_IN_IDX].func_sel);
+      i_mux_hspi_clk.mux(GPIO.func_in_sel_cfg[HSPICLK_IN_IDX].func_sel);
+      i_mux_hspi_hd.mux(GPIO.func_in_sel_cfg[HSPIHD_IN_IDX].func_sel);
+      i_mux_hspi_wp.mux(GPIO.func_in_sel_cfg[HSPIWP_IN_IDX].func_sel);
+      i_mux_hspi_cs0.mux(GPIO.func_in_sel_cfg[HSPICS0_IN_IDX].func_sel);
+
       /* There is a gap in the indexes, so we skip it. */
       for(bit = PCNT_SIG_CH0_IN0_IDX; bit < PCNT_CTRL_CH1_IN4_IDX; bit=bit+1) {
          i_mux_pcnt.mux(bit, GPIO.func_in_sel_cfg[bit].func_sel);
@@ -254,10 +273,24 @@ void gpio_matrix::trace(sc_trace_file *tf) {
    std::string sigb = name();
    std::string sign;
 
-   sc_trace(tf, gpio_out, d_u0rx_s.name());
+   sc_trace(tf, gpio_out, gpio_out.name());
    sc_trace(tf, d_u0rx_s, d_u0rx_s.name());
    sc_trace(tf, d_u1rx_s, d_u1rx_s.name());
    sc_trace(tf, d_u2rx_s, d_u2rx_s.name());
+   sc_trace(tf, d_hspi_d_in_s, d_hspi_d_in_s.name());
+   sc_trace(tf, d_hspi_q_in_s, d_hspi_q_in_s.name());
+   sc_trace(tf, d_hspi_clk_in_s, d_hspi_clk_in_s.name());
+   sc_trace(tf, d_hspi_hd_in_s, d_hspi_hd_in_s.name());
+   sc_trace(tf, d_hspi_wp_in_s, d_hspi_wp_in_s.name());
+   sc_trace(tf, d_hspi_cs0_in_s, d_hspi_cs0_in_s.name());
+   sc_trace(tf, d_vspi_d_in_s, d_vspi_d_in_s.name());
+   sc_trace(tf, d_vspi_q_in_s, d_vspi_q_in_s.name());
+   sc_trace(tf, d_vspi_clk_in_s, d_vspi_clk_in_s.name());
+   sc_trace(tf, d_vspi_hd_in_s, d_vspi_hd_in_s.name());
+   sc_trace(tf, d_vspi_wp_in_s, d_vspi_wp_in_s.name());
+   sc_trace(tf, d_vspi_cs0_in_s, d_vspi_cs0_in_s.name());
+   sc_trace(tf, d_vspi_cs1_in_s, d_vspi_cs1_in_s.name());
+   sc_trace(tf, d_vspi_cs2_in_s, d_vspi_cs2_in_s.name());
 
    for(g = 0; g < GPIOMATRIX_CNT; g = g + 1) {
       sign = sigb + ".men_s_" + std::to_string(g);

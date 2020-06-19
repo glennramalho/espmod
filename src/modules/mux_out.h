@@ -28,7 +28,7 @@
 #define MUXOUT_DRIVE_Z 258
 
 SC_MODULE(mux_out) {
-   sc_out<bool> min_o {"min_o"};
+   sc_out<bool> mout_o {"mout_o"};
    sc_out<bool> men_o {"men_o"};
    sc_in<bool> uart0tx_i{"uart0tx_i"};
    sc_in<bool> uart1tx_i{"uart1tx_i"};

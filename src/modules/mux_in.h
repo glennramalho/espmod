@@ -25,13 +25,16 @@
 
 SC_MODULE(mux_in) {
    sc_out<bool> out_o {"out_o"};
-   sc_port<sc_signal_in_if<bool>,0> mout_i {"mout_i"};
+   sc_port<sc_signal_in_if<bool>,0> min_i {"min_i"};
 
    int function;
    sc_event fchange_ev;
+   bool debug;
 
    /* Functions */
    void mux(int gpiosel);
+   void set_debug(bool on) { debug = on; }
+   bool get_debug() { return debug; }
 
    /* Threads */
    void transfer(void);

@@ -51,7 +51,7 @@ struct gpio_matrix;
  * to one GPIO.
  */
 #define CONNECTOUTMUX(dg) { \
-   i_mux_out##dg.min_o(min_s[dg]); \
+   i_mux_out##dg.mout_o(mout_s[dg]); \
    i_mux_out##dg.men_o(men_s[dg]); \
    i_mux_out##dg.uart0tx_i(uart0tx_i); \
    i_mux_out##dg.uart1tx_i(uart1tx_i); \
@@ -90,10 +90,10 @@ struct gpio_matrix;
 
 #define CONNECTINMUX(block, outsig, directsig) \
    block.out_o(outsig); \
-   for(g = 0; g < GPIOMATRIX_CNT; g = g + 1) block.mout_i(mout_s[g]); \
-   block.mout_i(directsig); \
-   block.mout_i(logic_0); \
-   block.mout_i(logic_1);
+   for(g = 0; g < GPIOMATRIX_CNT; g = g + 1) block.min_i(min_s[g]); \
+   block.min_i(directsig); \
+   block.min_i(logic_0); \
+   block.min_i(logic_1);
 
 SC_MODULE(gpio_matrix) {
    sc_inout<gn_mixed> d0_a11 {"d0_a11"}; /* BOOT button */
@@ -359,10 +359,10 @@ SC_MODULE(gpio_matrix) {
    sc_signal<bool> d_u2rx_s {"d_u2rx_s"};
 
    /* matrix interconnect function signals */
-   sc_signal<bool> men_s[GPIOMATRIX_CNT];
-   sc_signal<bool> min_s[GPIOMATRIX_CNT];
-   sc_signal<bool> mout_s[GPIOMATRIX_CNT];
-   sc_signal<uint64_t> gpio_out;
+   sc_signal<bool> men_s[GPIOMATRIX_CNT]; /* Output enable */
+   sc_signal<bool> mout_s[GPIOMATRIX_CNT]; /* Outgoing signal */
+   sc_signal<bool> min_s[GPIOMATRIX_CNT];/* Incomming signal */
+   sc_signal<uint64_t> gpio_out {"gpio_out"};
 
    /* Unconnected signals */
    sc_signal<bool> l0_f1 {"l0_f1", false};
@@ -414,7 +414,7 @@ SC_MODULE(gpio_matrix) {
       i_mux_d0.pin(d0_a11);
       CONNECTFUNC(i_mux_d0,  l0_f1, l1_f1, sig_open);        /* F1 GPIO */
       CONNECTFUNC(i_mux_d0,  l0_f2, l1_f2, sig_open);        /* F2 CLK_OUT1 */
-      CONNECTFUNC(i_mux_d0,min_s[0],men_s[0],mout_s[0]);     /* F3 GPIO */
+      CONNECTFUNC(i_mux_d0,mout_s[0],men_s[0],min_s[0]);     /* F3 GPIO */
       CONNECTFUNC(i_mux_d0,  l0_f4, l1_f4, sig_open);        /* F4 not used */
       CONNECTFUNC(i_mux_d0,  l0_f5, l1_f5, sig_open);        /* F5 not used */
       CONNECTFUNC(i_mux_d0,  l0_f6, l1_f6, sig_open);        /*F6 EMAC_TX_CLR*/
@@ -426,14 +426,14 @@ SC_MODULE(gpio_matrix) {
       i_mux_d1.pin(d1);
       CONNECTFUNC(i_mux_d1, uart0tx_i, l1_f1, sig_open);     /* F1 T0RX */
       CONNECTFUNC(i_mux_d1, l0_f2,     l1_f2, sig_open);     /* F2 CLK_OUT2 */
-      CONNECTFUNC(i_mux_d1,min_s[1],men_s[1],mout_s[1]);     /* F3 GPIO */
+      CONNECTFUNC(i_mux_d1,mout_s[1],men_s[1],min_s[1]);     /* F3 GPIO */
       CONNECTOUTMUX(1);
       /* GPIO 2 */
       i_mux_d2.pin(d2_a12);
       CONNECTFUNC(i_mux_d2, l0_f1,     l1_f1, sig_open);     /* F1 GPIO */
       CONNECTFUNC(i_mux_d2, hspi_wp_out_i,
                                hspi_wp_oen_i,d_hspi_wp_in_s);/* F2 HSPI-WP*/
-      CONNECTFUNC(i_mux_d2,min_s[2],men_s[2],mout_s[2]);     /* F3 GPIO */
+      CONNECTFUNC(i_mux_d2,mout_s[2],men_s[2],min_s[2]);     /* F3 GPIO */
       /* F1: GPIO -- built-in */
       /* F2: HSPIWP -- not yet supported */
       /* F3: GPIO -- built-in */
@@ -444,7 +444,7 @@ SC_MODULE(gpio_matrix) {
       i_mux_d3.pin(d3);
       CONNECTFUNC(i_mux_d3, l0_f1, l0_f1, d_u0rx_s);         /* F1 U0RX */
       CONNECTFUNC(i_mux_d3, l0_f2, l1_f2, sig_open);         /* F2 CLK_OUT2*/
-      CONNECTFUNC(i_mux_d3, min_s[3], men_s[3], mout_s[3]);  /* F3 GPIO */
+      CONNECTFUNC(i_mux_d3, mout_s[3], men_s[3], min_s[3]);  /* F3 GPIO */
       /* F2: CLK_OUT2 -- not supported. */
       /* F3: GPIO -- built-in to GPIO. */
       CONNECTOUTMUX(3);
@@ -453,7 +453,7 @@ SC_MODULE(gpio_matrix) {
       CONNECTFUNC(i_mux_d4,  l0_f1, l1_f1, sig_open);        /* F1 skipped */
       CONNECTFUNC(i_mux_d4, hspi_hd_out_i,
                                hspi_hd_oen_i,d_hspi_hd_in_s);/* F2 HSPI-HD*/
-      CONNECTFUNC(i_mux_d4,min_s[4],men_s[4],mout_s[4]);     /* F3 GPIO */
+      CONNECTFUNC(i_mux_d4,mout_s[4],men_s[4],min_s[4]);     /* F3 GPIO */
       CONNECTFUNC(i_mux_d4,  l0_f4, l1_f4, sig_open);        /* F4 HS2_DATA1 */
       CONNECTFUNC(i_mux_d4,  l0_f5, l1_f5, sig_open);        /* F5 SD_DATA1 */
       CONNECTFUNC(i_mux_d4,  l0_f6, l1_f6, sig_open);        /* F6 EMAC_TX_ER*/
@@ -466,7 +466,7 @@ SC_MODULE(gpio_matrix) {
       CONNECTFUNC(i_mux_d5,  l0_f1, l1_f1, sig_open);        /* F1 skipped */
       CONNECTFUNC(i_mux_d5,  vspi_cs0_out_i,
                              vspi_cs0_oen_i,d_vspi_cs0_in_s);/* F2 VSPICS0 */
-      CONNECTFUNC(i_mux_d5,min_s[5],men_s[5],mout_s[5]);     /* F3 GPIO */
+      CONNECTFUNC(i_mux_d5,mout_s[5],men_s[5],min_s[5]);     /* F3 GPIO */
       /* F4: HS1_DATA6 -- not supported. */
       CONNECTOUTMUX(5);
       /* GPIO  6 -- not yet supported, implemented via the flash channel. */
@@ -480,7 +480,7 @@ SC_MODULE(gpio_matrix) {
       CONNECTFUNC(i_mux_d12,  l0_f1, l1_f1, sig_open);       /* F1 MTDO */
       CONNECTFUNC(i_mux_d12, hspi_q_out_i,
                                hspi_q_oen_i, d_hspi_q_in_s); /* F2 HSPIQ */
-      CONNECTFUNC(i_mux_d12,min_s[12],men_s[12],mout_s[12]); /* F3 GPIO */
+      CONNECTFUNC(i_mux_d12,mout_s[12],men_s[12],min_s[12]); /* F3 GPIO */
       /* F4: HS2_DATA2 -- not supported. */
       /* F5: SD_DATA2 -- not supported. */
       /* F6: EMAC_TXD3 */
@@ -489,7 +489,7 @@ SC_MODULE(gpio_matrix) {
       CONNECTFUNC(i_mux_d13,  l0_f1, l1_f1, sig_open);       /* F1 MTCK */
       CONNECTFUNC(i_mux_d13, hspi_d_out_i,
                                hspi_d_oen_i, d_hspi_d_in_s); /* F2 HSPID */
-      CONNECTFUNC(i_mux_d13,min_s[13],men_s[13],mout_s[13]); /* F3 GPIO */
+      CONNECTFUNC(i_mux_d13,mout_s[13],men_s[13],min_s[13]); /* F3 GPIO */
       /* F4: HS2_DATA3 -- not supported. */
       /* F5: SD_DATA3 -- not supported. */
       /* F6: EMAC_RX_ER */
@@ -498,7 +498,7 @@ SC_MODULE(gpio_matrix) {
       CONNECTFUNC(i_mux_d14, l0_f1, l1_f1, sig_open);        /* F1 MTMS */
       CONNECTFUNC(i_mux_d14, hspi_clk_out_i,
                             hspi_clk_oen_i, d_hspi_clk_in_s);/* F2 HSPICLK */
-      CONNECTFUNC(i_mux_d14,min_s[14],men_s[14],mout_s[14]); /* F3 GPIO */
+      CONNECTFUNC(i_mux_d14,mout_s[14],men_s[14],min_s[14]); /* F3 GPIO */
       /* F4: HS2_CLK -- not supported. */
       /* F5: SD_CLK -- not supported. */
       /* F6: EMAC_TXD2 */
@@ -507,7 +507,7 @@ SC_MODULE(gpio_matrix) {
       CONNECTFUNC(i_mux_d15, l0_f1, l1_f1, sig_open);        /* F1 MTDO */
       CONNECTFUNC(i_mux_d15, hspi_cs0_out_i,
                             hspi_cs0_oen_i, d_hspi_cs0_in_s);/* F2 HSPICS0 */
-      CONNECTFUNC(i_mux_d15,min_s[15],men_s[15],mout_s[15]); /* F3 GPIO */
+      CONNECTFUNC(i_mux_d15,mout_s[15],men_s[15],min_s[15]); /* F3 GPIO */
       /* F4: HS2_CMD -- not supported. */
       /* F5: SD_CMD -- not supported. */
       /* F6: EMAC_RXD3 */
@@ -515,7 +515,7 @@ SC_MODULE(gpio_matrix) {
       i_mux_d16.pin(d16);
       CONNECTFUNC(i_mux_d16, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
       CONNECTFUNC(i_mux_d16, l0_f2, l1_f2, sig_open);        /* F2 not used */
-      CONNECTFUNC(i_mux_d16,min_s[16],men_s[16],mout_s[16]); /* F3 GPIO */
+      CONNECTFUNC(i_mux_d16,mout_s[16],men_s[16],min_s[16]); /* F3 GPIO */
       CONNECTFUNC(i_mux_d16, l0_f4, l1_f4, sig_open);        /* F4 HS1_DATA4 */
       CONNECTFUNC(i_mux_d16, l0_f5, l1_f5, d_u2rx_s);        /* F5 U2RXD */
       /* F6: EMAC_CLK_OUT */
@@ -524,7 +524,7 @@ SC_MODULE(gpio_matrix) {
       i_mux_d17.pin(d17);
       CONNECTFUNC(i_mux_d17, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
       CONNECTFUNC(i_mux_d17, l0_f2, l1_f2, sig_open);        /* F2 not used*/
-      CONNECTFUNC(i_mux_d17,min_s[17],men_s[17],mout_s[17]); /* F3 GPIO */
+      CONNECTFUNC(i_mux_d17,mout_s[17],men_s[17],min_s[17]); /* F3 GPIO */
       CONNECTFUNC(i_mux_d17, l0_f4, l1_f4, sig_open);        /* F4 HS1_DATA5 */
       CONNECTFUNC(i_mux_d17, uart2tx_i,l1_f5,sig_open);      /* F5 U2TXD */
       /* F6: EMAC_CLK_OUT_180 */
@@ -533,14 +533,14 @@ SC_MODULE(gpio_matrix) {
       CONNECTFUNC(i_mux_d18, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
       CONNECTFUNC(i_mux_d18, vspi_clk_out_i,
                             vspi_clk_oen_i, d_vspi_clk_in_s);/* F2 VSPICLK */
-      CONNECTFUNC(i_mux_d18,min_s[18],men_s[18],mout_s[18]); /* F3 GPIO */
+      CONNECTFUNC(i_mux_d18,mout_s[18],men_s[18],min_s[18]); /* F3 GPIO */
       /* F4: HS1_DATA7 -- not supported. */
       CONNECTOUTMUX(18);
       i_mux_d19.pin(d19);
       CONNECTFUNC(i_mux_d19, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
       CONNECTFUNC(i_mux_d19, vspi_q_out_i,
                                 vspi_q_oen_i, d_vspi_q_in_s);/* F2 VSPIQ */
-      CONNECTFUNC(i_mux_d19,min_s[19],men_s[19],mout_s[19]); /* F3 GPIO */
+      CONNECTFUNC(i_mux_d19,mout_s[19],men_s[19],min_s[19]); /* F3 GPIO */
       /* F4: U0CTS -- not supported. */
       /* F5: -- not used. */
       /* F6: EMAC TXDO */
@@ -549,7 +549,7 @@ SC_MODULE(gpio_matrix) {
       CONNECTFUNC(i_mux_d21, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
       CONNECTFUNC(i_mux_d21, vspi_hd_out_i,
                               vspi_hd_oen_i, d_vspi_hd_in_s);/* F2 VSPIHD */
-      CONNECTFUNC(i_mux_d21,min_s[21],men_s[21],mout_s[21]); /* F3 GPIO */
+      CONNECTFUNC(i_mux_d21,mout_s[21],men_s[21],min_s[21]); /* F3 GPIO */
       /* F4: -- not used. */
       /* F5: -- not used. */
       /* F6: EMAC TX EN */
@@ -558,7 +558,7 @@ SC_MODULE(gpio_matrix) {
       CONNECTFUNC(i_mux_d22, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
       CONNECTFUNC(i_mux_d22, vspi_wp_out_i,
                               vspi_wp_oen_i, d_vspi_wp_in_s);/* F2 VSPIWP */
-      CONNECTFUNC(i_mux_d22,min_s[22],men_s[22],mout_s[22]); /* F3 GPIO */
+      CONNECTFUNC(i_mux_d22,mout_s[22],men_s[22],min_s[22]); /* F3 GPIO */
       /* F4: U0RTS -- not supported. */
       /* F5: -- not used. */
       /* F6: EMAC TXD1 */
@@ -567,7 +567,7 @@ SC_MODULE(gpio_matrix) {
       CONNECTFUNC(i_mux_d23, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
       CONNECTFUNC(i_mux_d23, vspi_d_out_i,
                                 vspi_d_oen_i, d_vspi_d_in_s);/* F2 VSPID */
-      CONNECTFUNC(i_mux_d23,min_s[23],men_s[23],mout_s[23]); /* F3 GPIO */
+      CONNECTFUNC(i_mux_d23,mout_s[23],men_s[23],min_s[23]); /* F3 GPIO */
       /* F4: HS1_STROBE -- not supported. */
       /* F5: -- not used. */
       /* F6: -- not used. */
@@ -575,7 +575,7 @@ SC_MODULE(gpio_matrix) {
       i_mux_d25.pin(d25_a18);
       CONNECTFUNC(i_mux_d25, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
       CONNECTFUNC(i_mux_d25, l0_f2, l1_f2, sig_open);        /* F2 not used */
-      CONNECTFUNC(i_mux_d25,min_s[25],men_s[25],mout_s[25]); /* F3 GPIO */
+      CONNECTFUNC(i_mux_d25,mout_s[25],men_s[25],min_s[25]); /* F3 GPIO */
       /* F4: -- not used. */
       /* F5: -- not used. */
       /* F6: EMAC RXD0 */
@@ -583,7 +583,7 @@ SC_MODULE(gpio_matrix) {
       i_mux_d26.pin(d26_a19);
       CONNECTFUNC(i_mux_d26, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
       CONNECTFUNC(i_mux_d26, l0_f2, l1_f2, sig_open);        /* F2 not used */
-      CONNECTFUNC(i_mux_d26,min_s[26],men_s[26],mout_s[26]); /* F3 GPIO */
+      CONNECTFUNC(i_mux_d26,mout_s[26],men_s[26],min_s[26]); /* F3 GPIO */
       /* F4: -- not used. */
       /* F5: -- not used. */
       /* F6: EMAC RXD1 */
@@ -591,7 +591,7 @@ SC_MODULE(gpio_matrix) {
       i_mux_d27.pin(d27_a17);
       CONNECTFUNC(i_mux_d27, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
       CONNECTFUNC(i_mux_d27, l0_f2, l1_f2, sig_open);        /* F2 not used */
-      CONNECTFUNC(i_mux_d27,min_s[27],men_s[27],mout_s[27]); /* F3 GPIO */
+      CONNECTFUNC(i_mux_d27,mout_s[27],men_s[27],min_s[27]); /* F3 GPIO */
       /* F4: -- not used. */
       /* F5: -- not used. */
       /* F6: EMAC RX_DV */
@@ -602,47 +602,47 @@ SC_MODULE(gpio_matrix) {
       i_mux_d32.pin(d32_a4);
       CONNECTFUNC(i_mux_d32, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
       CONNECTFUNC(i_mux_d32, l0_f2, l1_f2, sig_open);        /* F2 not used */
-      CONNECTFUNC(i_mux_d32,min_s[32],men_s[32],mout_s[32]); /* F3 GPIO */
+      CONNECTFUNC(i_mux_d32,mout_s[32],men_s[32],min_s[32]); /* F3 GPIO */
       CONNECTOUTMUX(32);
       i_mux_d33.pin(d33_a5);
       CONNECTFUNC(i_mux_d33, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
       CONNECTFUNC(i_mux_d33, l0_f2, l1_f2, sig_open);        /* F2 not used */
-      CONNECTFUNC(i_mux_d33,min_s[33],men_s[33],mout_s[33]); /* F3 GPIO */
+      CONNECTFUNC(i_mux_d33,mout_s[33],men_s[33],min_s[33]); /* F3 GPIO */
       CONNECTOUTMUX(33);
       i_mux_d34.pin(d34_a6);
       CONNECTFUNC(i_mux_d34, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
       CONNECTFUNC(i_mux_d34, l0_f2, l1_f2, sig_open);        /* F2 not used */
-      CONNECTFUNC(i_mux_d34,min_s[34],men_s[34],mout_s[34]); /* F3 GPIO */
+      CONNECTFUNC(i_mux_d34,mout_s[34],men_s[34],min_s[34]); /* F3 GPIO */
       CONNECTOUTMUX(34);
       i_mux_d35.pin(d35_a7);
       CONNECTFUNC(i_mux_d35, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
       CONNECTFUNC(i_mux_d35, l0_f2, l1_f2, sig_open);        /* F2 not used */
-      CONNECTFUNC(i_mux_d35,min_s[35],men_s[35],mout_s[35]); /* F3 GPIO */
+      CONNECTFUNC(i_mux_d35,mout_s[35],men_s[35],min_s[35]); /* F3 GPIO */
       CONNECTOUTMUX(35);
       i_mux_d36.pin(d36_a0);
       CONNECTFUNC(i_mux_d36, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
       CONNECTFUNC(i_mux_d36, l0_f2, l1_f2, sig_open);        /* F2 not used */
-      CONNECTFUNC(i_mux_d36,min_s[36],men_s[36],mout_s[36]); /* F3 GPIO */
+      CONNECTFUNC(i_mux_d36,mout_s[36],men_s[36],min_s[36]); /* F3 GPIO */
       CONNECTOUTMUX(36);
       i_mux_d37.pin(d37_a1);
       CONNECTFUNC(i_mux_d37, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
       CONNECTFUNC(i_mux_d37, l0_f2, l1_f2, sig_open);        /* F2 not used */
-      CONNECTFUNC(i_mux_d37,min_s[37],men_s[37],mout_s[37]); /* F3 GPIO */
+      CONNECTFUNC(i_mux_d37,mout_s[37],men_s[37],min_s[37]); /* F3 GPIO */
       CONNECTOUTMUX(37);
       i_mux_d38.pin(d38_a2);
       CONNECTFUNC(i_mux_d38, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
       CONNECTFUNC(i_mux_d38, l0_f2, l1_f2, sig_open);        /* F2 not used */
-      CONNECTFUNC(i_mux_d38,min_s[38],men_s[38],mout_s[38]); /* F3 GPIO */
+      CONNECTFUNC(i_mux_d38,mout_s[38],men_s[38],min_s[38]); /* F3 GPIO */
       CONNECTOUTMUX(38);
       i_mux_d39.pin(d39_a3);
       CONNECTFUNC(i_mux_d39, l0_f1, l1_f1, sig_open);        /* F1 GPIO */
       CONNECTFUNC(i_mux_d39, l0_f2, l1_f2, sig_open);        /* F2 not used */
-      CONNECTFUNC(i_mux_d39,min_s[39],men_s[39],mout_s[39]); /* F3 GPIO */
+      CONNECTFUNC(i_mux_d39,mout_s[39],men_s[39],min_s[39]); /* F3 GPIO */
       CONNECTOUTMUX(39);
 
       /* PCNT Mux */
       i_mux_pcnt.pcntbus_o(pcntbus_o);
-      for(g = 0; g < GPIOMATRIX_CNT; g = g + 1) i_mux_pcnt.mout_i(mout_s[g]);
+      for(g = 0; g < GPIOMATRIX_CNT; g = g + 1) i_mux_pcnt.mout_i(min_s[g]);
       i_mux_pcnt.mout_i(l0_f1); /* Direct signal */
       i_mux_pcnt.mout_i(logic_0);
       i_mux_pcnt.mout_i(logic_1);
