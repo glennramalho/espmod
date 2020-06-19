@@ -359,7 +359,7 @@ void spimod::transfer_th() {
        * then give him zeroes.
        */
       if (precycwr > 0 || bit == -1) bittosend = false;
-      else bittosend = ((buffer[bit >> 5] & (1<<(bit & 0x1f)))>0);
+      else bittosend = ((spistruct->data_buf[bit >> 5] & (1<<(bit & 0x1f)))>0);
 
       /* The clock could be wrong, so we go ahead and drive it. This should be
        * redundant, but it is nice to do.
@@ -418,10 +418,12 @@ void spimod::transfer_th() {
        * valid range.
        */
       if (bitrd != -1 && precycrd == 0 && bitreceived == true) {
-         buffer[bitrd >> 5] = buffer[bitrd >> 5] | (1<<(bitrd & 0x1f));
+         spistruct->data_buf[bitrd >> 5] =
+            spistruct->data_buf[bitrd >> 5] | (1<<(bitrd & 0x1f));
       }
       else if (bitrd != -1 && precycrd == 0 && bitreceived == false) {
-         buffer[bitrd >> 5] = buffer[bitrd >> 5] & ~(1<<(bitrd & 0x1f));
+         spistruct->data_buf[bitrd >> 5] =
+            spistruct->data_buf[bitrd >> 5] & ~(1<<(bitrd & 0x1f));
       }
 
       /* Now we prepare for the next cycle. This depends on the settings. */
@@ -455,9 +457,9 @@ void spimod::transfer_th() {
  * Outputs: none
  * Return Value: none
  * Description:
- *    Loads the configuration registers and sets all that must take place imediately.
- *    The transfer task handles all configurations which can wait for the end of the
- *    command.
+ *    Loads the configuration registers and sets all that must take place
+ *    imediately. The transfer task handles all configurations which can wait
+ *    for the end of the command.
  */
 void spimod::configure_meth() {
    /* If we get a reset, we reset the configuration part. */
@@ -476,6 +478,7 @@ void spimod::configure_meth() {
       q_oen_o.write(true);
       wp_oen_o.write(false);
       hd_oen_o.write(false);
+      clk_oen_o.write(false);
       cs0_oen_o.write(false);
       cs1_oen_o.write(false);
       cs2_oen_o.write(false);
@@ -486,6 +489,7 @@ void spimod::configure_meth() {
       q_oen_o.write(false);
       wp_oen_o.write(true);
       hd_oen_o.write(true);
+      clk_oen_o.write(true);
       /* Perhaps this is not the right way, but we set the output enables to the
        * CS OEN bits all high. If one does not want them, he can disable them
        * in the matrix. Then the DIS bits in the pin register just specifies if

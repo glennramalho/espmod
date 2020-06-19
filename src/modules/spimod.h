@@ -75,7 +75,6 @@ SC_MODULE(spimod) {
    sc_signal<bool> master {"master"};
 
    /* Variables */
-   unsigned int buffer[16];
    spi_dev_t *spistruct;
    bool actclk;
    int dlywr, dlyrd;

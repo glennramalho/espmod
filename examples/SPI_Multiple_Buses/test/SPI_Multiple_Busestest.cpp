@@ -68,11 +68,45 @@ void SPI_Multiple_Busestest::serflush() {
 *******************************************************************************/
 
 void SPI_Multiple_Busestest::t0(void) {
+   int i, v, vret;
    SC_REPORT_INFO("TEST", "Running Test T0.");
-   wait(1, SC_MS); sc_stop();
 
-   PRINTF_INFO("TEST", "Waiting for power-up");
-   wait(500, SC_MS);
+   PRINTF_INFO("TEST", "Waiting for VSPI");
+   hspi_miso.write(GN_LOGIC_0);
+
+   v = 0;
+   vret = 0x79;
+   for(i = 7; i >= 0; i = i - 1) {
+      vspi_miso.write(((vret & (1 << i))>0)?GN_LOGIC_1:GN_LOGIC_0);
+      wait(vspi_sck.value_changed_event());
+      do {
+         wait(sc_time(100, SC_MS), vspi_sck.value_changed_event());
+         if (!vspi_sck.event()) {
+            PRINTF_ERROR("TEST",
+               "Timed out while waiting for bit %d of the VSPI", i);
+         }
+      } while (vspi_sck.read() != GN_LOGIC_0);
+      v = v | (1<<i);
+   }
+   PRINTF_INFO("TEST", "Sent %02x and received %02x from VSPI", vret, v);
+
+   PRINTF_INFO("TEST", "Waiting for HSPI");
+
+   v = 0;
+   vret = 0xa3;
+   for(i = 7; i >= 0; i = i - 1) {
+      hspi_miso.write(((vret & (1 << i))>0)?GN_LOGIC_1:GN_LOGIC_0);
+      wait(hspi_sck.value_changed_event());
+      do {
+         wait(sc_time(100, SC_MS), hspi_sck.value_changed_event());
+         if (!hspi_sck.event()) {
+            PRINTF_ERROR("TEST",
+               "Timed out while waiting for bit %d of the HSPI", i);
+         }
+      } while (hspi_sck.read() != GN_LOGIC_0);
+      v = v | (1<<i);
+   }
+   PRINTF_INFO("TEST", "Sent %02x and received %02x from HSPI", vret, v);
 }
 
 void SPI_Multiple_Busestest::testbench(void) {
