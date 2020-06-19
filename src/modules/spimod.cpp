@@ -370,7 +370,7 @@ void spimod::transfer_th() {
        * same for the sample.
        */
       if (dlywr == 0) d_o.write(bittosend);
-      if (dlyrd == 0) bitreceived = d_i.read();
+      if (dlyrd == 0) bitreceived = q_i.read();
 
       /******************** DELAY 1 *******************************************/
       /* We either wait half time or  wait the high time and toggle the clock.
@@ -390,7 +390,7 @@ void spimod::transfer_th() {
 
       /* If there is a half-cycle delay on the data we change it now. */
       if (dlywr == 1) d_o.write(bittosend);
-      if (dlyrd == 1) bitreceived = d_i.read();
+      if (dlyrd == 1) bitreceived = q_i.read();
 
       /******************** DELAY 2 *******************************************/
       /* We wait for the period to end. */
@@ -411,7 +411,7 @@ void spimod::transfer_th() {
        * mode is 0 or 1.
        */
       if (dlywr == 2) d_o.write(bittosend);
-      if (dlyrd == 2) bitreceived = d_i.read();
+      if (dlyrd == 2) bitreceived = q_i.read();
 
       /* We now store the data sampled, but only if we are not in the initial
        * delay area. We also need to make sure the bit position is inside the
@@ -446,8 +446,8 @@ void spimod::transfer_th() {
       }
 
       /* We also need to decrement the hold counters. */
-      if (precycwr == 0) precycwr = precycwr - 1;
-      if (precycrd == 0) precycrd = precycrd - 1;
+      if (precycwr != 0) precycwr = precycwr - 1;
+      if (precycrd != 0) precycrd = precycrd - 1;
    }
 }
 
