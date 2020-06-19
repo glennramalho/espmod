@@ -39,6 +39,7 @@ SC_MODULE(uart) {
    bool debug;
    bool autodetect;
    int stopbits; /* 0: invalid, 1: one bit, 2: 1.5 bits, 3: 2 bits */
+   sc_time deadtime;
 
    public:
    void set_baud(unsigned int baudrate);
@@ -47,6 +48,7 @@ SC_MODULE(uart) {
    bool get_baud() { return baudrate; }
    void set_stop(int _sp) { stopbits = _sp; }
    int get_stop() { return stopbits; }
+   void set_deadtime(sc_time _dt) { deadtime = _dt; }
 
    /* This enables the autodetect. It will take the first message and discard
     * it. Only the start bit will be used.
@@ -54,7 +56,8 @@ SC_MODULE(uart) {
    void setautodetect() { autodetect = true; }
    int getautorate();
 
-   uart(sc_module_name name, int tx_buffer_size, int rx_buffer_size):
+   uart(sc_module_name name, int tx_buffer_size, int rx_buffer_size,
+         sc_time _dt = sc_time(0, SC_NS)):
          rx("rx"), tx("tx"),
          from("fromfifo", rx_buffer_size), to("tofifo", tx_buffer_size) {
       SC_THREAD(intake);
@@ -62,6 +65,7 @@ SC_MODULE(uart) {
       SC_THREAD(outtake); /* Active when something is in the fifo. */
       set_baud(115200); /* The default is 115200. */
 
+      deadtime = _dt;
       autodetect = false;
       debug = false;
       stopbits = 1;

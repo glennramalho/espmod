@@ -23,7 +23,6 @@
 #include "info.h"
 
 void uart::intake() {
-   char buffer[100];
    int cnt;
    unsigned char msg;
    unsigned char pos;
@@ -31,6 +30,11 @@ void uart::intake() {
 
    /* First we wait for the signal to rise. */
    while (rx.read() != true) wait();
+
+   /* Sometimes we have a glitch at powerup. If a dead time is defined, we
+    * use it.
+    */
+   if (deadtime != sc_time(0, SC_NS)) wait(deadtime);
 
    /* Now we can listen for a packet. */
    while(true) {
@@ -91,11 +95,6 @@ void uart::intake() {
                (incomming)?'h':'l');
          }
          if (incomming == true) msg = msg | pos;
-         else if (incomming != false) {
-            snprintf(buffer, 100, "Got an '%c' on %s",
-               incomming?('1'):('0'), name());
-            SC_REPORT_WARNING("UART", buffer);
-         }
          wait(baudperiod);
       }
       /* And we send the char. If the buffer is filled, we discard it and
