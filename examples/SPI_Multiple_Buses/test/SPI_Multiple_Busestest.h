@@ -108,4 +108,5 @@ SC_MODULE(SPI_Multiple_Busestest) {
    }
 
    void trace(sc_trace_file *tf);
+   void start_of_simulation();
 };

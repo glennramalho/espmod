@@ -23,6 +23,7 @@ void hspiCommand();
 void vspiCommand();
 
 void setup() {
+  Serial.begin(115200);
   //initialise two instances of the SPIClass attached to VSPI and HSPI respectively
   vspi = new SPIClass(VSPI);
   hspi = new SPIClass(HSPI);
@@ -65,6 +66,8 @@ void vspiCommand() {
   vspi->transfer(data);  
   digitalWrite(5, HIGH); //pull ss high to signify end of data transfer
   vspi->endTransaction();
+  /* Upon success, we print a message, but only once. */
+  if (millis() < 50) Serial.printf("Received %02x @ %lu\r\n", data, millis());
 }
 
 void hspiCommand() {
@@ -75,4 +78,6 @@ void hspiCommand() {
   hspi->transfer(stuff);
   digitalWrite(15, HIGH);
   hspi->endTransaction();
+  /* Upon success, we print a message, but only once. */
+  if (millis() < 50) Serial.printf("Received %02x @ %lu\r\n", stuff, millis());
 }

@@ -60,7 +60,15 @@ void SPI_Multiple_Busestest::trace(sc_trace_file *tf) {
  * Dumps everything comming from the serial interface.
  */
 void SPI_Multiple_Busestest::serflush() {
+   //i_uartclient.i_uart.set_debug(true);
    i_uartclient.dump();
+}
+
+void SPI_Multiple_Busestest::start_of_simulation() {
+   /* We add a deadtime to the uart client as the ESP sends a glitch down the
+    * UART0 at power-up.
+    */
+   i_uartclient.i_uart.set_deadtime(sc_time(5, SC_US));
 }
 
 /*******************************************************************************
@@ -116,6 +124,8 @@ void SPI_Multiple_Busestest::t0(void) {
       if (hspi_mosi.read() == GN_LOGIC_1) v = v | (1<<i);
    }
    PRINTF_INFO("TEST", "Sent %02x and received %02x from HSPI", vret, v);
+
+   wait(1, SC_SEC);
 }
 
 void SPI_Multiple_Busestest::testbench(void) {
