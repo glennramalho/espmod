@@ -31,7 +31,7 @@
  */
 
 #include <systemc.h>
-#include "esp32-hal-gpio.h"
+#include "clockpacer.h"
 #include "gpio.h"
 #include "gpioset.h"
 #include "soc/gpio_periph.h"
@@ -133,7 +133,7 @@ esp_err_t gpio_config(const gpio_config_t *pGPIOConfig) {
       io_num = (gpio_num_t)((int)io_num + 1);
    } while (io_num < GPIO_PIN_COUNT);
 
-   del1cycle();
+   clockpacer.wait_next_apb_clk();
    return ESP_OK;
 }
 
@@ -149,7 +149,7 @@ esp_err_t gpio_config(const gpio_config_t *pGPIOConfig) {
  * @return Always return ESP_OK.
  */
 esp_err_t gpio_reset_pin(gpio_num_t gpio_num) {
-   del1cycle();
+   clockpacer.wait_next_apb_clk();
    assert(gpio_num >= 0 && GPIO_IS_VALID_GPIO(gpio_num));
    gpio_config_t cfg = {
       .pin_bit_mask = BIT64(gpio_num),
@@ -176,7 +176,7 @@ esp_err_t gpio_reset_pin(gpio_num_t gpio_num) {
  */
 esp_err_t gpio_set_intr_type(gpio_num_t gpio_num, gpio_int_type_t intr_type) {
    PRINTF_WARN("GPIODRV", "GPIO Interrupts are not yet supported.");
-   del1cycle();
+   clockpacer.wait_next_apb_clk();
    return ESP_OK;
 }
 
@@ -196,7 +196,7 @@ esp_err_t gpio_set_intr_type(gpio_num_t gpio_num, gpio_int_type_t intr_type) {
  */
 esp_err_t gpio_intr_enable(gpio_num_t gpio_num) {
    PRINTF_WARN("GPIODRV", "GPIO Interrupts are not yet supported.");
-   del1cycle();
+   clockpacer.wait_next_apb_clk();
    return ESP_OK;
 }
 
@@ -212,7 +212,7 @@ esp_err_t gpio_intr_enable(gpio_num_t gpio_num) {
  */
 esp_err_t gpio_intr_disable(gpio_num_t gpio_num) {
    PRINTF_WARN("GPIODRV", "GPIO Interrupts are not yet supported.");
-   del1cycle();
+   clockpacer.wait_next_apb_clk();
    return ESP_OK;
 }
 
@@ -247,7 +247,7 @@ int gpio_get_level(gpio_num_t gpio_num) {
       return 0;
    }
    resp = gpin->get_val();
-   del1cycle();
+   clockpacer.wait_next_apb_clk();
    return (resp)?1:0;
 }
 
@@ -290,7 +290,7 @@ esp_err_t gpio_set_direction(gpio_num_t gpio_num, gpio_mode_t mode) {
         GPIO.pin[gpio_num].pad_driver = 0;
         resp = resp & gpin->clr_od();
    }
-   del1cycle();
+   clockpacer.wait_next_apb_clk();
 
    if (resp) return ESP_OK;
    else return ESP_ERR_INVALID_ARG;
@@ -389,7 +389,7 @@ esp_err_t gpio_set_pull_mode(gpio_num_t gpio_num, gpio_pull_mode_t pull) {
       default: resp = false; break;
    }
 
-   del1cycle();
+   clockpacer.wait_next_apb_clk();
 
    if (!resp) {
       PRINTF_WARN("GPIO", "Attempting to set pin %d to illegal pull %d",
@@ -414,7 +414,7 @@ esp_err_t gpio_set_pull_mode(gpio_num_t gpio_num, gpio_pull_mode_t pull) {
 esp_err_t gpio_wakeup_enable(gpio_num_t gpio_num, gpio_int_type_t intr_type) {
    GPIO_CHECK(GPIO_IS_VALID_GPIO(gpio_num), "GPIO number error", ESP_ERR_INVALID_ARG);
    PRINTF_WARN("GPIODRV", "GPIO Wakeups are not yet supported.");
-   del1cycle();
+   clockpacer.wait_next_apb_clk();
    return ESP_OK;
 }
 
@@ -430,7 +430,7 @@ esp_err_t gpio_wakeup_enable(gpio_num_t gpio_num, gpio_int_type_t intr_type) {
 esp_err_t gpio_wakeup_disable(gpio_num_t gpio_num) {
    GPIO_CHECK(GPIO_IS_VALID_GPIO(gpio_num), "GPIO number error", ESP_ERR_INVALID_ARG);
    PRINTF_WARN("GPIODRV", "GPIO Wakeups are not yet supported.");
-   del1cycle();
+   clockpacer.wait_next_apb_clk();
    return ESP_OK;
 }
 
@@ -461,7 +461,7 @@ esp_err_t gpio_wakeup_disable(gpio_num_t gpio_num) {
 esp_err_t gpio_isr_register(void (*fn)(void*), void * arg, int intr_alloc_flags, gpio_isr_handle_t *handle) {
    GPIO_CHECK(fn, "GPIO ISR null", ESP_ERR_INVALID_ARG);
    PRINTF_WARN("GPIODRV", "GPIO Interrupts are not yet supported.");
-   del1cycle();
+   clockpacer.wait_next_apb_clk();
    return ESP_OK;
 }
 
@@ -559,7 +559,7 @@ esp_err_t gpio_pulldown_dis(gpio_num_t gpio_num) {
   */
 esp_err_t gpio_install_isr_service(int intr_alloc_flags) {
    PRINTF_WARN("GPIODRV", "GPIO Interrupts are not yet supported.");
-   del1cycle();
+   clockpacer.wait_next_apb_clk();
    return ESP_OK;
 }
 
@@ -568,7 +568,7 @@ esp_err_t gpio_install_isr_service(int intr_alloc_flags) {
   */
 void gpio_uninstall_isr_service() {
    PRINTF_WARN("GPIODRV", "GPIO Interrupts are not yet supported.");
-   del1cycle();
+   clockpacer.wait_next_apb_clk();
 }
 
 /**
@@ -597,7 +597,7 @@ void gpio_uninstall_isr_service() {
   */
 esp_err_t gpio_isr_handler_add(gpio_num_t gpio_num, gpio_isr_t isr_handler, void* args) {
    PRINTF_WARN("GPIODRV", "GPIO Interrupts are not yet supported.");
-   del1cycle();
+   clockpacer.wait_next_apb_clk();
    return ESP_OK;
 }
 
@@ -613,7 +613,7 @@ esp_err_t gpio_isr_handler_add(gpio_num_t gpio_num, gpio_isr_t isr_handler, void
   */
 esp_err_t gpio_isr_handler_remove(gpio_num_t gpio_num) {
    PRINTF_WARN("GPIODRV", "GPIO Interrupts are not yet supported.");
-   del1cycle();
+   clockpacer.wait_next_apb_clk();
    return ESP_OK;
 }
 
