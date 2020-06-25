@@ -27,6 +27,8 @@
 #include <string.h>
 #include <math.h>
 #include "Arduino.h"
+#include <systemc.h>
+#include "info.h"
 
 #include "Print.h"
 extern "C" {
@@ -53,9 +55,13 @@ size_t Print::printf(const char *format, ...)
     va_list copy;
     va_start(arg, format);
     va_copy(copy, arg);
-    size_t len = vsnprintf(NULL, 0, format, copy);
+    int len = vsnprintf(NULL, 0, format, copy);
     va_end(copy);
-    if(len >= sizeof(loc_buf)){
+    if (len < 0) {
+       PRINTF_WARN("PRINTF", "vnprintf returned an error.");
+       return 0;
+    }
+    if((unsigned int)len >= sizeof(loc_buf)){
         temp = new char[len+1];
         if(temp == NULL) {
             return 0;
@@ -64,7 +70,7 @@ size_t Print::printf(const char *format, ...)
     len = vsnprintf(temp, len+1, format, arg);
     write((uint8_t*)temp, len);
     va_end(arg);
-    if(len >= sizeof(loc_buf)){
+    if(temp != loc_buf) {
         delete[] temp;
     }
     return len;
