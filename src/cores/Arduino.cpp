@@ -39,25 +39,6 @@
 uint16_t makeWord(uint16_t w) { return w; }
 uint16_t makeWord(byte h, byte l) { return ((h&0xff)<<8)|l&0xff; }
 
-void delay(uint32_t del) {
-   wait(del, SC_MS);
-}
-
-void delayMicroseconds(uint32_t del) {
-   wait(del, SC_US);
-}
-
-unsigned long int millis() {
-   return (unsigned long int)floor(sc_time_stamp().to_seconds() * 1000);
-}
-
-unsigned long int micros() {
-   return (unsigned long int)floor(sc_time_stamp().to_seconds() * 1000000);
-}
-
-void yield() { wait(clockpacer.get_apb_period()); }
-void del1cycle() { wait(clockpacer.get_cpu_period()); }
-
 unsigned int interruptsenabled;
 unsigned int xt_rsil(unsigned int lvl) {
    unsigned int oldlvl;

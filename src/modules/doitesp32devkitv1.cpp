@@ -30,6 +30,18 @@
 #include "reset_reason.h"
 #include "soc/spi_struct.h"
 
+/* For lack of a better place, this goes here. The ESP32 has a temperature
+ * sensor which returns the internal temperature in Farenheight. It seems
+ * to use the ADC. We just put something here which returns a value. Later we
+ * can do something better.
+ */
+uint8_t temprature_sens_read() {
+   /* Note, the temperature has to account for the packaging impact, so we
+    * get the room temperature and add a rule-of-thumb 20C.
+    */
+   return 116;
+}
+
 void doitesp32devkitv1::dut(void) {
    wait(125, SC_NS);
    /* We start running the Arduino Setup Function. */

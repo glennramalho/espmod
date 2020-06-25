@@ -33,12 +33,6 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
-const char *pathToFileName(const char *path) {
-   const char *basename = strrchr(path, '/');
-   if (basename == NULL) return ".";
-   else return &(basename[1]);
-}
-
 int log_printf(const char *fmt, ...) {
    int size;
    char buffer[128];
