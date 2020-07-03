@@ -129,6 +129,7 @@ static bool btSetPin() {
 
 static void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
 {
+/*
     switch (event)
     {
     case ESP_SPP_INIT_EVT:
@@ -207,6 +208,7 @@ static void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
         break;
     }
     if(custom_spp_callback)(*custom_spp_callback)(event, param);
+    */
 }
 
 void BluetoothSerial::onData(BluetoothSerialDataCb cb){
@@ -215,6 +217,7 @@ void BluetoothSerial::onData(BluetoothSerialDataCb cb){
 
 static void esp_bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *param)
 {
+    /*
     switch(event){
         case ESP_BT_GAP_DISC_RES_EVT:
             log_i("ESP_BT_GAP_DISC_RES_EVT");
@@ -322,6 +325,7 @@ static void esp_bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *pa
         default:
             break;
     }
+    */
 }
 
 static bool _init_bt(const char *deviceName)
@@ -351,22 +355,26 @@ static bool _init_bt(const char *deviceName)
         return false;
     }
 
+    /*
     if (esp_spp_register_callback(esp_spp_cb) != ESP_OK){
         log_e("spp register failed");
         return false;
     }
+    */
 
+    /*
     if (esp_spp_init(ESP_SPP_MODE_CB) != ESP_OK){
         log_e("spp init failed");
         return false;
     }
+    */
 
     if (esp_bt_sleep_disable() != ESP_OK){
         log_e("esp_bt_sleep_disable failed");
     }
 
     log_i("device name set");
-    esp_bt_dev_set_device_name(deviceName);
+    //esp_bt_dev_set_device_name(deviceName);
 
     if (_isPinSet) {
         btSetPin();
@@ -374,9 +382,9 @@ static bool _init_bt(const char *deviceName)
 
     if (_enableSSP) {
         log_i("Simple Secure Pairing");
-        esp_bt_sp_param_t param_type = ESP_BT_SP_IOCAP_MODE;
-        esp_bt_io_cap_t iocap = ESP_BT_IO_CAP_IO;
-        esp_bt_gap_set_security_param(param_type, &iocap, sizeof(uint8_t));
+        //esp_bt_sp_param_t param_type = ESP_BT_SP_IOCAP_MODE;
+        //esp_bt_io_cap_t iocap = ESP_BT_IO_CAP_IO;
+        //esp_bt_gap_set_security_param(param_type, &iocap, sizeof(uint8_t));
     }
 
     // the default BTA_DM_COD_LOUDSPEAKER does not work with the macOS BT stack
@@ -394,9 +402,11 @@ static bool _init_bt(const char *deviceName)
 static bool _stop_bt()
 {
     if (btStarted()){
+        /*
         if(_spp_client)
             esp_spp_disconnect(_spp_client);
         esp_spp_deinit();
+        */
         esp_bluedroid_disable();
         esp_bluedroid_deinit();
         btStop();
@@ -551,11 +561,12 @@ bool BluetoothSerial::connect(String remoteName)
     _remote_name[ESP_BT_GAP_MAX_BDNAME_LEN] = 0;
     log_i("master : remoteName");
     // will first resolve name to address
-    esp_bt_gap_set_scan_mode(ESP_BT_SCAN_MODE_CONNECTABLE_DISCOVERABLE);
-    if (esp_bt_gap_start_discovery(ESP_BT_INQ_MODE_GENERAL_INQUIRY, INQ_LEN, INQ_NUM_RSPS) == ESP_OK) {
-        return waitForConnect(SCAN_TIMEOUT);
-    }
-    return false;
+    //esp_bt_gap_set_scan_mode(ESP_BT_SCAN_MODE_CONNECTABLE_DISCOVERABLE);
+    //if (esp_bt_gap_start_discovery(ESP_BT_INQ_MODE_GENERAL_INQUIRY, INQ_LEN, INQ_NUM_RSPS) == ESP_OK) {
+    //    return waitForConnect(SCAN_TIMEOUT);
+    //}
+    //return false;
+    return true;
 }
 
 bool BluetoothSerial::connect(uint8_t remoteAddress[])
@@ -570,10 +581,13 @@ bool BluetoothSerial::connect(uint8_t remoteAddress[])
     _isRemoteAddressSet = true;
     memcpy(_peer_bd_addr, remoteAddress, ESP_BD_ADDR_LEN);
     log_i("master : remoteAddress");
+    /*
     if (esp_spp_start_discovery(_peer_bd_addr) == ESP_OK) {
         return waitForConnect(READY_TIMEOUT);
     }
     return false;
+    */
+    return true;
 }
 
 bool BluetoothSerial::connect()
@@ -583,25 +597,28 @@ bool BluetoothSerial::connect()
         disconnect();
         // use resolved or set address first
         log_i("master : remoteAddress");
-        if (esp_spp_start_discovery(_peer_bd_addr) == ESP_OK) {
-            return waitForConnect(READY_TIMEOUT);
-        }
-        return false;
+        //if (esp_spp_start_discovery(_peer_bd_addr) == ESP_OK) {
+        //    return waitForConnect(READY_TIMEOUT);
+        //}
+        //return false;
+        return true;
     } else if (_remote_name[0]) {
         disconnect();
         log_i("master : remoteName");
         // will resolve name to address first - it may take a while
-        esp_bt_gap_set_scan_mode(ESP_BT_SCAN_MODE_CONNECTABLE_DISCOVERABLE);
-        if (esp_bt_gap_start_discovery(ESP_BT_INQ_MODE_GENERAL_INQUIRY, INQ_LEN, INQ_NUM_RSPS) == ESP_OK) {
-            return waitForConnect(SCAN_TIMEOUT);
-        }
-        return false;
+        //esp_bt_gap_set_scan_mode(ESP_BT_SCAN_MODE_CONNECTABLE_DISCOVERABLE);
+        //if (esp_bt_gap_start_discovery(ESP_BT_INQ_MODE_GENERAL_INQUIRY, INQ_LEN, INQ_NUM_RSPS) == ESP_OK) {
+        //    return waitForConnect(SCAN_TIMEOUT);
+        //}
+        //return false;
+        return true;
     }
     log_e("Neither Remote name nor address was provided");
     return false;
 }
 
 bool BluetoothSerial::disconnect() {
+    /*
     if (_spp_client) {
         flush();
         log_i("disconnecting");
@@ -612,6 +629,8 @@ bool BluetoothSerial::disconnect() {
         }
     }
     return false;
+    */
+    return true;
 }
 
 bool BluetoothSerial::unpairDevice(uint8_t remoteAddress[]) {

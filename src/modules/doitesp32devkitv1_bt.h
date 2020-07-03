@@ -42,6 +42,7 @@ class doitesp32devkitv1_bt : public doitesp32devkitv1 {
    }
 
    void pininit() {
+      btptr = &i_bt;
       BTserial.setports(&i_bt.to, &i_bt.from);
       doitesp32devkitv1::pininit();
    }

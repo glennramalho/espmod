@@ -60,6 +60,7 @@ CORES=$(CORESDIR)/Arduino.cpp $(CORESDIR)/HardwareSerial.cpp \
    $(CORESDIR)/esp32-hal-matrix.c \
    $(CORESDIR)/esp32-hal-uart.c \
    $(CORESDIR)/esp32-hal-misc.cpp \
+   $(CORESDIR)/esp32-hal-bt.c \
    $(CORESDIR)/Print.cpp \
    $(CORESDIR)/Stream.cpp \
    $(ARDUINO)/StreamString.cpp \
@@ -75,7 +76,8 @@ LIBRARIES=$(LIBDIR)/WebServer/WebServer.cpp \
    $(LIBDIR)/WiFi/WiFiClient.cpp $(LIBDIR)/WiFi/WiFiServer.cpp \
    $(LIBDIR)/WiFi/WiFiGeneric.cpp $(LIBDIR)/WiFi/WiFiSTA.cpp \
    $(LIBDIR)/WiFi/WiFiUdp.cpp $(ESPSDKDIR)/lwip/dns.cpp \
-   $(LIBDIR)/Wire/Wire.cpp $(ARDUINOLIB)/SPI/src/SPI.cpp
+   $(LIBDIR)/Wire/Wire.cpp $(ARDUINOLIB)/SPI/src/SPI.cpp \
+   $(LIBDIR)/BluetoothSerial/BluetoothSerial.cpp
 
 # ESP IDF SDK Files
 ESPSDK=$(ESPSDKDIR)/esp32/esp_system.cpp \
@@ -103,6 +105,10 @@ ESPSDK=$(ESPSDKDIR)/esp32/esp_system.cpp \
    $(ESPSDKDIR)/esp32/intr_alloc.cpp \
    $(ESPSDKDIR)/esp32/rom/ets_sys.cpp \
    $(ESPSDKDIR)/esp32/rom/romrtc.cpp \
+   $(ESPSDKDIR)/bt/esp_bt.cpp \
+   $(ESPSDKDIR)/bt/esp_spp_api.cpp \
+   $(ESPSDKDIR)/bt/esp_bt_main.cpp \
+   $(ESPSDKDIR)/bt/esp_gap_bt_api.cpp \
    $(ESPSDKDIR)/nvs_flash/src/nvs_api.cpp \
    $(ESPSDKDIR)/nvs_flash/src/nvs_item_hash_list.cpp \
    $(ESPSDKDIR)/nvs_flash/src/nvs_ops.cpp \
@@ -130,6 +136,7 @@ MODULES=$(MODDIR)/cchan.cpp $(MODDIR)/cchanflash.cpp \
 
 # Test Interface Modules
 TBMODULES=$(TBINTF)/tft.cpp $(TBINTF)/webclient.cpp $(TBINTF)/uartclient.cpp \
+   $(TBINTF)/btclient.cpp \
    $(TBINTF)/tpencoder.cpp $(TBINTF)/encoder.cpp $(TBINTF)/st7735.cpp
 
 # We join the files into two sets of libraries. One with the Arduino IDF files
@@ -159,11 +166,12 @@ DEPFILES=$(ADEFS) $(EDEFS)
 # use some other trick, but for now this works.
 VPATH=\
    $(CORESDIR):$(INTFDIR):$(LIBDIR)/WebServer:$(LIBDIR)/WebServer/detail:\
-   $(LIBDIR)/WiFi:$(LIBDIR)/Wire:$(ARDUINOLIB)/SPI/src:$(MODDIR):$(TBINTF):\
+   $(LIBDIR)/WiFi:$(LIBDIR)/Wire:$(LIBDIR)/BluetoothSerial:\
+   $(ARDUINOLIB)/SPI/src:$(MODDIR):$(TBINTF):\
    $(ESPSDKDIR):$(ESPSDKDIR)/freertos:$(ESPSDKDIR)/esp32:$(ESPSDKDIR)/soc:\
    $(ESPSDKDIR)/tcp_transport:$(ESPSDKDIR)/spi_flash:\
    $(ESPSDKDIR)/nvs_flash/src:$(ESPSDKDIR)/nvs_flash/test_nvs_host:\
-   $(ESPSDKDIR)/esp-mqtt:$(ESPSDKDIR)/esp-mqtt/lib:\
+   $(ESPSDKDIR)/esp-mqtt:$(ESPSDKDIR)/esp-mqtt/lib:$(ESPSDKDIR)/bt:\
    $(ESPSDKDIR)/driver:$(ESPSDKDIR)/mbedtls/library:\
    $(ESPSDKDIR)/esp32/rom:$(ESPSDKDIR)/lwip:$(ARDUINO):$(ARDUINO)/libb64
 
