@@ -35,3 +35,24 @@ void btclient::send(void *msg, int len) {
       i_btchan.to.write((int)(c[pos]));
    }
 }
+
+std::string btclient::get() {
+   std::string msg("");
+   char recv;
+
+   do {
+      recv = i_btchan.from.read();
+      if (recv != '\r' && recv != '\n') msg += recv;
+   } while(recv != '\n');
+
+   return msg;
+}
+
+void btclient::expect(const char *string) {
+   std::string msg;
+   msg = get();
+   PRINTF_INFO("BTCLI", "received: \"%s\"", msg.c_str());
+   if (0 != msg.find(string)) {
+      PRINTF_ERROR("BTCLI", "Did not get expected \"%s\"", string);
+   }
+}

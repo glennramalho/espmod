@@ -41,6 +41,8 @@ SC_MODULE(btclient) {
    void send(void *msg, int len);
    void send(const char *msg) { send((void *)msg, strlen(msg)); }
    void send(std::string msg) { send((void *)msg.c_str(), msg.length()); }
+   std::string get();
+   void expect(const char *string);
 };
 
 #endif
