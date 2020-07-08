@@ -136,7 +136,7 @@ MODULES=$(MODDIR)/cchan.cpp $(MODDIR)/cchanflash.cpp \
 
 # Test Interface Modules
 TBMODULES=$(TBINTF)/tft.cpp $(TBINTF)/webclient.cpp $(TBINTF)/uartclient.cpp \
-   $(TBINTF)/btclient.cpp \
+   $(TBINTF)/btclient.cpp $(TBINTF)/cd4079_channel.cpp \
    $(TBINTF)/tpencoder.cpp $(TBINTF)/encoder.cpp $(TBINTF)/st7735.cpp
 
 # We join the files into two sets of libraries. One with the Arduino IDF files
