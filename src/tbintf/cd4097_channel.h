@@ -34,12 +34,18 @@ SC_MODULE(cd4097_channel) {
 
    private:
    int sel;
+   bool debug;
 
    public:
    /* Tasks */
    void process_th();
 
+   /* Functions */
+   void set_debug(bool _d) { debug = _d; }
+   bool get_debug() { return debug; }
+
    SC_CTOR(cd4097_channel) {
+      debug = false;
       SC_THREAD(process_th);
    }
 

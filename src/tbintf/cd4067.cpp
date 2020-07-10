@@ -34,19 +34,37 @@ void cd4067::process_th() {
       if (sel >= channel.size()) wait(a | b | c | inh);
       else wait(channel[sel]->default_event()
             | a->default_event() | b->default_event() | c->default_event()
-            | inh->default_event() | x->default_event());
+            | d->default_event() | inh->default_event() | x->default_event());
       
+      if (debug) printf(
+         "sel: %d - channel -> %c/ a %c/ b %c/ c %c/ d %c/ inh %c/ x %c\n", sel,
+            (channel[sel]->value_changed_event().triggered())?'t':'f',
+            (a->value_changed_event().triggered())?'t':'f',
+            (b->value_changed_event().triggered())?'t':'f',
+            (c->value_changed_event().triggered())?'t':'f',
+            (d->value_changed_event().triggered())?'t':'f',
+            (inh->value_changed_event().triggered())?'t':'f',
+            (x->value_changed_event().triggered())?'t':'f');
+
       /* If inh went high we shut it all off. */
       if (inh.read() == GN_LOGIC_1) {
          x.write(GN_LOGIC_Z);
          channel[sel]->write(GN_LOGIC_Z);
       }
 
+      /* We have an analog mux. In a real mux system, we would do a fight
+       * between the sides and eventually settle to something. This is a
+       * digital simulator though, so we need a simplification. If I get a
+       * driver on one side, we drive that value on the other.
+       */
+
       /* If there was a change in the selector, we adjust that first. */
       if (a.value_changed_event().triggered() ||
             b.value_changed_event().triggered() ||
-            c.value_changed_event().triggered()) {
+            c.value_changed_event().triggered() ||
+            d.value_changed_event().triggered()) {
          int newsel =
+            (((d.read())?1:0) << 3) |
             (((c.read())?1:0) << 2) | (((b.read())?1:0) << 1) |
             ((a.read())?1:0);
 
@@ -65,11 +83,10 @@ void cd4067::process_th() {
       }
 
       /* Now we drive the new one. */
-      else {
-         if (channel[sel]->value_changed_event().triggered())
-            x.write(channel[sel]->read());
-         if (x.default_event().triggered()) channel[sel]->write(x.read());
-      }
+      else if (channel[sel]->value_changed_event().triggered())
+         x.write(channel[sel]->read());
+      else if (x.default_event().triggered())
+         channel[sel]->write(x.read());
    }
 }
 
@@ -86,7 +103,7 @@ void cd4067::trace(sc_trace_file *tf) {
    sc_trace(tf, inh, inh.name());
 
    /* The channels we can only display the ones that are used. */
-   for(un = 0; un < x.size(); un = un + 1) {
+   for(un = 0; un < channel.size(); un = un + 1) {
       sign = sigb + std::string(".channel_") + std::to_string(un);
       sc_trace(tf, channel[un], sign);
    }
