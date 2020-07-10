@@ -1,5 +1,5 @@
 /*******************************************************************************
- * cd4079_channel.h -- Copyright 2019 (c) Glenn Ramalho - RFIDo Design
+ * cd4067.h -- Copyright 2019 (c) Glenn Ramalho - RFIDo Design
  *******************************************************************************
  * Description:
  *   This is a simple model for the CD4079 Analog Mux.
@@ -18,18 +18,19 @@
  *******************************************************************************
  */
 
-#ifndef _CD4079_H
-#define _CD4079_H
+#ifndef _CD4067_H
+#define _CD4067_H
 
 #include <systemc.h>
 #include "gn_mixed.h"
 
-SC_MODULE(cd4079_channel) {
+SC_MODULE(cd4067) {
    sc_in<bool> inh {"inh"};
    sc_in<bool> a {"a"};
    sc_in<bool> b {"b"};
    sc_in<bool> c {"c"};
-   sc_port<sc_signal_inout_if<gn_mixed>,8> channel;
+   sc_in<bool> d {"d"};
+   sc_port<sc_signal_inout_if<gn_mixed>,16> channel;
    sc_inout<gn_mixed> x {"x"};
 
    private:
@@ -39,7 +40,7 @@ SC_MODULE(cd4079_channel) {
    /* Tasks */
    void process_th();
 
-   SC_CTOR(cd4079_channel) {
+   SC_CTOR(cd4067) {
       SC_THREAD(process_th);
    }
 

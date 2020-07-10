@@ -1,8 +1,8 @@
 /*******************************************************************************
- * cd4079_channel.cpp -- Copyright 2019 (c) Glenn Ramalho - RFIDo Design
+ * cd4067.cpp -- Copyright 2019 (c) Glenn Ramalho - RFIDo Design
  *******************************************************************************
  * Description:
- *   This is a testbench module to emulate the ST7735 display controller.
+ *   This is a testbench module to emulate the CD4067 display controller.
  *******************************************************************************
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,9 +20,9 @@
 
 #include <systemc.h>
 #include "info.h"
-#include "cd4079_channel.h"
+#include "cd4067.h"
 
-void cd4079_channel::process_th() {
+void cd4067::process_th() {
    int line;
    x.write(GN_LOGIC_Z);
    for(line = 0; line < channel.size(); line = line + 1)
@@ -73,7 +73,7 @@ void cd4079_channel::process_th() {
    }
 }
 
-void cd4079_channel::trace(sc_trace_file *tf) {
+void cd4067::trace(sc_trace_file *tf) {
    int un;
    std::string sigb = name();
    std::string sign;
@@ -82,6 +82,7 @@ void cd4079_channel::trace(sc_trace_file *tf) {
    sc_trace(tf, a, a.name());
    sc_trace(tf, b, b.name());
    sc_trace(tf, c, c.name());
+   sc_trace(tf, d, d.name());
    sc_trace(tf, inh, inh.name());
 
    /* The channels we can only display the ones that are used. */
