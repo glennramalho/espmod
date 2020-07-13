@@ -2,7 +2,7 @@
  * cd4067.cpp -- Copyright 2019 (c) Glenn Ramalho - RFIDo Design
  *******************************************************************************
  * Description:
- *   This is a testbench module to emulate the CD4067 display controller.
+ *  This is a simple model for the CD4067 Analog Mux.
  *******************************************************************************
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.

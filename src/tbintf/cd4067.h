@@ -2,7 +2,7 @@
  * cd4067.h -- Copyright 2019 (c) Glenn Ramalho - RFIDo Design
  *******************************************************************************
  * Description:
- *   This is a simple model for the CD4079 Analog Mux.
+ *   This is a simple model for the CD4067 Analog Mux.
  *******************************************************************************
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.

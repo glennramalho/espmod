@@ -2,7 +2,7 @@
  * cd4097_channel.h -- Copyright 2019 (c) Glenn Ramalho - RFIDo Design
  *******************************************************************************
  * Description:
- *   This is a simple model for the CD4079 Analog Mux.
+ *   This is a simple model for a single channel of a CD4079 dual analog Mux.
  *******************************************************************************
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,8 +43,10 @@ SC_MODULE(cd4097_channel) {
    /* Functions */
    void set_debug(bool _d) { debug = _d; }
    bool get_debug() { return debug; }
+   int get_selector();
 
    SC_CTOR(cd4097_channel) {
+      sel = 0;
       debug = false;
       SC_THREAD(process_th);
    }
