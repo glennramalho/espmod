@@ -44,8 +44,10 @@ SC_MODULE(cd4067) {
    /* Functions */
    void set_debug(bool _d) { debug = _d; }
    bool get_debug() { return debug; }
+   int get_selector();
 
    SC_CTOR(cd4067) {
+      sel = 0;
       debug = false;
       SC_THREAD(process_th);
    }

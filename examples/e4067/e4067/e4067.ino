@@ -53,9 +53,9 @@ void setup() {
  * Main Arduino infinite loop.
  */
 void loop() {
-   float f = adc1_get_raw( ADC1_CHANNEL_0 );
+   int f = adc1_get_raw( ADC1_CHANNEL_0 );
    int z = (millis() / 1000) % 4;
    drive(z);
-   Serial.printf("sel[%d] = %f\r\n", z, f);
+   Serial.printf("For sel @ %d got ADC1 raw to be %d\r\n", z, f);
    delay(200);
 }

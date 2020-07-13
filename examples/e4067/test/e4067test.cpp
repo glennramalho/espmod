@@ -52,6 +52,7 @@ void e4067test::trace(sc_trace_file *tf) {
    sc_trace(tf, d2, d2.name());
    sc_trace(tf, d3, d3.name());
    i_esp.trace(tf);
+   i_cd4067.trace(tf);
 }
 
 /**********************
@@ -68,6 +69,7 @@ void e4067test::start_of_simulation() {
     * UART0 at power-up.
     */
    i_uartclient.i_uart.set_deadtime(sc_time(5, SC_US));
+   //i_cd4067.set_debug(true);
 }
 
 /**********************
@@ -80,7 +82,6 @@ void e4067test::start_of_simulation() {
  * Dumps everything comming from the serial interface.
  */
 void e4067test::serflush() {
-   i_cd4067.set_debug(true);
    i_uartclient.dump();
 }
 
@@ -90,11 +91,22 @@ void e4067test::serflush() {
 
 void e4067test::t0(void) {
    SC_REPORT_INFO("TEST", "Running Test T0.");
-   a0.write(2.2F);
-   a1.write(1.0F);
-   a2.write(GN_LOGIC_Z);
 
-   wait(5, SC_SEC);
+   // We start off driving some values. */
+   a0.write(2.2F);
+   a1.write(GN_LOGIC_Z);
+   a2.write(1.0F);
+
+   // Now we wait for some time
+   wait(4.4, SC_SEC);
+
+   // Now we change the values in mid flight.
+   a0.write(0.3F);
+   a1.write(1.7F);
+   a2.write(2.0F);
+
+   // Now we wait more.
+   wait(4, SC_SEC);
 }
 
 void e4067test::testbench(void) {
