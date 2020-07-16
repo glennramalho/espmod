@@ -96,6 +96,11 @@ void TwoWire::setClockStretchLimit(uint32_t limit){
 
 size_t TwoWire::requestFrom(uint8_t address, size_t size, bool sendStop){
    unsigned int i, bit;
+   /* We are starting a new command, so we dump anything in the fifo from the
+    * previous command.
+    */
+   while(from->num_available()) from->read();
+
    if (from->num_free() < (int)(size*8) || to->num_free() < 10 ||
          to->num_free() < (int)(size*8)) {
       SC_REPORT_ERROR("WIRE", "I2C Fifo Full");
@@ -129,6 +134,11 @@ size_t TwoWire::requestFrom(uint8_t address, size_t size, bool sendStop){
 }
 
 void TwoWire::beginTransmission(uint8_t address){
+   /* We are starting a new command, so we dump anything in the fifo from the
+    * previous command.
+    */
+   while(from->num_available()) from->read();
+
    if (from->num_free() < 1 || to->num_free() < 10) {
       SC_REPORT_ERROR("WIRE", "I2C Fifo Full");
       return;
