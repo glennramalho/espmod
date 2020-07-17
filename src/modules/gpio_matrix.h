@@ -86,6 +86,10 @@ struct gpio_matrix;
    i_mux_out##dg.vspi_wp_out_i(vspi_wp_out_i); \
    i_mux_out##dg.vspi_hd_oen_i(vspi_hd_oen_i); \
    i_mux_out##dg.vspi_hd_out_i(vspi_hd_out_i); \
+   i_mux_out##dg.sda0_en_i(sda0_en_i); \
+   i_mux_out##dg.scl0_en_i(scl0_en_i); \
+   i_mux_out##dg.sda1_en_i(sda1_en_i); \
+   i_mux_out##dg.scl1_en_i(scl1_en_i); \
 }
 
 #define CONNECTINMUX(block, outsig, directsig) \
@@ -182,6 +186,16 @@ SC_MODULE(gpio_matrix) {
    sc_in<bool> vspi_hd_out_i {"vspi_hd_out_i"};
    sc_out<bool> vspi_hd_in_o {"vspi_hd_in_o"};
 
+   /* I2C */
+   sc_in<bool> sda0_en_i {"sda0_en_i"};
+   sc_in<bool> sda1_en_i {"sda1_en_i"};
+   sc_in<bool> scl0_en_i {"scl0_en_i"};
+   sc_in<bool> scl1_en_i {"scl1_en_i"};
+   sc_out<bool> scl0_o {"scl0_o"};
+   sc_out<bool> sda0_o {"sda0_o"};
+   sc_out<bool> scl1_o {"scl1_o"};
+   sc_out<bool> sda1_o {"sda1_o"};
+
    /* Submodules */
    mux_pcnt i_mux_pcnt {"i_mux_pcnt"};
    mux_in i_mux_hspi_d {"i_mux_hspi_d", GPIOMATRIX_LOGIC1};
@@ -198,6 +212,10 @@ SC_MODULE(gpio_matrix) {
    mux_in i_mux_vspi_cs0 {"i_mux_vspi_cs0", GPIOMATRIX_LOGIC1};
    mux_in i_mux_vspi_cs1 {"i_mux_vspi_cs1", GPIOMATRIX_LOGIC1};
    mux_in i_mux_vspi_cs2 {"i_mux_vspi_cs2", GPIOMATRIX_LOGIC1};
+   mux_in i_mux_i2c_sda0 {"i_mux_i2c_sda0", GPIOMATRIX_LOGIC1};
+   mux_in i_mux_i2c_sda1 {"i_mux_i2c_sda1", GPIOMATRIX_LOGIC1};
+   mux_in i_mux_i2c_scl0 {"i_mux_i2c_scl0", GPIOMATRIX_LOGIC1};
+   mux_in i_mux_i2c_scl1 {"i_mux_i2c_scl1", GPIOMATRIX_LOGIC1};
    mux_in i_mux_uart0 {"i_mux_uart0", GPIOMATRIX_LOGIC1};
    mux_in i_mux_uart1 {"i_mux_uart1", GPIOMATRIX_LOGIC1};
    mux_in i_mux_uart2 {"i_mux_uart2", GPIOMATRIX_LOGIC1};
@@ -662,6 +680,12 @@ SC_MODULE(gpio_matrix) {
       CONNECTINMUX(i_mux_vspi_cs0, vspi_cs0_in_o, d_vspi_cs0_in_s);
       CONNECTINMUX(i_mux_vspi_cs1, vspi_cs1_in_o, d_vspi_cs1_in_s);
       CONNECTINMUX(i_mux_vspi_cs2, vspi_cs2_in_o, d_vspi_cs2_in_s);
+
+      /* I2C */
+      CONNECTINMUX(i_mux_i2c_sda0, sda0_o, l0_f1);
+      CONNECTINMUX(i_mux_i2c_sda1, sda1_o, l0_f1);
+      CONNECTINMUX(i_mux_i2c_scl0, scl0_o, l0_f1);
+      CONNECTINMUX(i_mux_i2c_scl1, scl1_o, l0_f1);
 
       /* UART Muxes */
       CONNECTINMUX(i_mux_uart0, uart0rx_o, d_u0rx_s);

@@ -63,6 +63,10 @@ SC_MODULE(mux_out) {
    sc_in<bool> vspi_wp_out_i {"vspi_wp_out_i"};
    sc_in<bool> vspi_hd_oen_i {"vspi_hd_oen_i"};
    sc_in<bool> vspi_hd_out_i {"vspi_hd_out_i"};
+   sc_in<bool> scl0_en_i {"scl0_en_i"};
+   sc_in<bool> scl1_en_i {"scl1_en_i"};
+   sc_in<bool> sda0_en_i {"sda0_en_i"};
+   sc_in<bool> sda1_en_i {"sda1_en_i"};
 
    int function;
    sc_event fchange_ev;

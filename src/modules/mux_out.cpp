@@ -178,6 +178,27 @@ void mux_out::transfer() {
                wait(fchange_ev);
             }
             break;
+         /* I2C */
+         case I2CEXT0_SDA_OUT_IDX:
+            mout_o.write(false);
+            men_o.write(sda0_en_i);
+            wait(fchange_ev | sda0_en_i.default_event());
+            break;
+         case I2CEXT1_SDA_OUT_IDX:
+            mout_o.write(false);
+            men_o.write(sda1_en_i);
+            wait(fchange_ev | sda1_en_i.default_event());
+            break;
+         case I2CEXT0_SCL_OUT_IDX:
+            mout_o.write(false);
+            men_o.write(scl0_en_i);
+            wait(fchange_ev | scl0_en_i.default_event());
+            break;
+         case I2CEXT1_SCL_OUT_IDX:
+            mout_o.write(false);
+            men_o.write(scl1_en_i);
+            wait(fchange_ev | scl1_en_i.default_event());
+            break;
          /* function 256 is logic 0 and function 257 is logic 1. This is
           * different from the spec, so the GPIO matrix selects the correct
           * one depending on the value to drive.

@@ -127,12 +127,13 @@ INTF=$(INTFDIR)/gpioset.cpp $(INTFDIR)/crccalc.cpp \
 # SystemC Module Files
 MODULES=$(MODDIR)/cchan.cpp $(MODDIR)/cchanflash.cpp \
    $(MODDIR)/esp32adc1.cpp $(MODDIR)/esp32adc2.cpp \
-   $(MODDIR)/doitesp32devkitv1.cpp $(MODDIR)/gn_pullupdn.cpp \
+   $(MODDIR)/doitesp32devkitv1.cpp $(MODDIR)/doitesp32devkitv1_i2c.cpp \
+   $(MODDIR)/gn_pullupdn.cpp \
    $(MODDIR)/gn_mixed.cpp $(MODDIR)/ea_pullup.cpp $(MODDIR)/io_mux.cpp \
    $(MODDIR)/gpio_matrix.cpp $(MODDIR)/mux_pcnt.cpp $(MODDIR)/mux_in.cpp \
    $(MODDIR)/mux_out.cpp $(MODDIR)/pcntmod.cpp $(MODDIR)/clkgen.cpp \
    $(MODDIR)/ledcmod.cpp $(MODDIR)/netcon.cpp $(MODDIR)/uart.cpp \
-   $(MODDIR)/spimod.cpp $(MODDIR)/espintr.cpp
+   $(MODDIR)/spimod.cpp $(MODDIR)/i2c.cpp $(MODDIR)/espintr.cpp
 
 # Test Interface Modules
 TBMODULES=$(TBINTF)/tft.cpp $(TBINTF)/webclient.cpp $(TBINTF)/uartclient.cpp \

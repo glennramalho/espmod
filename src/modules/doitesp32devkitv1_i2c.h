@@ -34,6 +34,7 @@
 #include "gn_mixed.h"
 #include "ctrlregs.h"
 #include "spimod.h"
+#include "i2c.h"
 
 SC_MODULE(doitesp32devkitv1) {
    /* Pins */
@@ -71,9 +72,6 @@ SC_MODULE(doitesp32devkitv1) {
    sc_out<unsigned int> ftx {"trx"};
    sc_in<unsigned int> wrx {"wrx"};
    sc_out<unsigned int> wtx {"wtx"};
-   /* These take place of GPIO21 and 22 */
-   sc_in<bool> irx {"irx"};
-   sc_out<bool> itx {"itx"};
 
    /* Submodules */
    gpio_matrix i_gpio_matrix {"i_gpio_matrix"};
@@ -87,7 +85,8 @@ SC_MODULE(doitesp32devkitv1) {
    uart i_uart1 {"i_uart1", 64, 64};
    uart i_uart2 {"i_uart2", 64, 64};
    cchan i_uflash {"i_uflash", 256*4, 256*4}; /* Actually this is a QSPI */
-   uart i_ui2c {"i_ui2c", 32*8, 32*8};   /* to replace with an I2C */
+   i2c i_i2c0 {"i_i2c0"};
+   i2c i_i2c1 {"i_i2c1"};
    espintr i_espintr{"i_espintr"};
 
    /* Not sure what is the real interface, but this one works as it is not
@@ -174,10 +173,14 @@ SC_MODULE(doitesp32devkitv1) {
    sc_signal<bool> vspi_cs2_oe{"vspi_cs2_oe"};
    sc_signal<bool> vspi_cs2_in{"vspi_cs2_in"};
    sc_signal<bool> logic_0 {"logic_0", false};
-   
-   /* Not used in this simulation. */
+
+   /* I2C signal */
+   sc_signal<bool> scl_en_0 {"scl_en_0"};
+   sc_signal<bool> sda_en_0 {"sda_en_0"};
    sc_signal<bool> scl_0 {"scl_0"};
    sc_signal<bool> sda_0 {"sda_0"};
+   sc_signal<bool> scl_en_1 {"scl_en_1"};
+   sc_signal<bool> sda_en_1 {"sda_en_1"};
    sc_signal<bool> scl_1 {"scl_1"};
    sc_signal<bool> sda_1 {"sda_1"};
 
@@ -197,8 +200,6 @@ SC_MODULE(doitesp32devkitv1) {
       i_uflash.tx(ftx);
       i_uwifi.rx(wrx);
       i_uwifi.tx(wtx);
-      i_ui2c.rx(irx);
-      i_ui2c.tx(itx);
 
       i_gpio_matrix.d0_a11(d0_a11);
       i_gpio_matrix.d1(d1);
@@ -322,16 +323,15 @@ SC_MODULE(doitesp32devkitv1) {
       i_vspi.cs2_oen_o(vspi_cs2_oe); i_gpio_matrix.vspi_cs2_oen_i(vspi_cs2_oe);
       i_vspi.cs2_i(vspi_cs2_in); i_gpio_matrix.vspi_cs2_in_o(vspi_cs2_in);
 
-      /* This version does not use the real I2C modules. */
-      i_gpio_matrix.scl0_en_i(logic_0);
-      i_gpio_matrix.sda0_en_i(logic_0);
-      i_gpio_matrix.scl0_o(scl_0);
-      i_gpio_matrix.sda0_o(sda_0);
-      i_gpio_matrix.scl1_en_i(logic_0);
-      i_gpio_matrix.sda1_en_i(logic_0);
-      i_gpio_matrix.scl1_o(scl_1);
-      i_gpio_matrix.sda1_o(sda_1);
-
+      /* I2C */
+      i_i2c0.scl_en_o(scl_en_0); i_gpio_matrix.scl0_en_i(scl_en_0);
+      i_i2c0.sda_en_o(sda_en_0); i_gpio_matrix.sda0_en_i(sda_en_0);
+      i_i2c0.scl_i(scl_0); i_gpio_matrix.scl0_o(scl_0);
+      i_i2c0.sda_i(sda_0); i_gpio_matrix.sda0_o(sda_0);
+      i_i2c1.scl_en_o(scl_en_1); i_gpio_matrix.scl1_en_i(scl_en_1);
+      i_i2c1.sda_en_o(sda_en_1); i_gpio_matrix.sda1_en_i(sda_en_1);
+      i_i2c1.scl_i(scl_1); i_gpio_matrix.scl1_o(scl_1);
+      i_i2c1.sda_i(sda_1); i_gpio_matrix.sda1_o(sda_1);
 
       /* And we connect the PCNT. */
       i_pcnt.pcntbus_i(pcntbus_0);

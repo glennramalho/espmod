@@ -23,6 +23,7 @@
 #include "ledcmod.h"
 #include "spimod.h"
 #include "btmod.h"
+#include "i2c.h"
 #include "adc_types.h"
 #include "soc/gpio_struct.h"
 #include "soc/pcnt_struct.h"
@@ -44,6 +45,8 @@ adc1 *adc1ptr;
 adc2 *adc2ptr;
 espintr *espintrptr;
 btmod *btptr;
+i2c *i2c0ptr;
+i2c *i2c1ptr;
 /* These are the structs that get updated. */
 gpio_dev_t GPIO;
 pcnt_dev_t PCNT;

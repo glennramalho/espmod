@@ -215,6 +215,12 @@ void gpio_matrix::updateth() {
       i_mux_hspi_wp.mux(GPIO.func_in_sel_cfg[HSPIWP_IN_IDX].func_sel);
       i_mux_hspi_cs0.mux(GPIO.func_in_sel_cfg[HSPICS0_IN_IDX].func_sel);
 
+      /* I2C */
+      i_mux_i2c_sda0.mux(GPIO.func_in_sel_cfg[I2CEXT0_SDA_IN_IDX].func_sel);
+      i_mux_i2c_sda1.mux(GPIO.func_in_sel_cfg[I2CEXT1_SDA_IN_IDX].func_sel);
+      i_mux_i2c_scl0.mux(GPIO.func_in_sel_cfg[I2CEXT0_SCL_IN_IDX].func_sel);
+      i_mux_i2c_scl1.mux(GPIO.func_in_sel_cfg[I2CEXT1_SCL_IN_IDX].func_sel);
+
       /* There is a gap in the indexes, so we skip it. */
       for(bit = PCNT_SIG_CH0_IN0_IDX; bit < PCNT_CTRL_CH1_IN4_IDX; bit=bit+1) {
          i_mux_pcnt.mux(bit, GPIO.func_in_sel_cfg[bit].func_sel);
