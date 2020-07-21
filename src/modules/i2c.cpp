@@ -20,10 +20,11 @@
 
 #include <systemc.h>
 #include "i2c.h"
+#include "info.h"
 
 void i2c::transfer_th() {
    unsigned char p;
-   bool lastbit;
+   bool rwbit;
 
    sda_en_o.write(false);
    scl_en_o.write(false);
@@ -31,15 +32,25 @@ void i2c::transfer_th() {
 
    while(true) {
       p = to.read();
+      snd.write(p);
+      /* For the start and stop bit, we could be in the middle of a command,
+       * therefore we cannot assume the bits are correct.
+       */
       if (p == 'S') {
+         sda_en_o.write(false);
+         scl_en_o.write(false);
          wait(625, SC_NS); sda_en_o.write(true);
          wait(625, SC_NS); scl_en_o.write(true);
          wait(1250, SC_NS);
          state = DEVID;
       }
       else if (p == 'P') {
-         wait(1250, SC_NS); scl_en_o.write(false);
+         /* If the SDA is high, we need to take it low first. If not, we cam
+          * go straight into the stop bit.
+          */
          wait(625, SC_NS); sda_en_o.write(true);
+         wait(625, SC_NS); scl_en_o.write(false);
+         wait(625, SC_NS); sda_en_o.write(false);
          wait(1250, SC_NS);
          state = IDLE;
       }
@@ -48,22 +59,32 @@ void i2c::transfer_th() {
             wait(625, SC_NS); sda_en_o.write(false);
             wait(625, SC_NS); scl_en_o.write(false);
             wait(1250, SC_NS); scl_en_o.write(true);
-            lastbit = true;
+            rwbit = true;
          }
          else if (p == '0') {
-            wait(1250, SC_NS); scl_en_o.write(false);
+            wait(625, SC_NS); sda_en_o.write(true);
+            wait(625, SC_NS); scl_en_o.write(false);
             wait(1250, SC_NS); scl_en_o.write(true);
-            lastbit = false;
+            rwbit = false;
          }
          else if (p == 'Z') {
+            sda_en_o.write(false);
+            /* Then we tick the clock. */
             wait(1250, SC_NS); scl_en_o.write(false);
+            /* After the clock, we sample it. */
             if (sda_i.read()) {
+               snd.write('N');
                from.write('N');
                state = IDLE;
             }
             else {
+               snd.write('A');
                from.write('A');
-               if (lastbit || state == WRITING) state = WRITING;
+               /* If the readwrite bit is low and we are in the DEVID state
+                * we go to the WRITING state. If we are already in the WRITING
+                * state we remain in it.
+                */
+               if (state == DEVID && !rwbit || state == WRITING) state= WRITING;
                else state = READING;
             }
             wait(1250, SC_NS); scl_en_o.write(true);
@@ -78,16 +99,28 @@ void i2c::transfer_th() {
             state = IDLE;
          }
          else if (p == 'A') {
-            wait(1250, SC_NS); scl_en_o.write(false);
+            wait(625, SC_NS); sda_en_o.write(true);
+            wait(625, SC_NS); scl_en_o.write(false);
             wait(1250, SC_NS); scl_en_o.write(true);
          }
          else if (p == 'Z') {
+            sda_en_o.write(false);
             wait(1250, SC_NS); scl_en_o.write(false);
-            if (sda_i.read()) from.write('1');
-            else from.write('0');
+            if (sda_i.read()) {
+               from.write('1');
+               snd.write('1');
+            }
+            else {
+               from.write('0');
+               snd.write('0');
+            }
             wait(1250, SC_NS); scl_en_o.write(true);
          }
          else wait(2500, SC_NS);
       }
    }
+}
+
+void i2c::trace(sc_trace_file *tf) {
+   sc_trace(tf, snd, snd.name());
 }

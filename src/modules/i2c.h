@@ -33,8 +33,11 @@ SC_MODULE(i2c) {
    sc_fifo<unsigned char> to;
    sc_fifo<unsigned char> from;
 
+   sc_signal<unsigned char> snd {"snd"};
+
    enum {IDLE, DEVID, READING, WRITING} state;
    void transfer_th();
+   void trace(sc_trace_file *tf);
 
    // Constructor
    SC_CTOR(i2c) {
