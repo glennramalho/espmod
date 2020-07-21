@@ -1,5 +1,5 @@
 /*******************************************************************************
- * doitesp32devkitv1.h -- Copyright 2019 (c) Glenn Ramalho - RFIDo Design
+ * doitesp32devkitv1_i2c.h -- Copyright 2019 (c) Glenn Ramalho - RFIDo Design
  *******************************************************************************
  * Description:
  *   Implements a SystemC model of the doitESP32devkitV1 board.
@@ -18,8 +18,8 @@
  *******************************************************************************
  */
 
-#ifndef _DOITESP32DEVKITV1_H
-#define _DOITESP32DEVKITV1_H
+#ifndef _DOITESP32DEVKITV1_I2C_H
+#define _DOITESP32DEVKITV1_I2C_H
 
 #include <systemc.h>
 #include <Arduino.h>
@@ -36,7 +36,7 @@
 #include "spimod.h"
 #include "i2c.h"
 
-SC_MODULE(doitesp32devkitv1) {
+SC_MODULE(doitesp32devkitv1_i2c) {
    /* Pins */
    sc_inout<gn_mixed> d0_a11 {"d0_a11"}; /* BOOT button */
    sc_inout<gn_mixed> d1 {"d1"};
@@ -191,7 +191,7 @@ SC_MODULE(doitesp32devkitv1) {
    ctrlregs_t ctrlregs;
 
    // Constructor
-   SC_CTOR(doitesp32devkitv1) {
+   SC_CTOR(doitesp32devkitv1_i2c) {
       /* Pin Hookups */
       i_uart0.rx(uart0rx); i_uart0.tx(uart0tx);
       i_uart1.rx(uart1rx); i_uart1.tx(uart1tx);

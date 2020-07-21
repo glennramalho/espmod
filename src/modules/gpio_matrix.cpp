@@ -279,6 +279,35 @@ void gpio_matrix::trace(sc_trace_file *tf) {
    std::string sigb = name();
    std::string sign;
 
+   i_mux_out0.trace(tf);
+   i_mux_out1.trace(tf);
+   i_mux_out2.trace(tf);
+   i_mux_out3.trace(tf);
+   i_mux_out4.trace(tf);
+   i_mux_out5.trace(tf);
+   i_mux_out12.trace(tf);
+   i_mux_out13.trace(tf);
+   i_mux_out14.trace(tf);
+   i_mux_out15.trace(tf);
+   i_mux_out16.trace(tf);
+   i_mux_out17.trace(tf);
+   i_mux_out18.trace(tf);
+   i_mux_out19.trace(tf);
+   i_mux_out21.trace(tf);
+   i_mux_out22.trace(tf);
+   i_mux_out23.trace(tf);
+   i_mux_out25.trace(tf);
+   i_mux_out26.trace(tf);
+   i_mux_out27.trace(tf);
+   i_mux_out32.trace(tf);
+   i_mux_out33.trace(tf);
+   i_mux_out34.trace(tf);
+   i_mux_out35.trace(tf);
+   i_mux_out36.trace(tf);
+   i_mux_out37.trace(tf);
+   i_mux_out38.trace(tf);
+   i_mux_out39.trace(tf);
+
    sc_trace(tf, gpio_out, gpio_out.name());
    sc_trace(tf, d_u0rx_s, d_u0rx_s.name());
    sc_trace(tf, d_u1rx_s, d_u1rx_s.name());

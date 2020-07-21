@@ -68,11 +68,11 @@ SC_MODULE(mux_out) {
    sc_in<bool> sda0_en_i {"sda0_en_i"};
    sc_in<bool> sda1_en_i {"sda1_en_i"};
 
-   int function;
-   sc_event fchange_ev;
+   sc_signal<int> function {"function", MUXOUT_DRIVE_0};
 
    /* Functions */
    void mux(int funcsel);
+   void trace(sc_trace_file *tf);
 
    /* Threads */
    void transfer(void);

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * doitesp32devkitv1.cpp -- Copyright 2019 (c) Glenn Ramalho - RFIDo Design
+ * doitesp32devkitv1_i2c.cpp -- Copyright 2019 (c) Glenn Ramalho - RFIDo Design
  *******************************************************************************
  * Description:
  *   Implements a SystemC model of the doitESP32devkitV1 board.
@@ -30,19 +30,7 @@
 #include "reset_reason.h"
 #include "soc/spi_struct.h"
 
-/* For lack of a better place, this goes here. The ESP32 has a temperature
- * sensor which returns the internal temperature in Farenheight. It seems
- * to use the ADC. We just put something here which returns a value. Later we
- * can do something better.
- */
-uint8_t temprature_sens_read() {
-   /* Note, the temperature has to account for the packaging impact, so we
-    * get the room temperature and add a rule-of-thumb 20C.
-    */
-   return 116;
-}
-
-void doitesp32devkitv1::dut(void) {
+void doitesp32devkitv1_i2c::dut(void) {
    wait(125, SC_NS);
    /* We start running the Arduino Setup Function. */
    setup();
@@ -62,7 +50,7 @@ void doitesp32devkitv1::dut(void) {
    }
 }
 
-void doitesp32devkitv1::start_of_simulation() {
+void doitesp32devkitv1_i2c::start_of_simulation() {
    /* We change the behavior of SC_ERROR to call SC_STOP instead of SC_THROW.
     * This helps us because the simulation will stop nicely after an error and
     * any waveforms get closed. In addition, any exit handlers called in the
@@ -86,7 +74,7 @@ void doitesp32devkitv1::start_of_simulation() {
    esp_reset_reason_init();
 }
 
-void doitesp32devkitv1::pininit() {
+void doitesp32devkitv1_i2c::pininit() {
    /* We set each GPIO to be connected to a pin number in the ESPMOD library. */
    pinset(0, &i_gpio_matrix.i_mux_d0);
    pinset(1, &i_gpio_matrix.i_mux_d1);
@@ -149,7 +137,7 @@ void doitesp32devkitv1::pininit() {
    Wire.setports(&i_i2c0.to, &i_i2c0.from);
 }
 
-void doitesp32devkitv1::trace(sc_trace_file *tf) {
+void doitesp32devkitv1_i2c::trace(sc_trace_file *tf) {
    i_ledc.trace(tf);
    i_pcnt.trace(tf);
    i_gpio_matrix.trace(tf);
@@ -253,4 +241,12 @@ void doitesp32devkitv1::trace(sc_trace_file *tf) {
    sc_trace(tf, hspi_cs0_out, hspi_cs0_out.name());
    sc_trace(tf, hspi_cs0_oe, hspi_cs0_oe.name());
    sc_trace(tf, hspi_cs0_in, hspi_cs0_in.name());
+   sc_trace(tf, scl_en_0, scl_en_0.name());
+   sc_trace(tf, sda_en_0, sda_en_0.name());
+   sc_trace(tf, scl_0, scl_0.name());
+   sc_trace(tf, sda_0, sda_0.name());
+   sc_trace(tf, scl_en_1, scl_en_1.name());
+   sc_trace(tf, sda_en_1, sda_en_1.name());
+   sc_trace(tf, scl_1, scl_1.name());
+   sc_trace(tf, sda_1, sda_1.name());
 }

@@ -39,8 +39,11 @@ extern "C" {
   #include <inttypes.h>
 }
 
+#include "esp32-hal-i2c.h"
 #include "Arduino.h"
 #include "Wire.h"
+#include <systemc.h>
+#include "info.h"
 
 //Some boards don't have these pins available, and hence don't support Wire.
 //Check here for compile-time error.
@@ -50,51 +53,117 @@ extern "C" {
 
 // Constructors ////////////////////////////////////////////////////////////////
 
-TwoWire::TwoWire(){ transmitting = false;}
+TwoWire::TwoWire(uint8_t bus_num)
+    :num(bus_num & 1)
+    ,sda(-1)
+    ,scl(-1)
+    ,i2c(NULL)
+    ,last_error(I2C_ERROR_OK)
+    ,_timeOutMillis(50)
+{
+   transmitting = false;
+}
+
+TwoWire::~TwoWire()
+{
+    //flush();
+    if(i2c) {
+        i2cRelease(i2c);
+        i2c=NULL;
+    }
+}
 
 // Public Methods //////////////////////////////////////////////////////////////
 
-void TwoWire::begin(int sda, int scl){
-   char buffer[70];
-   sprintf(buffer, "Setting I2C to Master, SDA on pin %s, SCL on pin %s",
-      pinname(sda), pinname(scl));
-   SC_REPORT_INFO("WIRE", buffer);
-   txAddress = 0; /* Master */
-}
+bool TwoWire::begin(int sdaPin, int sclPin, uint32_t frequency)
+{
+   PRINTF_INFO("WIRE",
+      "Setting I2C %d to Master mode, SDA on pin %s, SCL on pin %s",
+      num, pinname(PIN_WIRE_SDA), pinname(PIN_WIRE_SCL));
 
-void TwoWire::pins(int sda, int scl){
-   char buffer[70];
-   sprintf(buffer, "Setting I2C SDA on pin %s, SCL on pin %s",
-      pinname(sda), pinname(scl));
-   SC_REPORT_INFO("WIRE", buffer);
-}
+   if(sdaPin < 0) { // default param passed
+        if(num == 0) {
+            if(sda==-1) {
+                sdaPin = PIN_WIRE_SDA;    //use Default Pin
+            } else {
+                sdaPin = sda;    // reuse prior pin
+            }
+        } else {
+            if(sda==-1) {
+                log_e("no Default SDA Pin for Second Peripheral");
+                return false; //no Default pin for Second Peripheral
+            } else {
+                sdaPin = sda;    // reuse prior pin
+            }
+        }
+    }
 
-void TwoWire::begin(){
-   begin(PIN_WIRE_SDA, PIN_WIRE_SCL);
-}
+    if(sclPin < 0) { // default param passed
+        if(num == 0) {
+            if(scl == -1) {
+                sclPin = PIN_WIRE_SCL;    // use Default pin
+            } else {
+                sclPin = scl;    // reuse prior pin
+            }
+        } else {
+            if(scl == -1) {
+                log_e("no Default SCL Pin for Second Peripheral");
+                return false; //no Default pin for Second Peripheral
+            } else {
+                sclPin = scl;    // reuse prior pin
+            }
+        }
+    }
 
-void TwoWire::begin(uint8_t address){
-   char buffer[70];
-   sprintf(buffer,
-      "Setting I2C to Slave, addr=%02x, SDA on pin %s, SCL on pin %s",
-      address, pinname(PIN_WIRE_SDA), pinname(PIN_WIRE_SCL));
-   SC_REPORT_INFO("WIRE", buffer);
-   txAddress = address; /* Slave */
-}
+    sda = sdaPin;
+    scl = sclPin;
+    i2c = i2cInit(num, sdaPin, sclPin, frequency);
+    if(!i2c) {
+        return false;
+    }
 
-void TwoWire::begin(int address){
-   begin((uint8_t)address);
+    flush();
+    return true;
+
 }
 
 void TwoWire::setClock(uint32_t frequency){
    printf("Setting Frequency to %u\n", frequency);
 }
 
-void TwoWire::setClockStretchLimit(uint32_t limit){
-   printf("Setting Clock Stretch to %u\n", limit);
+uint8_t TwoWire::requestFrom(uint8_t address, uint8_t quantity, uint8_t sendStop)
+{
+    return requestFrom(static_cast<uint16_t>(address), static_cast<size_t>(quantity), static_cast<bool>(sendStop));
 }
 
-size_t TwoWire::requestFrom(uint8_t address, size_t size, bool sendStop){
+uint8_t TwoWire::requestFrom(uint16_t address, uint8_t quantity, uint8_t sendStop)
+{
+    return requestFrom(address, static_cast<size_t>(quantity), static_cast<bool>(sendStop));
+}
+
+uint8_t TwoWire::requestFrom(uint8_t address, uint8_t quantity)
+{
+    return requestFrom(static_cast<uint16_t>(address), static_cast<size_t>(quantity), true);
+}
+
+uint8_t TwoWire::requestFrom(uint16_t address, uint8_t quantity)
+{
+    return requestFrom(address, static_cast<size_t>(quantity), true);
+}
+
+uint8_t TwoWire::requestFrom(int address, int quantity)
+{
+    return requestFrom(static_cast<uint16_t>(address), static_cast<size_t>(quantity), true);
+}
+
+/*
+uint8_t TwoWire::requestFrom(uint16_t address, uint8_t quantity, int sendStop)
+{
+    return static_cast<uint8_t>(requestFrom(static_cast<uint16_t>(address), static_cast<size_t>(quantity), static_cast<bool>(sendStop)));
+}
+*/
+
+uint8_t TwoWire::requestFrom(uint16_t address, uint8_t size, bool sendStop){
    unsigned int i, bit;
    /* We are starting a new command, so we dump anything in the fifo from the
     * previous command.
@@ -122,7 +191,7 @@ size_t TwoWire::requestFrom(uint8_t address, size_t size, bool sendStop){
          to->write('Z');
          wait(from->data_written_event());
       }
-      if (i != size-1) to->write('A');
+      if ((signed int)i != size-1) to->write('A');
    }
    /* And we send a NACK followed by the Stop */
    if(sendStop) {
@@ -152,21 +221,20 @@ void TwoWire::beginTransmission(uint8_t address){
    /* If no Acknowledge came, we flag it */
    if (from->read() != 'A') transmitting = false;
    else transmitting = true;
-   size = 0;
 }
 
 void TwoWire::beginTransmission(int address){
    beginTransmission((uint8_t)address);
 }
 
-uint8_t TwoWire::endTransmission(uint8_t sendStop){
+uint8_t TwoWire::endTransmission(bool sendStop){
   /* We send the stop bit. */
   if (sendStop) {
      to->write('N');
      to->write('P');
   }
   transmitting = false;
-  return size;
+  return I2C_ERROR_OK; // Lacks more to do here. TODO
 }
 
 uint8_t TwoWire::endTransmission(void){
@@ -187,7 +255,6 @@ size_t TwoWire::write(uint8_t data) {
       /* If no Acknowledge came, we flag it */
    } while(from->read() != 'A');
 
-   size = size + 1;
    return 1;
 }
 
@@ -210,8 +277,7 @@ size_t TwoWire::write(const uint8_t *data, size_t size) {
    for(i = 0; i < size; i = i + 1) {
       writebin(data[i], 8);
    }
-   this->size = this->size + size;
-   return this->size;
+   return size;
 }
 
 int TwoWire::read() {
@@ -258,5 +324,6 @@ void TwoWire::flush(void){
 // Preinstantiate Objects //////////////////////////////////////////////////////
 
 #if !defined(NO_GLOBAL_INSTANCES) && !defined(NO_GLOBAL_TWOWIRE)
-TwoWire Wire;
+TwoWire Wire(0);
+TwoWire Wire1(1);
 #endif

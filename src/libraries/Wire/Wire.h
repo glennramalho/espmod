@@ -38,46 +38,95 @@
 
 #include <inttypes.h>
 #include "TestSerial.h"
+#include "esp32-hal-i2c.h"
 
 class TwoWire : public TestSerial
 {
-  private:
-    uint8_t txAddress;
-    int size;
+protected:
+    uint8_t num;
+    int8_t sda;
+    int8_t scl;
+    i2c_t * i2c;
+
     bool transmitting;
-  public:
-    TwoWire();
-    void begin(int sda, int scl);
-    void pins(int sda, int scl) __attribute__((deprecated));
-    void begin();
-    void begin(uint8_t);
-    void begin(int);
-    void setClock(uint32_t);
-    void setClockStretchLimit(uint32_t);
-    void beginTransmission(uint8_t);
-    void beginTransmission(int);
+    i2c_err_t last_error; // @stickBreaker from esp32-hal-i2c.h
+    uint16_t _timeOutMillis;
+
+public:
+    TwoWire(uint8_t bus_num);
+    ~TwoWire();
+    bool begin(int sda=-1, int scl=-1, uint32_t frequency=0); // returns true, if successful init of i2c bus
+      // calling will attemp to recover hung bus
+
+    void setClock(uint32_t frequency); // change bus clock without initing hardware
+    size_t getClock(); // current bus clock rate in hz
+
+    void setTimeOut(uint16_t timeOutMillis); // default timeout of i2c transactions is 50ms
+    uint16_t getTimeOut();
+
+    uint8_t lastError();
+    char * getErrorText(uint8_t err);
+
+    //@stickBreaker for big blocks and ISR model
+    i2c_err_t writeTransmission(uint16_t address, uint8_t* buff, uint16_t size, bool sendStop=true);
+    i2c_err_t readTransmission(uint16_t address, uint8_t* buff, uint16_t size, bool sendStop=true, uint32_t *readCount=NULL);
+
+    void beginTransmission(uint16_t address);
+    void beginTransmission(uint8_t address);
+    void beginTransmission(int address);
+
+    uint8_t endTransmission(bool sendStop);
     uint8_t endTransmission(void);
-    uint8_t endTransmission(uint8_t);
-    size_t requestFrom(uint8_t address, size_t size, bool sendStop);
-    size_t requestFrom(uint8_t address, size_t size) {
-       return requestFrom(address, size, true);
-    }
-    bool writebin(uint8_t data, int bits);
+
+    uint8_t requestFrom(uint16_t address, uint8_t size, bool sendStop);
+    uint8_t requestFrom(uint16_t address, uint8_t size, uint8_t sendStop);
+    uint8_t requestFrom(uint16_t address, uint8_t size);
+    uint8_t requestFrom(uint8_t address, uint8_t size, uint8_t sendStop);
+    uint8_t requestFrom(uint8_t address, uint8_t size);
+    uint8_t requestFrom(int address, int size, int sendStop);
+    uint8_t requestFrom(int address, int size);
+
     size_t write(uint8_t);
     size_t write(const uint8_t *, size_t);
     size_t send(uint8_t i) { return write(i); }
     int receive(void) { return read(); }
-    int read();
-    int peek();
+    //int available(void);
+    int read(void);
+    int peek(void);
     void flush(void);
-    size_t write(unsigned long n) { return write((uint8_t)n); }
-    size_t write(long n) { return write((uint8_t)n); }
-    size_t write(unsigned int n) { return write((uint8_t)n); }
-    size_t write(int n) { return write((uint8_t)n); }
+
+    inline size_t write(const char * s)
+    {
+        return write((uint8_t*) s, strlen(s));
+    }
+    inline size_t write(unsigned long n)
+    {
+        return write((uint8_t)n);
+    }
+    inline size_t write(long n)
+    {
+        return write((uint8_t)n);
+    }
+    inline size_t write(unsigned int n)
+    {
+        return write((uint8_t)n);
+    }
+    inline size_t write(int n)
+    {
+        return write((uint8_t)n);
+    }
+
+    void onReceive( void (*)(int) );
+    void onRequest( void (*)(void) );
+
+    uint32_t setDebugFlags( uint32_t setBits, uint32_t resetBits);
+    bool busy();
+
+private:
+    bool writebin(uint8_t data, int bits);
 };
 
-#if !defined(NO_GLOBAL_INSTANCES) && !defined(NO_GLOBAL_TWOWIRE)
 extern TwoWire Wire;
-#endif
+extern TwoWire Wire1;
 
 #endif
