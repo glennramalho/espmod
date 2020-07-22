@@ -614,14 +614,12 @@ void io_mux::drive_return() {
        * then issue a warning. We skip time zero though to eliminate some
        * rampup conditions.
        */
-      else if (sc_time_stamp() != sc_time(0, SC_NS) &&
-            (pinsamp == GN_LOGIC_A || pinsamp == GN_LOGIC_X
-               || pinsamp == GN_LOGIC_Z) && function != GPIOMF_ANALOG) {
+      else if (sc_time_stamp() != sc_time(0, SC_NS) && !pinsamp.islogic()) {
          retval = false;
          PRINTF_WARN("IOMUX", "can't return '%c' onto FUNC%d",
             pinsamp.to_char(), function)
       }
-      else if (pinsamp == GN_LOGIC_1) retval = true;
+      else if (pinsamp.ishigh()) retval = true;
       else retval = false;
 
       for (func = 0; func < fout.size(); func = func + 1)
