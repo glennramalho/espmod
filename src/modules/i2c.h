@@ -30,8 +30,8 @@ SC_MODULE(i2c) {
    sc_in<bool> scl_i {"scl_i"};
    sc_in<bool> sda_i {"sda_i"};
 
-   sc_fifo<unsigned char> to;
-   sc_fifo<unsigned char> from;
+   sc_fifo<unsigned char> to {"to", 32*8};
+   sc_fifo<unsigned char> from {"to", 32*8};
 
    sc_signal<unsigned char> snd {"snd"};
 
