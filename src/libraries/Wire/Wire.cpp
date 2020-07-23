@@ -229,10 +229,7 @@ void TwoWire::beginTransmission(int address){
 
 uint8_t TwoWire::endTransmission(bool sendStop){
   /* We send the stop bit. */
-  if (sendStop) {
-     to->write('N');
-     to->write('P');
-  }
+  if (sendStop) to->write('P');
   transmitting = false;
   return I2C_ERROR_OK; // Lacks more to do here. TODO
 }
