@@ -64,13 +64,17 @@ TwoWire::TwoWire(uint8_t bus_num)
    transmitting = false;
 }
 
-TwoWire::~TwoWire()
-{
-    //flush();
-    if(i2c) {
-        i2cRelease(i2c);
-        i2c=NULL;
-    }
+TwoWire::~TwoWire() {
+   /* If we are in the exit routine (post simulation) we then can't do events,
+    * so we need to just quit. If we are not, we can do a nice clean.
+    */
+   if (sc_is_running()) {
+      //flush();
+      if(i2c) {
+         i2cRelease(i2c);
+      }
+   }
+   i2c=NULL;
 }
 
 // Public Methods //////////////////////////////////////////////////////////////
