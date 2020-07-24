@@ -234,15 +234,33 @@ void gpio_pin_wakeup_disable(void);
   * @return None
   */
 void gpio_matrix_in(uint32_t gpio, uint32_t signal_idx, bool inv) {
-   if (gpio >= GPIO_PIN_COUNT) {
-      PRINTF_WARN("ROMGPIO", "Attempting to set illegal GPIO %d", gpio);
-      return;
-   }
+   uint32_t gpiofunc;
+   /* We first check the signal, if it is illegal, there is nothing we can
+    * do about it.
+    */
    if (signal_idx >= 256) {
       PRINTF_WARN("ROMGPIO", "Attempting to set illegal signal %d", signal_idx);
       return;
    }
-   GPIO.func_in_sel_cfg[signal_idx].func_sel = gpio;
+   /* If the invert is used, we issue a warning. */
+   if (inv && gpio < GPIO_PIN_COUNT) {
+      PRINTF_WARN("ROMGPIO",
+            "invert gpio matrix function is not yet supported.");
+   }
+   /* We next check that the gpio matrix function. Note that most are simply
+    * the gpios but there are two extra ones.
+    */
+   if (gpio < GPIO_PIN_COUNT) gpiofunc = gpio;
+   else if (gpio == 0x30 && !inv || gpio == 0x38 && inv)
+      gpiofunc = GPIOMATRIX_LOGIC0;
+   else if (gpio == 0x38 && !inv || gpio == 0x30 && inv)
+      gpiofunc = GPIOMATRIX_LOGIC1;
+   /* Any other ones we issue a warning and default to logic 0. */
+   else  {
+      PRINTF_WARN("ROMGPIO", "Attempting to set illegal GPIO function %d",gpio);
+      gpiofunc = (inv)?GPIOMATRIX_LOGIC1:GPIOMATRIX_LOGIC0;
+   }
+   GPIO.func_in_sel_cfg[signal_idx].func_sel = gpiofunc;
    GPIO.func_in_sel_cfg[signal_idx].sig_in_sel = 1;
    GPIO.func_in_sel_cfg[signal_idx].sig_in_inv = inv;
    update_gpio();
@@ -263,10 +281,16 @@ void gpio_matrix_in(uint32_t gpio, uint32_t signal_idx, bool inv) {
   * @return None
   */
 void gpio_matrix_out(uint32_t gpio, uint32_t signal_idx, bool out_inv, bool oen_inv) {
+   /* We first check the GPIO number. If it is illegal there is nothing we can
+    * do.
+    */
    if (gpio >= GPIO_PIN_COUNT) {
       PRINTF_WARN("ROMGPIO", "Attempting to set illegal GPIO %d", gpio);
       return;
    }
+   /* The function we simply hand over to the output mux. It knows what to do.
+    * If it is illegal, it handles it too.
+    */
    GPIO.func_out_sel_cfg[gpio].func_sel = signal_idx;
    GPIO.func_out_sel_cfg[gpio].inv_sel = out_inv;
    GPIO.func_out_sel_cfg[gpio].oen_sel = 0;
