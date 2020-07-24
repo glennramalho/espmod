@@ -25,7 +25,6 @@
 #include <systemc.h>
 #include <Arduino.h>
 #include "uartclient.h"
-#include <vector>
 #include "doitesp32devkitv1_i2c.h"
 #include "pn532.h"
 
@@ -35,7 +34,6 @@ SC_MODULE(readMifaretest) {
    gn_signal_mix i2c_scl {"i2c_scl"};
    gn_signal_mix pn532_reset {"pn532_reset"};
    gn_signal_mix pn532_irq {"pn532_irq"};
-   sc_signal<bool> pn532_irq_dig {"pn532_irq_dig"};
    gn_signal_mix led {"led"};
    gn_signal_mix rx {"rx"};
    gn_signal_mix tx {"tx"};
@@ -49,13 +47,10 @@ SC_MODULE(readMifaretest) {
    /* Unconnected signals */
    gn_signal_mix logic_0 {"logic_0", GN_LOGIC_0};
 
-   /* I2C UART */
-   pn532 i_pn532 {"i_pn532"};
-
    /* blocks */
    doitesp32devkitv1_i2c i_esp{"i_esp"};
+   pn532 i_pn532 {"i_pn532"};
    uartclient i_uartclient{"i_uartclient"};
-   netcon_booltomix i_netcon{"i_netcon"};
 
    /* Processes */
    void testbench(void);
@@ -87,8 +82,8 @@ SC_MODULE(readMifaretest) {
 
       /* I2C BUS */
       i_esp.d21(i2c_sda); i_esp.d22(i2c_scl);
-      i_pn532.sda(i2c_sda); i_pn532.scl(i2c_scl); i_pn532.irq(pn532_irq_dig);
-      i_netcon.a(pn532_irq_dig); i_netcon.b(pn532_irq);
+      i_pn532.sda(i2c_sda); i_pn532.scl(i2c_scl);
+      i_pn532.irq(pn532_irq); i_pn532.reset(pn532_reset);
 
       /* Pins not used in this simulation */
       i_esp.d0_a11(logic_0); /* BOOT pin */

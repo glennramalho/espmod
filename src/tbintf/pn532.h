@@ -26,8 +26,8 @@ SC_MODULE(pn532) {
    /* Signals */
    sc_inout<gn_mixed> sda {"sda"};
    sc_inout<gn_mixed> scl {"scl"};
-   gn_signal_mix reset {"reset"};
-   sc_out<bool> irq {"irq"};
+   sc_in<gn_mixed> reset {"reset"};
+   sc_out<gn_mixed> irq {"irq"};
 
    sc_signal<int> pnstate {"pnstate"};
    sc_signal<int> icstate {"icstate"};
@@ -63,12 +63,17 @@ SC_MODULE(pn532) {
 
    // Constructor
    SC_CTOR(pn532) {
+      hasdata = false;
       SC_THREAD(i2c_th);
       SC_THREAD(process_th);
    }
 
    /* Private routines. */
    private:
+   bool hasdata;
+   void sethasdata() { hasdata = true; irq.write(GN_LOGIC_0); }
+   void clrhasdata() { hasdata = false; irq.write(GN_LOGIC_1); }
+   bool gethasdata() { return hasdata; }
    void pushack();
    void pushpreamble(int len, bool hosttopn, int cmd, unsigned char *c);
    void pushresp();

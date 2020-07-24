@@ -86,7 +86,6 @@ SC_MODULE(SerialToSerialBTtest) {
       /* Note: these two will soon be replaced with the real flash and I2C
        * interfaces, as soon as someone takes the time to implement them. */
       i_esp.frx(fromflash); i_esp.ftx(toflash);
-      i_esp.irx(fromi2c); i_esp.itx(toi2c);
 
       /* Pins not used in this simulation */
       i_esp.d0_a11(logic_0); /* BOOT pin */

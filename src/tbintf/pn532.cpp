@@ -125,7 +125,7 @@ void pn532::i2c_th(void) {
                 * the block is invalid (read during IRQ high) or valid (read
                 * during IRQ low.
                 */
-               invalid = irq.read();
+               invalid = !gethasdata();
                ackirq_ev.notify();
             }
             break;
@@ -230,7 +230,7 @@ void pn532::pushresp() {
        * packet to return in the buffer.
        */
       wait(60, SC_MS);
-      irq.write(false);
+      sethasdata();
 
       /* Preamble */
       pushpreamble(0xA, false, 0x4A, &cksum);
@@ -251,14 +251,14 @@ void pn532::pushresp() {
    }
    else if (mif.cmd == 0x14) {
       wait(1, SC_MS);
-      irq.write(false);
+      sethasdata();
       pushpreamble(0x5, false, 0x15, &cksum);
       to.write(0x100-cksum); /* DCS */
       to.write(0x00); /* ZERO */
    }
    else if (mif.cmd == 0x02) {
       wait(1, SC_MS);
-      irq.write(false);
+      sethasdata();
       pushpreamble(0x06, false, 0x3, &cksum);
       /* Firmware Version, we just pick something cool from
        * one of the examples.
@@ -280,7 +280,7 @@ void pn532::process_th() {
    unsigned char msg;
    enum {IDLE, UNLOCK1, UNLOCK2, UNLOCK3, UNLOCK4, UNLOCK5, PD0, PDN, DCS,
       LOCK} pn532state;
-   irq.write(GN_LOGIC_1);
+   clrhasdata();
 
    while(true) {
       if (from.num_available() == 0) {
@@ -289,7 +289,7 @@ void pn532::process_th() {
           * actually does.
           */
          if (ackirq_ev.triggered()) {
-            irq.write(GN_LOGIC_1);
+            clrhasdata();
             /* Depending on the command, we might have also a response.*/
             pushresp();
             continue;
@@ -382,18 +382,18 @@ void pn532::process_th() {
             if (mif.cmd == 0x4a) {
                PRINTF_INFO("TEST", "Accepted Inlist Passive Target");
                /* We put then the response in the buffer */
-               irq.write(false);
+               sethasdata();
                pushack();
             }
             else if (mif.cmd == 0x14) {
                PRINTF_INFO("TEST", "Accepted SAM configuration command");
                /* We put then the response in the buffer */
-               irq.write(false);
+               sethasdata();
                pushack();
             }
             else if (mif.cmd == 0x02) {
                PRINTF_INFO("TEST", "Accepted getVersion command");
-               irq.write(false);
+               sethasdata();
                pushack();
             }
       }
