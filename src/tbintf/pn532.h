@@ -1,5 +1,5 @@
 /*******************************************************************************
- * pn532.h -- Copyright 2019 (c) Glenn Ramalho - RFIDo Design
+ * pn532.h -- Copyright 2020 (c) Glenn Ramalho - RFIDo Design
  *******************************************************************************
  * Description:
  *   This is a crude model for the PN532 with firmware v1.6. It will work for

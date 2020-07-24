@@ -29,6 +29,13 @@ These chips use SPI to communicate, 4 required to interface
 Adafruit invests time and resources providing this open source code, 
 please support Adafruit and open-source hardware by purchasing 
 products from Adafruit!
+
+24-07-2020 Modified by Glenn Ramalho
+   Made a small modification to the file to work with the ESPMOD model.
+   Currently the model does not support constructors that do pin changes which
+   do pin changes that are called directly from the global scope. Therefore the
+   nfc was changed to be a pointer and the new operator is used to allocate
+   it in the setup function.
 */
 /**************************************************************************/
 #include <Wire.h>
@@ -59,6 +66,7 @@ products from Adafruit!
 //Adafruit_PN532 nfc(PN532_SS);
 
 // Or use this line for a breakout or shield with an I2C connection:
+// 
 Adafruit_PN532 *nfc;
 
 void setup(void) {

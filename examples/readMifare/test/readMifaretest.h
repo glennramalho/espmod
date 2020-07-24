@@ -1,6 +1,9 @@
 /*******************************************************************************
  * readMifaretest.h -- Copyright 2019 (c) Glenn Ramalho - RFIDo Design
  *******************************************************************************
+ * File: readMifaretest.h
+ * Project: IWM testbench
+ *******************************************************************************
  * Description:
  *   This is the main testbench header for the test. It describes how
  * the model should be wired up and connected to any monitors.
