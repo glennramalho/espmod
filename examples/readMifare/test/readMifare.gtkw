@@ -1,0 +1,51 @@
+[*]
+[*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
+[*] Fri Jul 24 17:25:25 2020
+[*]
+[dumpfile] "/home/glennramalho/work/readMifare/test/waves.vcd"
+[dumpfile_mtime] "Fri Jul 24 17:22:15 2020"
+[dumpfile_size] 4466741
+[savefile] "/home/glennramalho/work/readMifare/test/r.gtkw"
+[timestart] 436436500000
+[size] 1366 680
+[pos] -182 -39
+*-27.556875 436855858000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] SystemC.
+[treeopen] SystemC.i_readMifaretest.
+[treeopen] SystemC.i_readMifaretest.i_esp.
+[sst_width] 223
+[signals_width] 227
+[sst_expanded] 1
+[sst_vpaned_height] 168
+@28
+SystemC.i_readMifaretest.i_esp.scl_0
+SystemC.i_readMifaretest.i_esp.scl_en_0
+SystemC.i_readMifaretest.i_esp.sda_0
+SystemC.i_readMifaretest.i_esp.scl_1
+SystemC.i_readMifaretest.i_esp.scl_en_1
+SystemC.i_readMifaretest.i_esp.sda_1
+SystemC.i_readMifaretest.i_esp.sda_en_1
+SystemC.i_readMifaretest.i_esp.d21_d
+SystemC.i_readMifaretest.i_esp.d22_d
+SystemC.i_readMifaretest.i_esp.d23_d
+@24
+SystemC.i_readMifaretest.i_esp.i_gpio_matrix.i_mux_out21.function[31:0]
+@25
+SystemC.i_readMifaretest.i_esp.i_gpio_matrix.i_mux_out22.function[31:0]
+@820
+SystemC.i_readMifaretest.i_esp.i_i2c0.snd[7:0]
+@28
+SystemC.i_readMifaretest.i2c_scl_d
+SystemC.i_readMifaretest.i2c_sda_d
+@24
+SystemC.i_readMifaretest.i_pn532.icstate[31:0]
+SystemC.i_readMifaretest.i_pn532.pnstate[31:0]
+@22
+SystemC.i_readMifaretest.i_pn532.intoken[7:0]
+SystemC.i_readMifaretest.i_pn532.outtoken[7:0]
+@28
+SystemC.i_readMifaretest.pn532_irq_d
+SystemC.i_readMifaretest.pn532_reset_d
+SystemC.i_readMifaretest.i_pn532.ackirq_ev
+[pattern_trace] 1
+[pattern_trace] 0
