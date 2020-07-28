@@ -354,8 +354,8 @@ void pn532::process_th() {
             mif.len = mif.len - 1;
             if (mif.cmd == 0x14) {
                mif.mode = msg;
-               mif.len = mif.len - 1; if(mif.len>0) mif.timeout = grab(&cksum);
-               mif.len = mif.len - 1; if(mif.len>0) mif.useirq = grab(&cksum);
+               if (mif.len>0) { mif.timeout=grab(&cksum); mif.len = mif.len-1;}
+               if (mif.len>0) { mif.useirq=grab(&cksum); mif.len = mif.len-1;}
             }
             if (mif.len == 0) pn532state = DCS;
             break;
