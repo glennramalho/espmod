@@ -226,28 +226,34 @@ void pn532::i2c_th(void) {
 void pn532::pushresp() {
    unsigned char cksum = 0;
    if (mif.cmd == 0x4a) {
-      /* And we wait some short processing time before placing the
-       * packet to return in the buffer.
+      /* For the 4A command we place a response only if a card is present. We
+       * remain in the command until the card is placed.
        */
-      wait(60, SC_MS);
-      sethasdata();
+      if (mif.tags > 0) {
+         /* We wait for a short time and place the response. */
+         wait(2, SC_MS);
+         sethasdata();
 
-      /* Preamble */
-      pushpreamble(0xA, false, 0x4A, &cksum);
-      /* Packet */
-      pushandcalc(mif.tags, &cksum);
-      pushandcalc(0x00, &cksum); /* Tag no. */
-      pushandcalc(mif.sens_res>>8, &cksum);/* sens res upper */
-      pushandcalc(mif.sens_res&0xff, &cksum);/* sens res lower */
-      pushandcalc(mif.sel_res, &cksum); /* sel res */
-      pushandcalc(mif.uidLength, &cksum); /* NFCID Len */
-      /* NFCID */
-      pushandcalc(mif.uidValue>>24, &cksum);
-      pushandcalc((mif.uidValue&0xff0000)>>16, &cksum);
-      pushandcalc((mif.uidValue&0xff00)>>8, &cksum);
-      pushandcalc(mif.uidValue&0xff, &cksum);
-      to.write(0x100-cksum); /* DCS */
-      to.write(0x00); /* ZERO */
+         /* Preamble */
+         pushpreamble(0xA, false, 0x4A, &cksum);
+         /* Packet */
+         pushandcalc(mif.tags, &cksum);
+         pushandcalc(0x00, &cksum); /* Tag no. */
+         pushandcalc(mif.sens_res>>8, &cksum);/* sens res upper */
+         pushandcalc(mif.sens_res&0xff, &cksum);/* sens res lower */
+         pushandcalc(mif.sel_res, &cksum); /* sel res */
+         pushandcalc(mif.uidLength, &cksum); /* NFCID Len */
+         /* NFCID */
+         pushandcalc(mif.uidValue>>24, &cksum);
+         pushandcalc((mif.uidValue&0xff0000)>>16, &cksum);
+         pushandcalc((mif.uidValue&0xff00)>>8, &cksum);
+         pushandcalc(mif.uidValue&0xff, &cksum);
+         to.write(0x100-cksum); /* DCS */
+         to.write(0x00); /* ZERO */
+
+         /* We also clear the command so we do not keep on sending it back. */
+         mif.cmd = 0;
+      }
    }
    else if (mif.cmd == 0x14) {
       wait(1, SC_MS);
@@ -255,6 +261,8 @@ void pn532::pushresp() {
       pushpreamble(0x5, false, 0x15, &cksum);
       to.write(0x100-cksum); /* DCS */
       to.write(0x00); /* ZERO */
+      /* We clear the command so we do not keep on sending it back. */
+      mif.cmd = 0;
    }
    else if (mif.cmd == 0x02) {
       wait(1, SC_MS);
@@ -269,10 +277,9 @@ void pn532::pushresp() {
       pushandcalc(0x07, &cksum); /* Support */
       to.write(0x100-cksum); /* DCS */
       to.write(0x00); /* ZERO */
+      /* We clear the command so we do not keep on sending it back. */
+      mif.cmd = 0;
    }
-
-   /* The last command was executed, so we blank it out. */
-   mif.cmd = 0x0;
 }
 
 void pn532::process_th() {
