@@ -24,7 +24,8 @@
 #include "setfield.h"
 #include "soc/gpio_reg.h"
 #include "gpioset.h"
-#include "Arduino.h"
+#include "soc/gpio_sig_map.h"
+#include "clockpacer.h"
 
 void gpio_matrix::start_of_simulation() {
    /* We need to set all unused GPIO mout_s signals to an initial value. The
@@ -261,17 +262,17 @@ void gpio_matrix::updateth() {
 
 void gpio_matrix::update() {
    update_ev.notify();
-   del1cycle();
+   if(clockpacer.is_thread()) clockpacer.wait_next_apb_clk();
 }
 
 void gpio_matrix::updategpioreg() {
    updategpioreg_ev.notify();
-   del1cycle();
+   if(clockpacer.is_thread()) clockpacer.wait_next_apb_clk();
 }
 
 void gpio_matrix::updategpiooe() {
    updategpiooe_ev.notify();
-   del1cycle();
+   if(clockpacer.is_thread()) clockpacer.wait_next_apb_clk();
 }
 
 void gpio_matrix::trace(sc_trace_file *tf) {
