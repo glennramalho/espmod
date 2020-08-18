@@ -57,7 +57,9 @@ void __yield() {
 void yield() __attribute__ ((weak, alias("__yield")));
 
 /* This is something often used inside the model and drivers for the model. */
-void del1cycle() { wait(clockpacer.get_cpu_period()); }
+void del1cycle() {
+   if (clockpacer.is_thread()) clockpacer.wait_next_cpu_clk();
+}
 
 
 #if CONFIG_AUTOSTART_ARDUINO

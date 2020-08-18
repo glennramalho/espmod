@@ -55,6 +55,10 @@ class clockpacer_t {
    void set_rtc8m_period(sc_time &_n) {
       rtc8m_period = (int)floor(_n.to_seconds()*1e9);
    }
+   bool is_thread() {
+      auto p = sc_get_current_process_handle();
+      return p.valid() && p.proc_kind() != SC_METHOD_PROC_;
+   }
 };
 
 extern clockpacer_t clockpacer;
