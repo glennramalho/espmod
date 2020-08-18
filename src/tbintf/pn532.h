@@ -41,7 +41,7 @@ SC_MODULE(pn532) {
    /* Functions */
    void trace(sc_trace_file *tf);
    void setcardnotpresent();
-   void setcardpresent();
+   void setcardpresent(uint32_t uid);
    void start_of_simulation();
    /* Processes */
    void i2c_th(void);

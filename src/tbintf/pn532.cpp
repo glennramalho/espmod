@@ -58,12 +58,12 @@ void pn532::setcardnotpresent() {
    mif.uidValue = 0x0000;
 }
 
-void pn532::setcardpresent() {
+void pn532::setcardpresent(uint32_t uid) {
    mif.tags = 1;
    mif.sens_res = 0x5522;
    mif.sel_res = 0;
    mif.uidLength = 4;
-   mif.uidValue = 0x75D17E20;
+   mif.uidValue = uid;
 }
 
 void pn532::start_of_simulation() {
