@@ -29,12 +29,14 @@ SC_MODULE(pcf8574) {
    sc_port<sc_signal_inout_if<gn_mixed>,PCF8574_PINS> sig {"sig"};
    sc_out<gn_mixed> intr {"intr"};
    sc_event clearintr_ev {"clearintr_ev"};
+   sc_signal<int> state {"state"};
 
    /* Processes */
    void intr_th(void);
    void i2c_th(void);
 
    /* Functions */
+   void trace(sc_trace_file *tf);
    /* The device ID can change. If this is a PCF8574, the ID can go from
     * 20h to 27h. If this is a PCF8574A it can go from 38h to 3Fh. The default
     * value is 20h.

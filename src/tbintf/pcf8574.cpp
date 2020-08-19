@@ -96,9 +96,6 @@ void pcf8574::intr_th() {
    }
 }
 
-
-
-
 void pcf8574::i2c_th(void) {
    int i;
    unsigned int devid, data;
@@ -115,6 +112,7 @@ void pcf8574::i2c_th(void) {
    while(1) {
       /* We wait for a change on either the SDA or the SCL. */
       wait();
+      state.write((int)i2cstate);
 
       /* If we get Z or X, we ignore it. */
       if (!scl.read().islogic()) {
@@ -162,14 +160,17 @@ void pcf8574::i2c_th(void) {
           */
          case ACKRD:
             i = 7;
+            i2cstate = READ;
             data = sampleport();
 
             /* We also clear the interrupt. */
             clearintr_ev.notify();
+            break;
          /* When we hit the ACKWR, all we do is clear the shiftregister to
           * begin to receive data.
           */
          case ACKWR:
+            i = 7;
             data = 0;
             i2cstate = WRDATA;
             /* We also clear the interrupt. */
@@ -177,6 +178,9 @@ void pcf8574::i2c_th(void) {
             break;
          /* Each bit is taken. */
          case WRDATA:
+            /* Just when we enter the WRDATA phase we need to release the SDA */
+            if (i == 7) sda.write(GN_LOGIC_Z);
+            /* And the data we collect to drive in the WRD phase. */
             data = (data << 1) + ((sda.read().ishigh())?1:0);
             if (i == 0) i2cstate = ACKWRD;
             else i = i - 1;
@@ -255,8 +259,6 @@ void pcf8574::i2c_th(void) {
                   if ((drive & (1<<cnt))>0) sig[cnt]->write(GN_LOGIC_W1);
                }
             }
-            /* The SDA we float. */
-            sda.write(GN_LOGIC_Z);
             break;
          case ACKNACK:
             /* The SDA we float. */
@@ -270,4 +272,8 @@ void pcf8574::i2c_th(void) {
          default: ; /* For the others we do nothing. */
       }
    }
+}
+
+void pcf8574::trace(sc_trace_file *tf) {
+   sc_trace(tf, state, state.name());
 }
