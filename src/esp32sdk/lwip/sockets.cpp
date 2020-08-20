@@ -1,5 +1,5 @@
 /*******************************************************************************
- * sockets.h -- Copyright 2019 Glenn Ramalho - RFIDo Design
+ * sockets.cpp -- Copyright 2019 Glenn Ramalho - RFIDo Design
  *******************************************************************************
  * Description:
  *   This file ports several socket functions of the LwIP TCP/IP stack to the
@@ -64,6 +64,7 @@
 #include "errno.h"
 #include "freertos/task.h"
 #include <string>
+#include "clockpacer.h"
 
 #define ESCAPENONE 0
 #define ESCAPEALL 1
@@ -207,8 +208,13 @@ int espm_select(int maxfdp1, fd_set *readset, fd_set *writeset,
    unsigned long timeouttarg;
    errno = 0;
 
+   /* We collect the starting time so that we can do timeouts. */
    starttime = millis();
-   del1cycle();
+   /* We also wait a small delay. This is just to make sure if there was some
+    * socket just opened up in the previous step, there will be time for it
+    * to take effect.
+    */
+   clockpacer.wait_next_cpu_clk();
 
    /* maxfdp1 needs to be checked too. */
    if (maxfdp1 < 0 || maxfdp1 > FD_SETSIZE) {
@@ -599,6 +605,15 @@ int espm_close(int s) {
     * deallocate everything nicely.
     */
    if (!sc_is_running()) return 0;
+   /* For sometimes the sc_is_running() does not catch that we are in an
+    * exit handler. Therefore, we do a second check to protect us. If this
+    * was called from something that was not a thread, it must have been
+    * an exit handler.
+    */
+   if (!clockpacer.is_thread()) {
+      PRINTF_INFO("SOCK", "espm_close() called from exit handler");
+      return 0;
+   }
 
    /* If connected, we send a close to the other side. */
    if (_fdlist[ind].connected) {
@@ -1123,7 +1138,7 @@ int __espm_sendmsg(int port, const char *msg, int size, int escstyle,
       /* Each time we delay one cycle to prevent us from getting stuck in a busy
        * loop without time delays.
        */
-      //if (port >= 0) del1cycle();
+      //if (port >= 0) clockpacer.wait_next_cpu_clk();
 
       /* It is important to distinguish between the portstr and the main
        * message. The port string we already know there is space, so we simply
