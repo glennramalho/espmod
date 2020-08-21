@@ -42,6 +42,9 @@ SC_MODULE(uartclient) {
    /* Tasks */
    void send(const char *string);
    std::string get();
+   char read() { return i_uart.from.read(); }
+   int num_available() { return i_uart.from.num_available(); }
+   const sc_event &recv_ev() { return i_uart.from.data_written_event(); }
    void expect(const char *string);
    void dump();
 
