@@ -38,6 +38,17 @@ void pn532::pushack() {
    to.write(0x00);
 }
 
+void pn532::pushsyntaxerr() {
+   to.write(0x00);
+   to.write(0x00);
+   to.write(0xFF);
+   to.write(0x01);
+   to.write(0xFF);
+   to.write(0x7F);
+   to.write(0x81);
+   to.write(0x00);
+}
+
 void pn532::pushpreamble(int len, bool hosttopn, int cmd, unsigned char *c) {
    to.write(0x00);
    to.write(0x00);
@@ -69,6 +80,8 @@ void pn532::setcardpresent(uint32_t uid) {
 void pn532::start_of_simulation() {
    /* We begin setting the card as non-present. */
    setcardnotpresent();
+   /* And we initialize the device to off and no IRQ. */
+   opstate.write(OPOFF);
 }
 
 void pn532::i2c_th(void) {
@@ -100,7 +113,11 @@ void pn532::i2c_th(void) {
             devid = 0;
          }
             /* STOP BIT */
-         else i2cstate = IDLE;
+         else {
+            /* Anytime we get a stop bit, we dump any response left. */
+            while(to.num_available() != 0) (void)to.read();
+            i2cstate = IDLE;
+         }
       }
       /* The rest has to be data changes. For simplicity all data in and flow
        * control is here. The data returned is done on another branch.
@@ -122,11 +139,9 @@ void pn532::i2c_th(void) {
             i = i - 1;
             if (i == 0 && devid == PN532_ID) {
                /* Once we reach zero we release the IRQ line. We also record if
-                * the block is invalid (read during IRQ high) or valid (read
-                * during IRQ low.
+                * the block is invalid (no data to return).
                 */
-               invalid = !gethasdata();
-               ackirq_ev.notify();
+               invalid = to.num_available() == 0;
             }
             break;
          /* If the address does not match, we return Z. */
@@ -148,6 +163,7 @@ void pn532::i2c_th(void) {
                 */
                if (invalid) data = 0x00;
                else data = 0x01;
+
                i2cstate = READ;
             }
             /* If this is a ACKWR, we then clear the buffer and collect the
@@ -156,6 +172,11 @@ void pn532::i2c_th(void) {
             else {
                data = 0;
                i2cstate = WRDATA;
+
+               /* Before we start, we dump anything that could be left over
+                * from the previous command.
+                */
+               while(from.num_available() != 0) (void)from.read();
             }
             break;
          /* Each bit is taken. */
@@ -173,8 +194,11 @@ void pn532::i2c_th(void) {
             break;
          /* Depending on the acknack we either return more data or not. */
          case ACKNACK:
-            if (sda.read().ishigh()) i2cstate = IDLE;
-            else {
+            if (sda.read().ishigh()) {
+               i2cstate = IDLE;
+               /* If there is still any data in the to fifo, we dump it. */
+               while(to.num_available() != 0) (void)to.read();
+            } else {
                i2cstate = READ;
                i = 7;
                if (to.num_available() == 0) data = 0;
@@ -225,19 +249,15 @@ void pn532::i2c_th(void) {
 
 void pn532::pushresp() {
    unsigned char cksum = 0;
-   if (mif.cmd == 0x4a) {
-      /* For the 4A command we place a response only if a card is present. We
-       * remain in the command until the card is placed.
-       */
-      if (mif.tags > 0) {
-         /* We wait for a short time and place the response. */
-         wait(2, SC_MS);
-         sethasdata();
 
+   /* Now we can start processing the commands. */
+   if (mif.cmd == 0x4a && !mif.cmdbad) {
+      /* If we got a card, we return the data on it. */
+      if (mif.tags > 0) {
          /* Preamble */
-         pushpreamble(0xA, false, 0x4A, &cksum);
+         pushpreamble(0xA, false, 0x4B, &cksum);
          /* Packet */
-         pushandcalc(mif.tags, &cksum);
+         pushandcalc((mif.tags > mif.brty)?mif.brty:mif.tags, &cksum);/* NbTg */
          pushandcalc(0x00, &cksum); /* Tag no. */
          pushandcalc(mif.sens_res>>8, &cksum);/* sens res upper */
          pushandcalc(mif.sens_res&0xff, &cksum);/* sens res lower */
@@ -250,23 +270,23 @@ void pn532::pushresp() {
          pushandcalc(mif.uidValue&0xff, &cksum);
          to.write(0x100-cksum); /* DCS */
          to.write(0x00); /* ZERO */
-
-         /* We also clear the command so we do not keep on sending it back. */
-         mif.cmd = 0;
+      } else {
+         /* If no target came in, we return an empty list. */
+         /* Preamble */
+         pushpreamble(0xA, false, 0x4B, &cksum);
+         /* Packet */
+         pushandcalc(0, &cksum); /* NbTg */
+         to.write(0x100-cksum); /* DCS */
+         to.write(0x00); /* ZERO */
       }
    }
-   else if (mif.cmd == 0x14) {
-      wait(1, SC_MS);
-      sethasdata();
+   /* SAMConfiguration command */
+   else if (mif.cmd == 0x14 && !mif.cmdbad) {
       pushpreamble(0x5, false, 0x15, &cksum);
       to.write(0x100-cksum); /* DCS */
       to.write(0x00); /* ZERO */
-      /* We clear the command so we do not keep on sending it back. */
-      mif.cmd = 0;
    }
-   else if (mif.cmd == 0x02) {
-      wait(1, SC_MS);
-      sethasdata();
+   else if (mif.cmd == 0x02 && !mif.cmdbad) {
       pushpreamble(0x06, false, 0x3, &cksum);
       /* Firmware Version, we just pick something cool from
        * one of the examples.
@@ -277,8 +297,73 @@ void pn532::pushresp() {
       pushandcalc(0x07, &cksum); /* Support */
       to.write(0x100-cksum); /* DCS */
       to.write(0x00); /* ZERO */
-      /* We clear the command so we do not keep on sending it back. */
-      mif.cmd = 0;
+   }
+   else {
+      /* For unknown commands we just return a syntax error. */
+      pushsyntaxerr();
+   }
+
+   /* We also clear the command so we do not keep on sending it back. */
+   mif.cmd = 0;
+}
+
+void pn532::resp_th() {
+   while(true) {
+      /* We first wait for a command to come in. */
+      wait(newcommand_ev | ack_ev);
+
+      /* Anytime we get a new command, we need to dump what we were doing before
+       * and start it. So, we move the state back to OPACK to issue the new ACK.
+       */
+      if (newcommand_ev.triggered()) {
+         ack_ev.notify(200, SC_US);
+         opstate.write(OPACK);
+
+      /* For other times, we just process whatever command came in. */
+      } else switch (opstate.read()) {
+         /* The manual was not clear what happens if the host does not read
+          * the ACK. There are three possible options:
+          * - it gets merged with the next command
+          * - it gets overwitten
+          * - the command does not start until the ACK was read
+          * I am then assuming the third is the one.
+          */
+         case OPACK:
+            /* We dump any previous possible data in the to FIFO, like a
+             * previous unread response, and we push the ACK. Then we wait
+             * for it to be read out.
+             */
+            while(to.num_available() != 0) (void)to.read();
+            pushack();
+            opstate.write(OPACKRDOUT);
+            break;
+
+         /* After the ACK has been read out, we do a delay. Some commands have
+          * a predelay too.
+          */
+         case OPACKRDOUT:
+            if (mif.predelay != 0) {
+               ack_ev.notify(sc_time(mif.predelay, SC_MS));
+               opstate.write(OPPREDELAY);
+            } else {
+               ack_ev.notify(sc_time(mif.delay, SC_MS));
+               opstate.write(OPBUSY);
+            }
+            break;
+         case OPPREDELAY:
+            ack_ev.notify(sc_time(mif.delay, SC_MS));
+            opstate.write(OPBUSY);
+            break;
+         /* Then we send the response. */
+         case OPBUSY:
+            while(to.num_available() != 0) (void)to.read();
+            pushresp();
+            opstate.write(OPREADOUT);
+            break;
+         case OPREADOUT:
+            opstate.write(OPIDLE);
+         default: ;
+      }
    }
 }
 
@@ -287,22 +372,8 @@ void pn532::process_th() {
    unsigned char msg;
    enum {IDLE, UNLOCK1, UNLOCK2, UNLOCK3, UNLOCK4, UNLOCK5, PD0, PDN, DCS,
       LOCK} pn532state;
-   clrhasdata();
 
    while(true) {
-      if (from.num_available() == 0) {
-         wait(ackirq_ev | from.data_written_event());
-         /* When the ID is recognized, the IRQ goes high, regardless of what he
-          * actually does.
-          */
-         if (ackirq_ev.triggered()) {
-            clrhasdata();
-            /* Depending on the command, we might have also a response.*/
-            pushresp();
-            continue;
-         }
-      }
-
       msg = grab(&cksum);
       switch(pn532state) {
          case IDLE:
@@ -322,7 +393,7 @@ void pn532::process_th() {
             else pn532state = IDLE;
             break;
          case UNLOCK3:
-            /* We collect the length */
+            /* And we collect the length of the next command. */
             mif.len = msg;
             pn532state = UNLOCK4;
             break;
@@ -359,11 +430,31 @@ void pn532::process_th() {
              * messages are pitched.
              */
             mif.len = mif.len - 1;
+            mif.cmdbad = false;
+
+            /* SAM command */
             if (mif.cmd == 0x14) {
                mif.mode = msg;
-               if (mif.len>0) { mif.timeout=grab(&cksum); mif.len = mif.len-1;}
-               if (mif.len>0) { mif.useirq=grab(&cksum); mif.len = mif.len-1;}
+               if (mif.len<2) {
+                  mif.cmdbad = true;
+               } else {
+                  mif.timeout=grab(&cksum); mif.len = mif.len-1;
+                  mif.useirq=grab(&cksum); mif.len = mif.len-1;
+               }
             }
+            else if (mif.cmd == 0x4a) {
+               mif.maxtg = msg;
+               if (mif.len<1) {
+                  mif.cmdbad = true;
+               } else {
+                  mif.brty = grab(&cksum); mif.len = mif.len - 1;
+               }
+
+               /* brty=00 only supports 1 or 2 targets. */
+               if (mif.maxtg > 2 || mif.maxtg <= 0) mif.cmdbad = true;
+               if (mif.brty != 0x00) mif.cmdbad = true; /* we only support 00*/
+            }
+
             if (mif.len == 0) pn532state = DCS;
             break;
          case DCS: {
@@ -387,31 +478,65 @@ void pn532::process_th() {
             pn532state = IDLE;
             /* Now we can execute the command. */
             if (mif.cmd == 0x4a) {
-               PRINTF_INFO("TEST", "Accepted Inlist Passive Target");
+               PRINTF_INFO("PN532", "Accepted Inlist Passive Target");
                /* We put then the response in the buffer */
-               sethasdata();
-               pushack();
+               mif.predelay = 5;
+               mif.delay = 25;
+               newcommand_ev.notify();
             }
             else if (mif.cmd == 0x14) {
-               PRINTF_INFO("TEST", "Accepted SAM configuration command");
+               PRINTF_INFO("PN532", "Accepted SAM configuration command");
                /* We put then the response in the buffer */
-               sethasdata();
-               pushack();
+               mif.predelay = 0;
+               mif.delay = 1;
+               newcommand_ev.notify();
             }
             else if (mif.cmd == 0x02) {
-               PRINTF_INFO("TEST", "Accepted getVersion command");
-               sethasdata();
-               pushack();
+               PRINTF_INFO("PN532", "Accepted getVersion command");
+               mif.predelay = 0;
+               mif.delay = 1;
+               newcommand_ev.notify();
+            }
+            else {
+               /* Illegal commands also are processed as commands, so an
+                * ACK is returned, just the data packet has a syntax error.
+                */
+               mif.predelay = 0;
+               mif.delay = 1;
+               PRINTF_INFO("PN532", "Accepted Unknown command");
+               newcommand_ev.notify();
             }
       }
       pnstate.write(pn532state);
    }
 }
 
+/* For the IRQ manage, we initialize the thread taking the pin high. Then, when
+ * the TO fifo changes, we will take it either high or low.
+ */
+void pn532::irqmanage_th() {
+   bool wasempty = true;
+   irq.write(GN_LOGIC_1);
+   while(1) {
+      wait(to.data_written_event() | to.data_read_event());
+
+      if (to.num_available() == 0 && !wasempty) {
+         irq.write(GN_LOGIC_1);
+         ack_ev.notify();
+      }
+      else irq.write(GN_LOGIC_0);
+
+      wasempty = to.num_available() == 0;
+   }
+}
+
 void pn532::trace(sc_trace_file *tf) {
+   sc_trace(tf, opstate, opstate.name());
+   sc_trace(tf, ack_ev, ack_ev.name());
+   sc_trace(tf, newcommand_ev, newcommand_ev.name());
    sc_trace(tf, pnstate, pnstate.name());
    sc_trace(tf, icstate, icstate.name());
    sc_trace(tf, intoken, intoken.name());
    sc_trace(tf, outtoken, outtoken.name());
-   sc_trace(tf, ackirq_ev, ackirq_ev.name());
+   sc_trace(tf, irq, irq.name());
 }

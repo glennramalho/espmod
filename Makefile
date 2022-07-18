@@ -18,7 +18,7 @@ SYSTEMC_HOME=/opt/systemc/systemc-2.3.3
 TARGET_ARCH=linux64
 ARCH_SUFFIX=64-linux64
 FLAGS_COMMON = -Wall -Wno-reorder -Wno-variadic-macros -Wno-parentheses \
-   $(CPPSTANDARD) -fms-extensions -Wno-pedantic
+   $(CPPSTANDARD) -fms-extensions -Wno-pedantic -Wno-format-truncation
 FLAGS_STRICT = -Wno-long-long
 FLAGS_WERROR =
 

@@ -29,6 +29,7 @@ SC_MODULE(pn532) {
    sc_in<gn_mixed> reset {"reset"};
    sc_out<gn_mixed> irq {"irq"};
 
+   sc_signal<int> opstate {"opstate"};
    sc_signal<int> pnstate {"pnstate"};
    sc_signal<int> icstate {"icstate"};
    sc_signal<unsigned char> intoken {"intoken"};
@@ -36,7 +37,8 @@ SC_MODULE(pn532) {
 
    sc_fifo<unsigned char> to {"to"};
    sc_fifo<unsigned char> from {"from"};
-   sc_event ackirq_ev {"ackirq_ev"};
+   sc_event ack_ev {"ack_ev"};
+   sc_event newcommand_ev {"newcommand_ev"};
 
    /* Functions */
    void trace(sc_trace_file *tf);
@@ -46,6 +48,8 @@ SC_MODULE(pn532) {
    /* Processes */
    void i2c_th(void);
    void process_th(void);
+   void resp_th(void);
+   void irqmanage_th(void);
 
    /* I2C */
    struct {
@@ -56,25 +60,30 @@ SC_MODULE(pn532) {
       uint32_t uidValue;
       unsigned char cmd;
       unsigned char mode;
+      bool cmdbad;
+      unsigned short int maxtg;
+      unsigned short int brty;
       int len;
       int timeout;
       bool useirq;
+      unsigned int delay;
+      unsigned int predelay;
    } mif;
 
    // Constructor
    SC_CTOR(pn532) {
-      hasdata = false;
       SC_THREAD(i2c_th);
       SC_THREAD(process_th);
+      SC_THREAD(resp_th);
+      SC_THREAD(irqmanage_th);
    }
 
    /* Private routines. */
    private:
-   bool hasdata;
-   void sethasdata() { hasdata = true; irq.write(GN_LOGIC_0); }
-   void clrhasdata() { hasdata = false; irq.write(GN_LOGIC_1); }
-   bool gethasdata() { return hasdata; }
+   typedef enum {OPOFF, OPIDLE, OPACK, OPACKRDOUT, OPPREDELAY, OPBUSY,
+      OPREADOUT} op_t;
    void pushack();
+   void pushsyntaxerr();
    void pushpreamble(int len, bool hosttopn, int cmd, unsigned char *c);
    void pushresp();
    unsigned char put() {
