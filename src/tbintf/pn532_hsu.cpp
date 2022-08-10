@@ -31,12 +31,12 @@ void pn532_hsu::rx_th(void) {
    bool incomming;
 
    /* First we wait for the signal to rise. */
-   while (!rx.read().ishigh()) wait();
+   while (!rx.read().ishigh()) wait(rx.value_changed_event());
 
    /* Now we can listen for a packet. */
    while(true) {
       /* We wait for the RX to go low. */
-      wait();
+      wait(rx.value_changed_event());
       if (!rx.read().islow()) continue;
 
       /* We jump halfway into the start pulse. */

@@ -56,6 +56,7 @@ struct pn532_hsu : public pn532_base {
       stopbits = 3;
 
       SC_THREAD(rx_th);
+      sensitive << rx;
       SC_THREAD(tx_th);
    }
 

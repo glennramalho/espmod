@@ -28,7 +28,6 @@
 
 SC_MODULE(pn532_base) {
    /* Signals */
-   sc_in<gn_mixed> reset {"reset"};
    sc_out<gn_mixed> irq {"irq"};
 
    sc_signal<int> opstate {"opstate"};

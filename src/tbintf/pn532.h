@@ -19,86 +19,30 @@
  *******************************************************************************
  */
 
+#ifndef _PN532_H
+#define _PN532_H
+
 #include <systemc.h>
 #include "gn_mixed.h"
+#include "pn532_base.h"
 
-SC_MODULE(pn532) {
+struct pn532 : public pn532_base {
    /* Signals */
    sc_inout<gn_mixed> sda {"sda"};
    sc_inout<gn_mixed> scl {"scl"};
-   sc_in<gn_mixed> reset {"reset"};
-   sc_out<gn_mixed> irq {"irq"};
-
-   sc_signal<int> opstate {"opstate"};
-   sc_signal<int> pnstate {"pnstate"};
    sc_signal<int> icstate {"icstate"};
-   sc_signal<unsigned char> intoken {"intoken"};
-   sc_signal<unsigned char> outtoken {"outtoken"};
-
-   sc_fifo<unsigned char> to {"to"};
-   sc_fifo<unsigned char> from {"from"};
-   sc_event ack_ev {"ack_ev"};
-   sc_event newcommand_ev {"newcommand_ev"};
 
    /* Functions */
    void trace(sc_trace_file *tf);
-   void setcardnotpresent();
-   void setcardpresent(uint32_t uid);
-   void start_of_simulation();
    /* Processes */
    void i2c_th(void);
-   void process_th(void);
-   void resp_th(void);
-   void irqmanage_th(void);
-
-   /* I2C */
-   struct {
-      unsigned char tags;
-      unsigned int sens_res;
-      unsigned char sel_res;
-      unsigned char uidLength;
-      uint32_t uidValue;
-      unsigned char cmd;
-      unsigned char mode;
-      bool cmdbad;
-      unsigned short int maxtg;
-      unsigned short int brty;
-      int len;
-      int timeout;
-      bool useirq;
-      unsigned int delay;
-      unsigned int predelay;
-   } mif;
 
    // Constructor
-   SC_CTOR(pn532) {
+   pn532(sc_module_name name): pn532_base(name) {
       SC_THREAD(i2c_th);
-      SC_THREAD(process_th);
-      SC_THREAD(resp_th);
-      SC_THREAD(irqmanage_th);
    }
 
-   /* Private routines. */
-   private:
-   typedef enum {OPOFF, OPIDLE, OPACK, OPACKRDOUT, OPPREDELAY, OPBUSY,
-      OPREADOUT} op_t;
-   void pushack();
-   void pushsyntaxerr();
-   void pushpreamble(int len, bool hosttopn, int cmd, unsigned char *c);
-   void pushresp();
-   unsigned char put() {
-      unsigned char m = to.read();
-      outtoken.write(m);
-      return m;
-   }
-   unsigned char grab(unsigned char *c) {
-      unsigned char m = from.read();
-      intoken.write(m);
-      if (c != NULL) *c = 0xff & (*c + m);
-      return m;
-   }
-   void pushandcalc(const unsigned char m, unsigned char *cksum) {
-      *cksum = 0xff & (*cksum + m);
-      to.write(m);
-   }
+   SC_HAS_PROCESS(pn532);
 };
+
+#endif
