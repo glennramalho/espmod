@@ -140,8 +140,9 @@ MODULES=$(MODDIR)/cchan.cpp $(MODDIR)/cchanflash.cpp \
 TBMODULES=$(TBINTF)/tft.cpp $(TBINTF)/webclient.cpp $(TBINTF)/uartclient.cpp \
    $(TBINTF)/btclient.cpp $(TBINTF)/cd4097_channel.cpp \
    $(TBINTF)/cd4067.cpp $(TBINTF)/pn532.cpp $(TBINTF)/pn532_base.cpp \
-   $(TBINTF)/pn532_hsu.cpp $(TBINTF)/pcf8574.cpp \
-   $(TBINTF)/tpencoder.cpp $(TBINTF)/encoder.cpp $(TBINTF)/st7735.cpp
+   $(TBINTF)/pn532_hsu.cpp $(TBINTF)/pcf8574.cpp $(TBINTF)/gnmux.cpp \
+   $(TBINTF)/gndemux.cpp $(TBINTF)/tpencoder.cpp $(TBINTF)/encoder.cpp \
+   $(TBINTF)/st7735.cpp
 
 # We join the files into two sets of libraries. One with the Arduino IDF files
 # and one with the rest.
