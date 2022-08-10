@@ -204,6 +204,26 @@ unsigned char TestSerial::bl_read() {
    return from->read();
 }
 
+unsigned char TestSerial::bl_read(sc_time tmout) {
+   /* And this is a blocking read with a timeout. */
+   
+   clockpacer.wait_next_apb_clk();
+   if (from == NULL) return -1;
+   if (taken) {
+      taken = false;
+      return waiting;
+   }
+   /* If there is nothing available, we wait for it to arrive or a timeout. */
+   if (available() == 0) {
+      wait(tmout, from->data_written_event());
+      clockpacer.wait_next_apb_clk();
+      if (available() == 0) return -1;
+   }
+
+   /* If it was all good, we return it. */
+   return from->read();
+}
+
 int TestSerial::peek() {
    clockpacer.wait_next_apb_clk();
    if (from == NULL) return -1;
@@ -221,6 +241,24 @@ unsigned char TestSerial::bl_peek() {
    if (from == NULL) return -1;
    if (taken) return waiting;
    else {
+      taken = true;
+      waiting = from->read();
+      return waiting;
+   }
+}
+
+unsigned char TestSerial::bl_peek(sc_time tmout) {
+   clockpacer.wait_next_apb_clk();
+   if (from == NULL) return -1;
+   if (taken) return waiting;
+   else {
+      /* If there is nothing available,we wait for it to arrive or a timeout. */
+      if (available() == 0) {
+         wait(tmout, from->data_written_event());
+         clockpacer.wait_next_apb_clk();
+         if (available() == 0) return -1;
+      }
+
       taken = true;
       waiting = from->read();
       return waiting;

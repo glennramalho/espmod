@@ -30,29 +30,17 @@
 // private method to read stream with timeout
 int Stream::timedRead()
 {
-    int c;
-    _startMillis = millis();
-    do {
-        c = read();
-        if(c >= 0) {
-            return c;
-        }
-    } while(millis() - _startMillis < _timeout);
-    return -1;     // -1 indicates timeout
+    // The original does a busy wait, but that is very slow to simulate. We take
+    // advantage that we are in a model and wait for the write event or a
+    // timeout event.
+    return this->read_timeout(_timeout);
 }
 
 // private method to peek stream with timeout
 int Stream::timedPeek()
 {
-    int c;
-    _startMillis = millis();
-    do {
-        c = peek();
-        if(c >= 0) {
-            return c;
-        }
-    } while(millis() - _startMillis < _timeout);
-    return -1;     // -1 indicates timeout
+    // Same as timedRead()
+    return this->peek_timeout(_timeout);
 }
 
 // returns peek of the next digit in the stream or -1 if timeout
@@ -292,3 +280,26 @@ String Stream::readStringUntil(char terminator)
     return ret;
 }
 
+// For the generic stream we just check the channel in 1ms times. For other
+// channels, the channel will overwrite this with a proper SystemC wait
+// function.
+int Stream::read_timeout(unsigned long int tmout) {
+    int c;
+    _startMillis = millis();
+    c = read();
+    while (c < 0 || millis() < _startMillis + tmout) {
+        delay(1);
+        c = read();
+    }
+    return c;
+}
+int Stream::peek_timeout(unsigned long int tmout) {
+    int c;
+    _startMillis = millis();
+    c = peek();
+    while (c < 0 || millis() < _startMillis + tmout) {
+        delay(1);
+        c = peek();
+    }
+    return c;
+}

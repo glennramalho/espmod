@@ -196,7 +196,21 @@ HardwareSerial::operator bool() const
     return true;
 }
 
+// These are not a Arduino functions, but it is quite useful to prevent the
+// ESP from doing a busy wait, which will take a very long time to run on
+// a model.
 void HardwareSerial::setports(int modn, sc_fifo<unsigned char> *_to,
        sc_fifo<unsigned char> *_from, void *_mod) {
    uartInit(modn, _to, _from, _mod);
 }
+int HardwareSerial::read_timeout(unsigned long int tmout)
+{
+    return uartReadTimeout(_uart, tmout);
+}
+int HardwareSerial::peek_timeout(unsigned long int tmout)
+{
+    return uartPeekTimeout(_uart, tmout);
+}
+
+
+

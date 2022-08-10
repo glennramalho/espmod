@@ -123,6 +123,11 @@ protected:
     // this allows format characters (typically commas) in values to be ignored
 
     float parseFloat(char skipChar);  // as above but the given skipChar is ignored
+
+    /* Internal use for the model. */
+    virtual int read_timeout(unsigned long int tmout);
+    virtual int peek_timeout(unsigned long int tmout);
+
 };
 
 #endif

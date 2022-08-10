@@ -294,3 +294,21 @@ void uartInit(int modn, void *_to, void *_from, void *_mod) {
       (sc_fifo<unsigned char> *)_from);
    _uart_bus_array[modn].u = (uart *)_mod;
 }
+
+uint8_t uartReadTimeout(uart_struct_t* uart, unsigned long int tmout)
+{
+    if(uart == NULL) {
+        return 0;
+    }
+    return uart->t->bl_read(sc_time(tmout, SC_MS));
+}
+
+uint8_t uartPeekTimeout(uart_struct_t* uart, unsigned long int tmout)
+{
+    if(uart == NULL) {
+        return 0;
+    }
+    return uart->t->bl_peek(sc_time(tmout, SC_MS));
+}
+
+

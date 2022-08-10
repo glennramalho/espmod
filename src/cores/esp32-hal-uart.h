@@ -80,6 +80,14 @@ bool uartRxActive(uart_t* uart);
 
 void uartInit(int modn, void *_to, void *_from, void *_mod);
 
+/* These do not exist in the Arduino IDE. They are only possible in the model.
+ * They are the same thing as their counterparts but allow you to specify a
+ * timeout. This is useful so that internal library functions can do a time out
+ * wait without having to do a slow busy wait.
+ */
+uint8_t uartReadTimeout(uart_t* uart, unsigned long int tmout);
+uint8_t uartPeekTimeout(uart_t* uart, unsigned long int tmout);
+
 #ifdef __cplusplus
 }
 #endif

@@ -101,6 +101,10 @@ public:
     void setports(int modn, sc_fifo<unsigned char> *_to,
        sc_fifo<unsigned char> *_from, void *_mod);
 
+    protected:
+    virtual int peek_timeout(unsigned long int tmout);
+    virtual int read_timeout(unsigned long int tmout);
+
 protected:
     int _uart_nr;
     uart_t* _uart;
