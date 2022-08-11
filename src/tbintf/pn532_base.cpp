@@ -210,11 +210,17 @@ void pn532_base::process_th() {
       switch(pn532state) {
          case IDLE:
             if (msg == 0x0) pn532state = UNLOCK1;
-            else pn532state = IDLE;
+            else {
+               PRINTF_WARN("PN532", "Warning: got an illegal preamble.");
+               pn532state = IDLE;
+            }
             break;
          case UNLOCK1:
             if (msg == 0x0) pn532state = UNLOCK2;
-            else pn532state = IDLE;
+            else {
+               PRINTF_WARN("PN532","Warning: got an illegal preamble, byte 2.");
+               pn532state = IDLE;
+            }
             break;
          case UNLOCK2:
             /* The first 0x0 can be as long as the customer wants, so we
@@ -222,7 +228,10 @@ void pn532_base::process_th() {
              */
             if (msg == 0x0) pn532state = UNLOCK2;
             else if (msg == 0xff) pn532state = UNLOCK3;
-            else pn532state = IDLE;
+            else {
+               PRINTF_WARN("PN532","Warning: got an illegal preamble, byte 3.");
+               pn532state = IDLE;
+            }
             break;
          case UNLOCK3:
             /* And we collect the length of the next command. */
