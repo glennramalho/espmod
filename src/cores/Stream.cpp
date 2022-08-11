@@ -287,7 +287,7 @@ int Stream::read_timeout(unsigned long int tmout) {
     int c;
     _startMillis = millis();
     c = read();
-    while (c < 0 || millis() < _startMillis + tmout) {
+    while (c < 0 && millis() < _startMillis + tmout) {
         delay(1);
         c = read();
     }
@@ -297,7 +297,7 @@ int Stream::peek_timeout(unsigned long int tmout) {
     int c;
     _startMillis = millis();
     c = peek();
-    while (c < 0 || millis() < _startMillis + tmout) {
+    while (c < 0 && millis() < _startMillis + tmout) {
         delay(1);
         c = peek();
     }
