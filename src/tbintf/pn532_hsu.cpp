@@ -84,6 +84,7 @@ void pn532_hsu::tx_th() {
    while(true) {
       /* We block until we receive something to send. */
       msg = to.read();
+      outtoken.write(msg);
       if (debug && isprint(msg)) {
          PRINTF_INFO("PN532","[%s] sending-'%c'/%02x", name(), msg, msg);
       }
