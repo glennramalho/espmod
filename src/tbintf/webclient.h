@@ -103,11 +103,14 @@ SC_MODULE(webclient) {
    void openudpport(IPAddress ip, int port);
    std::string packetname(mqtt_type_t type, const char *str);
    std::string packetname(mqtt_type_t type, const unsigned char *str);
-   int expectmqtt(int port, mqtt_type_t exptype);
+   int receivemqtt(int port, unsigned char *&topic, mqtt_type_t &packettype,
+      int &length, int &flags, std::string &pub);
    void sendmqtt(int port, mqtt_type_t packettype, int packetid = 0,
       int c0 = 0);
    void publishmqtt(int port, const char *topic, int packetid,
       void *payload, int payloadlen);
+   int expectmqtt(int port, mqtt_type_t exptype);
+   int autoanswermqttpub(int port, mqtt_type_t &packettype);
    void expectws(int port);
    void printpage(int port);
    bool pending(int port);

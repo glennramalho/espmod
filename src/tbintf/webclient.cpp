@@ -548,15 +548,13 @@ std::string webclient::packetname(mqtt_type_t type, const char *str) {
          return std::to_string(type);
    }
 }
-int webclient::expectmqtt(int port, mqtt_type_t exptype) {
+
+int webclient::receivemqtt(int port, unsigned char *&topic,
+      mqtt_type_t &packettype, int &length, int &flags, std::string &pub) {
    unsigned char recv;
-   mqtt_type_t packettype;
-   int flags;
-   int length;
    int packetid;
    int cnt;
-   unsigned char *topic = NULL;
-   std::string pub("");
+   pub = "";
 
    /* We first read the fixed header. */
    recv = readchar(port);
@@ -633,34 +631,11 @@ int webclient::expectmqtt(int port, mqtt_type_t exptype) {
    }
    else packetid = -1; /* If there was no ID we set it to zero. */
 
-   /* We check the type. */
-   if (packettype == exptype && packetid == -1) {
-      PRINTF_INFO("WEBCLI",
-        "Received WiFi: %s, DUP=%d,QoS=%d,Retain=%d, len = %d, packetID = NONE",
-         packetname(packettype, topic).c_str(), flags>>3, (flags&6)>>1,
-         flags & 1, length);
-   }
-   else if (packettype == exptype) {
-      PRINTF_INFO("WEBCLI",
-        "Received WiFi: %s, DUP=%d,QoS=%d,Retain=%d, len = %d, packetID = %xh",
-         packetname(packettype, topic).c_str(), flags>>3, (flags&6)>>1,
-         flags & 1, length, packetid);
-   }
-   else {
-      PRINTF_ERROR("WEBCLI", "Expected packet %s but got %s",
-         packetname(exptype, "").c_str(),
-         packetname(packettype, topic).c_str());
-      return -1;
-   }
-   if (topic != NULL) delete topic;
-   if (pub.length() > 0) printf("Published: %s\n", pub.c_str());
-
    /* Now we flush out what is left in the packet as we are not checking this
     * yet. Maybe later.
     */
    flush(port);
 
-   /* And we return the packet ID */
    return packetid;
 }
 
@@ -770,6 +745,101 @@ void webclient::respondntp(int port, time_t trec, time_t tsend) {
    /* Now we send the packet back to the client with the new times. */
    send(port, (void *)msg, sizeof(msg));
 }
+
+int webclient::expectmqtt(int port, mqtt_type_t exptype) {
+   mqtt_type_t packettype;
+   int flags;
+   int length;
+   int packetid;
+   unsigned char *topic = NULL;
+   std::string pub;
+
+   packetid = receivemqtt(port, topic, packettype, length, flags, pub);
+
+   /* We check the type. */
+   if (packettype == exptype && packetid == -1) {
+      PRINTF_INFO("WEBCLI",
+        "Received WiFi: %s, DUP=%d,QoS=%d,Retain=%d, len = %d, packetID = NONE",
+         packetname(packettype, topic).c_str(), flags>>3, (flags&6)>>1,
+         flags & 1, length);
+   }
+   else if (packettype == exptype) {
+      PRINTF_INFO("WEBCLI",
+        "Received WiFi: %s, DUP=%d,QoS=%d,Retain=%d, len = %d, packetID = %xh",
+         packetname(packettype, topic).c_str(), flags>>3, (flags&6)>>1,
+         flags & 1, length, packetid);
+   }
+   else {
+      PRINTF_ERROR("WEBCLI", "Expected packet %s but got %s",
+         packetname(exptype, "").c_str(),
+         packetname(packettype, topic).c_str());
+      return -1;
+   }
+   if (topic != NULL) delete topic;
+   if (pub.length() > 0) printf("Published: %s\n", pub.c_str());
+
+   /* And we return the packet ID */
+   return packetid;
+}
+
+int webclient::autoanswermqttpub(int port, mqtt_type_t &packettype) {
+   int flags;
+   int length;
+   int packetid;
+   int dup;
+   int qos;
+   int retain;
+   unsigned char *topic = NULL;
+   std::string pub;
+
+   packetid = receivemqtt(port, topic, packettype, length, flags, pub);
+
+   dup = flags>>3;
+   qos = (flags&6)>>1;
+   retain = flags & 1;
+
+   /* We got a packet, so we report it. */
+   PRINTF_INFO("WEBCLI",
+     "Received WiFi: %s, DUP=%d,QoS=%d,Retain=%d, len = %d, packetID = %s",
+      packetname(packettype, topic).c_str(), dup, qos, retain, length,
+      (packetid == -1) ? "NONE" : std::to_string(packetid).c_str());
+
+   if (pub.length() > 0) printf("Published: %s\n", pub.c_str());
+   if (topic != NULL) delete topic;
+
+   switch (packettype) {
+      /* When we get a publish, we respond with a PUBACK if it was QOS1 or a
+       * PUBREC if it was QOS2. QOS1 we ignore.
+       */
+      case MQTT_TYPE_PUBLISH:
+         if (qos == 2) {
+            PRINTF_INFO("WEBCLI", "Returning WiFi: %s, packetID = %s",
+               packetname(MQTT_TYPE_PUBREC, topic).c_str(),
+               (packetid == -1) ? "NONE" : std::to_string(packetid).c_str());
+            sendmqtt(port, MQTT_TYPE_PUBREC, packetid);
+         }
+         else if (qos == 1) {
+            PRINTF_INFO("WEBCLI", "Returning WiFi: %s, packetID = %s",
+               packetname(MQTT_TYPE_PUBACK, topic).c_str(),
+               (packetid == -1) ? "NONE" : std::to_string(packetid).c_str());
+            sendmqtt(port, MQTT_TYPE_PUBACK, packetid);
+         }
+         break;
+      /* If we get a PUBREL, then it must have been QOS2, so we just respond. */
+      case MQTT_TYPE_PUBREL:
+         PRINTF_INFO("WEBCLI", "Returning WiFi: %s, packetID = %s",
+            packetname(MQTT_TYPE_PUBCOMP, topic).c_str(),
+            (packetid == -1) ? "NONE" : std::to_string(packetid).c_str());
+         sendmqtt(port, MQTT_TYPE_PUBCOMP, packetid);
+         break;
+      /* The other packets we just ignore. */
+      default: ;
+   }
+      
+   /* And we return the packet ID */
+   return packetid;
+}
+
 void webclient::expectws(int port) {
    unsigned int v;
    unsigned char recv;
