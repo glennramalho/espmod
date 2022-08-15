@@ -114,10 +114,11 @@ void pn532_base::pushresp() {
    }
    /* SAMConfiguration command */
    else if (mif.cmd == 0x14 && !mif.cmdbad) {
-      pushpreamble(0x5, false, 0x15, &cksum);
+      pushpreamble(0x2, false, 0x15, &cksum);
       to.write(0x100-cksum); /* DCS */
       to.write(0x00); /* ZERO */
    }
+   /* Get Firmware Version. */
    else if (mif.cmd == 0x02 && !mif.cmdbad) {
       pushpreamble(0x06, false, 0x3, &cksum);
       /* Firmware Version, we just pick something cool from
