@@ -782,7 +782,8 @@ int webclient::expectmqtt(int port, mqtt_type_t exptype) {
    return packetid;
 }
 
-int webclient::autoanswermqttpub(int port, mqtt_type_t &packettype) {
+int webclient::autoanswermqttpub(int port, mqtt_type_t &packettype,
+      std::string &pub) {
    int flags;
    int length;
    int packetid;
@@ -790,7 +791,6 @@ int webclient::autoanswermqttpub(int port, mqtt_type_t &packettype) {
    int qos;
    int retain;
    unsigned char *topic = NULL;
-   std::string pub;
 
    packetid = receivemqtt(port, topic, packettype, length, flags, pub);
 

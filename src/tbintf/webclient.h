@@ -110,7 +110,7 @@ SC_MODULE(webclient) {
    void publishmqtt(int port, const char *topic, int packetid,
       void *payload, int payloadlen);
    int expectmqtt(int port, mqtt_type_t exptype);
-   int autoanswermqttpub(int port, mqtt_type_t &packettype);
+   int autoanswermqttpub(int port, mqtt_type_t &packettype, std::string &pub);
    void expectws(int port);
    void printpage(int port);
    bool pending(int port);
