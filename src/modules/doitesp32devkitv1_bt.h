@@ -22,10 +22,10 @@
 #define _DOITESP32DEVKITV1_BT_H
 
 #include <systemc.h>
-#include "doitesp32devkitv1_i2c.h"
+#include "doitesp32devkitv1.h"
 #include "btmod.h"
 
-class doitesp32devkitv1_bt : public doitesp32devkitv1_i2c {
+class doitesp32devkitv1_bt : public doitesp32devkitv1 {
    public:
    /* Pins */
    sc_in<unsigned int> brx {"brx"};
@@ -35,17 +35,15 @@ class doitesp32devkitv1_bt : public doitesp32devkitv1_i2c {
    btmod i_bt {"i_bt", 128, 128};
 
    // Constructor
-   doitesp32devkitv1_bt(sc_module_name name): doitesp32devkitv1_i2c(name) {
+   doitesp32devkitv1_bt(sc_module_name name): doitesp32devkitv1(name) {
       /* Pin Hookups */
       i_bt.rx(brx);
       i_bt.tx(btx);
    }
+   SC_HAS_PROCESS(doitesp32devkitv1_bt);
 
-   void pininit() {
-      btptr = &i_bt;
-      BTserial.setports(&i_bt.to, &i_bt.from);
-      doitesp32devkitv1_i2c::pininit();
-   }
+   void pininit();
+   void trace(sc_trace_file *tf);
 };
 
 #endif

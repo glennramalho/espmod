@@ -29,6 +29,7 @@
 #include "driver/adc.h"
 #include "reset_reason.h"
 #include "soc/spi_struct.h"
+#include "nvs_flash.h"
 
 /* For lack of a better place, this goes here. The ESP32 has a temperature
  * sensor which returns the internal temperature in Farenheight. It seems
@@ -44,6 +45,17 @@ uint8_t temprature_sens_read() {
 
 void doitesp32devkitv1::dut(void) {
    wait(125, SC_NS);
+
+   /* If the flash is going to be used to store data, including the eeprom
+    * emulation, we need to initialize it. This should be set in the constructor
+    * of the instantiating module. The simulations that do not use the flash
+    * as data do not need to do this step.
+    */
+   if (flash_init) {
+      nvs_flash_init();
+      wait(50, SC_MS);
+   }
+
    /* We start running the Arduino Setup Function. */
    setup();
 
@@ -127,6 +139,9 @@ void doitesp32devkitv1::pininit() {
    gpiomatrixptr = &i_gpio_matrix;
    ctrlregsptr = &ctrlregs;
    espintrptr = &i_espintr;
+   i2c0ptr = &i_i2c0;
+   i2c1ptr = &i_i2c1;
+
    /* We point the module pointers to their modules and the struct pointers in
     * the modules to their struct.
     */
@@ -143,7 +158,7 @@ void doitesp32devkitv1::pininit() {
    Serial2.setports(2, &i_uart2.to, &i_uart2.from, (void *)&i_uart2);
    WiFi.setports(&i_uwifi.to, &i_uwifi.from);
    Flashport.setports(&i_uflash.to, &i_uflash.from);
-   Wire.setports(&i_ui2c.to, &i_ui2c.from);
+   Wire.setports(&i_i2c0.to, &i_i2c0.from);
 }
 
 void doitesp32devkitv1::trace(sc_trace_file *tf) {
@@ -152,6 +167,8 @@ void doitesp32devkitv1::trace(sc_trace_file *tf) {
    i_gpio_matrix.trace(tf);
    i_vspi.trace(tf);
    i_hspi.trace(tf);
+   i_i2c0.trace(tf);
+   i_i2c1.trace(tf);
    sc_trace(tf, uart0rx, uart0rx.name());
    sc_trace(tf, uart0tx, uart0tx.name());
    sc_trace(tf, uart2rx, uart2rx.name());
@@ -250,4 +267,12 @@ void doitesp32devkitv1::trace(sc_trace_file *tf) {
    sc_trace(tf, hspi_cs0_out, hspi_cs0_out.name());
    sc_trace(tf, hspi_cs0_oe, hspi_cs0_oe.name());
    sc_trace(tf, hspi_cs0_in, hspi_cs0_in.name());
+   sc_trace(tf, scl_en_0, scl_en_0.name());
+   sc_trace(tf, sda_en_0, sda_en_0.name());
+   sc_trace(tf, scl_0, scl_0.name());
+   sc_trace(tf, sda_0, sda_0.name());
+   sc_trace(tf, scl_en_1, scl_en_1.name());
+   sc_trace(tf, sda_en_1, sda_en_1.name());
+   sc_trace(tf, scl_1, scl_1.name());
+   sc_trace(tf, sda_1, sda_1.name());
 }
