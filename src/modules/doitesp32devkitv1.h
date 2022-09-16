@@ -373,5 +373,6 @@ SC_MODULE(doitesp32devkitv1) {
    void start_of_simulation();
    void trace(sc_trace_file *tf);
 };
+typedef doitesp32devkitv1 doitesp32devkitv1_i2c;
 
 #endif

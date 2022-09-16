@@ -86,15 +86,20 @@ void pn532_base::pushresp() {
    if (mif.cmd == 0x4a && !mif.cmdbad) {
       /* If we got a card, we return the data on it. */
       if (mif.tags > 0) {
+         /* Calculate size. */
+         int len = 1 + 1 + mif.tags * (1+2+1+1+mif.uidLength) + 1;
+         int i;
          /* Preamble */
-         pushpreamble(0xA, false, 0x4B, &cksum);
+         pushpreamble(len, false, 0x4B, &cksum);
          /* Packet */
          pushandcalc(mif.tags, &cksum);/* NbTg */
-         pushandcalc(0x00, &cksum); /* Tag no. */
-         pushandcalc(mif.sens_res>>8, &cksum);/* sens res upper */
-         pushandcalc(mif.sens_res&0xff, &cksum);/* sens res lower */
-         pushandcalc(mif.sel_res, &cksum); /* sel res */
-         pushandcalc(mif.uidLength, &cksum); /* NFCID Len */
+         for(i = 1; i <= mif.tags; i = i + 1) {
+            pushandcalc(i, &cksum); /* Tag no. */
+            pushandcalc(mif.sens_res>>8, &cksum);/* sens res upper */
+            pushandcalc(mif.sens_res&0xff, &cksum);/* sens res lower */
+            pushandcalc(mif.sel_res, &cksum); /* sel res */
+            pushandcalc(mif.uidLength, &cksum); /* NFCID Len */
+         }
          /* NFCID */
          pushandcalc(mif.uidValue>>24, &cksum);
          pushandcalc((mif.uidValue&0xff0000)>>16, &cksum);
