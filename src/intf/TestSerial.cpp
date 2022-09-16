@@ -191,7 +191,7 @@ int TestSerial::read() {
    return (int)from->read();
 }
 
-unsigned char TestSerial::bl_read() {
+int TestSerial::bl_read() {
    /* Just like the one above but it does a blocking read. Useful to cut
     * on polled reads.
     */
@@ -204,7 +204,7 @@ unsigned char TestSerial::bl_read() {
    return from->read();
 }
 
-unsigned char TestSerial::bl_read(sc_time tmout) {
+int TestSerial::bl_read(sc_time tmout) {
    /* And this is a blocking read with a timeout. */
    
    clockpacer.wait_next_apb_clk();
@@ -236,7 +236,7 @@ int TestSerial::peek() {
    }
 }
 
-unsigned char TestSerial::bl_peek() {
+int TestSerial::bl_peek() {
    clockpacer.wait_next_apb_clk();
    if (from == NULL) return -1;
    if (taken) return waiting;
@@ -247,7 +247,7 @@ unsigned char TestSerial::bl_peek() {
    }
 }
 
-unsigned char TestSerial::bl_peek(sc_time tmout) {
+int TestSerial::bl_peek(sc_time tmout) {
    clockpacer.wait_next_apb_clk();
    if (from == NULL) return -1;
    if (taken) return waiting;

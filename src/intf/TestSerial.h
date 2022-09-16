@@ -78,10 +78,10 @@ class TestSerial: public Stream {
    size_t write(const char* buf);
    size_t write(const char* buf, size_t len);
 
-   unsigned char bl_peek();
-   unsigned char bl_read();
-   unsigned char bl_peek(sc_time tmout);
-   unsigned char bl_read(sc_time tmout);
+   int bl_peek();
+   int bl_read();
+   int bl_peek(sc_time tmout);
+   int bl_read(sc_time tmout);
    const sc_event &data_read_event() {
       if (to == NULL) SC_REPORT_FATAL("TESTSER", "to pointer not initialized");
       return to->data_read_event();

@@ -84,9 +84,11 @@ void uartInit(int modn, void *_to, void *_from, void *_mod);
  * They are the same thing as their counterparts but allow you to specify a
  * timeout. This is useful so that internal library functions can do a time out
  * wait without having to do a slow busy wait.
+ * These return -1 if uart is not defined, -1 if the fifo is empty, or the
+ * character in 8 bits if it got something.
  */
-uint8_t uartReadTimeout(uart_t* uart, unsigned long int tmout);
-uint8_t uartPeekTimeout(uart_t* uart, unsigned long int tmout);
+int uartReadTimeout(uart_t* uart, unsigned long int tmout);
+int uartPeekTimeout(uart_t* uart, unsigned long int tmout);
 
 #ifdef __cplusplus
 }

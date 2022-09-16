@@ -110,7 +110,7 @@ void pn532_base::pushresp() {
       } else {
          /* If no target came in, we return an empty list. */
          /* Preamble */
-         pushpreamble(0xA, false, 0x4B, &cksum);
+         pushpreamble(0x3, false, 0x4B, &cksum);
          /* Packet */
          pushandcalc(0, &cksum); /* NbTg */
          to.write(0x100-cksum); /* DCS */
