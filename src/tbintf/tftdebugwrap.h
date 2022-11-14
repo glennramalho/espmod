@@ -72,7 +72,10 @@ class tftdebugwrap : public TFT_eSPI {
    void startcmd(const char *nm, int nx1, int ny1, int nx2, int ny2, int nfg,
       int nbg, int nsz);
    void endcmd();
+
+   void set_debug(bool on) { debug = on; }
    protected:
+   bool debug;
    bool pushskip(int nx1, int ny1, int nx2, int ny2, int nfg,
       int nbg, int nsz, String nm);
    void popskip(bool wasskip);

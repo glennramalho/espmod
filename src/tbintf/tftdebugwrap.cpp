@@ -4,8 +4,8 @@
 
 tftdebugwrap::tftdebugwrap(int16_t _W, int16_t _H): TFT_eSPI(_W, _H) {
    skip = false;
+   debug = true;
 }
-
 
 void tftdebugwrap::drawChar(int32_t x, int32_t y, uint16_t c, uint32_t color,
       uint32_t bg, uint8_t size) {
@@ -264,7 +264,7 @@ void tftdebugwrap::endcmd() {
 bool tftdebugwrap::pushskip(int nx1, int ny1, int nx2, int ny2,
       int nfg, int nbg, int nsz, String nm) {
    bool wasskip = skip;
-   PRINTF_INFO("TFTDBG", "[%d,%d %d,%d]: color %d/%d sz=%d '%s'",
+   if (debug) PRINTF_INFO("TFTDBG", "[%d,%d %d,%d]: color %d/%d sz=%d '%s'",
       nx1, ny1, nx2, ny1, nfg, nbg, nsz, nm.c_str());
    if (!skip) {
       _x1 = nx1; _y1 = ny1; _x2 = nx2; _y2 = ny2;
@@ -278,7 +278,7 @@ bool tftdebugwrap::pushskip(int nx1, int ny1, int nx2, int ny2,
 
 void tftdebugwrap::popskip(bool wasskip) {
    skip = wasskip;
-   PRINTF_INFO("TFTDBG", "POP");
+   if (debug) PRINTF_INFO("TFTDBG", "POP");
    if (!skip) {
       end.notify();
       wait(SC_ZERO_TIME);

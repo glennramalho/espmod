@@ -63,8 +63,11 @@ SC_MODULE(tftmod) {
    void trace(sc_trace_file *tf);
    void waitcode(tft_obj_t *t);
    void setfgcolor(unsigned int v);
+   void set_debug(int lvl) { debug = lvl; }
 
    SC_CTOR(tftmod) {
+      debug = 0;
+
       SC_THREAD(write);
       sensitive << wr;
 
@@ -74,6 +77,7 @@ SC_MODULE(tftmod) {
 
    private:
    uint8_t fglow, fghigh;
+   int debug;
 };
 
 #endif

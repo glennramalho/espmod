@@ -293,7 +293,7 @@ void tftmod::write(void) {
                rdstate = NONE;
                break;
             case 0x2c:
-               printf("%s: %s: Receiving Data\n",
+               if (debug > 8) printf("%s: %s: Receiving Data\n",
                   name(), sc_time_stamp().to_string().c_str());
                signature = 0;
                explength = (endcol-startcol+1) * (endrow-startrow+1) * 2;
@@ -368,45 +368,55 @@ void tftmod::write(void) {
             if (cmd == 0x2a) {
                startcol = val>>16;
                endcol = (val&0xffff);
-               printf("%s: %s: Setting column to = %04x:%04x\n",
+               if (debug>8) printf("%s: %s: Setting column to = %04x:%04x\n",
                   name(), sc_time_stamp().to_string().c_str(),
                   val>>16, val & 0xffff);
             }
             else if (cmd == 0x2b) {
                startrow = val>>16;
                endrow = (val&0xffff);
-               printf("%s: %s: Setting row to = %04x:%04x\n",
+               if (debug>8) printf("%s: %s: Setting row to = %04x:%04x\n",
                   name(), sc_time_stamp().to_string().c_str(),
                   val>>16, val & 0xffff);
             }
-            else if (cmd == 0x30) 
-               printf("%s: %s: Set Partial Row Start = %08x End = %08x\n",
+            else if (cmd == 0x30) {
+               if (debug>2) printf(
+                  "%s: %s: Set Partial Row Start = %08x End = %08x\n",
                   name(), sc_time_stamp().to_string().c_str(),
                   (val >> 16) & 0x1ff, val & 0x1ff);
-            else if (cmd == 0x36) 
+            }
+            else if (cmd == 0x36) {
                printf("%s: %s: Memory Access Control %08x\n",
                   name(), sc_time_stamp().to_string().c_str(), val);
-            else if (cmd == 0x3a) 
-               printf("%s: %s: Pixel Format = %08x\n",
+            }
+            else if (cmd == 0x3a) {
+               if (debug>2) printf("%s: %s: Pixel Format = %08x\n",
                   name(), sc_time_stamp().to_string().c_str(), val);
-            else if (cmd == 0xc5) 
+            }
+            else if (cmd == 0xc5) {
                printf("%s: %s: Frame Rate and Inversion %08x\n",
                   name(), sc_time_stamp().to_string().c_str(), val);
-            else if (cmd == 0xc0) 
+            }
+            else if (cmd == 0xc0) {
                printf("%s: %s: Pannel Driving %02x%08x\n",
                   name(), sc_time_stamp().to_string().c_str(), val1, val);
-            else if (cmd == 0xd0) 
+            }
+            else if (cmd == 0xd0) {
                printf("%s: %s: Set Power %08x\n",
                   name(), sc_time_stamp().to_string().c_str(), val);
-            else if (cmd == 0xd1) 
+            }
+            else if (cmd == 0xd1) {
                printf("%s: %s: VCOM %08x\n",
                   name(), sc_time_stamp().to_string().c_str(), val);
-            else if (cmd == 0xd2) 
+            }
+            else if (cmd == 0xd2) {
                printf("%s: %s: Normal Power %08x\n",
                   name(), sc_time_stamp().to_string().c_str(), val);
-            else
+            }
+            else {
                printf("G: %s: %x: %08x\n", sc_time_stamp().to_string().c_str(),
                   cmd, val);
+            }
             break;
          default: state = IDLE;
             printf("D: %s: %02x\n", sc_time_stamp().to_string().c_str(),
