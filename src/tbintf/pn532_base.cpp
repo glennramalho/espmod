@@ -179,6 +179,13 @@ void pn532_base::pushresp() {
          }
          pushandcalc(0x90, &cksum);
          pushandcalc(0x00, &cksum);
+      } else {
+         PRINTF_INFO("MIFARE", "Other Command");
+         pushpreamble(0x06, false, 0x41, &cksum);
+         pushandcalc(0x00, &cksum); /* OK */
+         pushandcalc(mif.lastincmd, &cksum);
+         pushandcalc(0x02, &cksum);
+         pushandcalc(0x03, &cksum);
       }
       to.write(0x100-cksum); /* DCS */
       to.write(0x00); /* ZERO */
@@ -365,8 +372,11 @@ void pn532_base::process_th() {
                   /* Read */
                   } else if (mif.lastincmd == 0x30 && mif.authenticated) {
                      ;
+                  /* Other commands we simply return a good as we do not know
+                   * what to do.
+                   */
                   } else {
-                     mif.cmdbad = true;
+                     mif.cmdbad = false;
                   }
                }
             }
