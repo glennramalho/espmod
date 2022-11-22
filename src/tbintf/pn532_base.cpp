@@ -70,6 +70,8 @@ void pn532_base::setcardpresent(uint32_t uid) {
    mif.sel_res = 0;
    mif.uidLength = 4;
    mif.uidValue = uid;
+   mif.authenticated = false;
+   mif.lastincmd = 0x0;
 }
 
 void pn532_base::start_of_simulation() {
@@ -133,6 +135,51 @@ void pn532_base::pushresp() {
       pushandcalc(0x01, &cksum); /* Firmware Version */
       pushandcalc(0x06, &cksum); /* Revision */
       pushandcalc(0x07, &cksum); /* Support */
+      to.write(0x100-cksum); /* DCS */
+      to.write(0x00); /* ZERO */
+   }
+   /* InDataExchange Command */
+   else if (mif.cmd == 0x40) {
+      /* We don't process the actual MiFare commands, we just return that it
+       * was authenticated ok.
+       */
+      /* We return the data. If the command is bad, we return a failure and
+       * some random junk.
+       */
+      if (mif.cmdbad) {
+         PRINTF_INFO("MIFARE", "Command Rejected");
+         pushpreamble(0x06, false, 0x41, &cksum);
+         pushandcalc(0x55, &cksum); /* BAD */
+         pushandcalc(mif.lastincmd, &cksum);
+         pushandcalc(0x02, &cksum);
+         pushandcalc(0x03, &cksum);
+      } else if (mif.lastincmd == 0x60) {
+         PRINTF_INFO("MIFARE", "Block Authenticated");
+         pushpreamble(0x06, false, 0x41, &cksum);
+         pushandcalc(0x00, &cksum); /* OK */
+         pushandcalc(mif.lastincmd, &cksum);
+         pushandcalc(0x02, &cksum);
+         pushandcalc(0x03, &cksum);
+      } else if (mif.lastincmd == 0xA0) {
+         PRINTF_INFO("MIFARE", "Write");
+         pushpreamble(0x06, false, 0x41, &cksum);
+         pushandcalc(0x00, &cksum); /* OK */
+         pushandcalc(mif.lastincmd, &cksum);
+         pushandcalc(0x02, &cksum);
+         pushandcalc(0x03, &cksum);
+      } else if (mif.lastincmd == 0x30) {
+         PRINTF_INFO("MIFARE", "Read");
+         int p;
+         pushpreamble(21, false, 0x41, &cksum);
+         pushandcalc(0x00, &cksum); /* OK */
+         p = 0;
+         while (p < 16) {
+            pushandcalc(mif.data[p], &cksum);
+            p = p + 1;
+         }
+         pushandcalc(0x90, &cksum);
+         pushandcalc(0x00, &cksum);
+      }
       to.write(0x100-cksum); /* DCS */
       to.write(0x00); /* ZERO */
    }
@@ -289,6 +336,40 @@ void pn532_base::process_th() {
                   mif.useirq=grab(&cksum); mif.len = mif.len-1;
                }
             }
+            /* InDataExchange */
+            else if (mif.cmd == 0x40) {
+               /* For the InDataExchange command we are talking to the card.
+                * This varies a lot according to the card, and it can get
+                * quite complex. We are trying to do something simple here,
+                * so all we do is check for a few commands.
+                */
+               /* We first get the header. */
+               if (mif.len < 2) mif.cmdbad = true;
+               else {
+                  /* msg has the Target No. */
+                  mif.lastincmd = grab(&cksum); mif.len = mif.len - 1; /* cmd */
+                  (void)grab(&cksum); mif.len = mif.len - 1; /* Block No. */
+                  /* Authenticate */
+                  if (mif.lastincmd == 0x60 && mif.len >= 10) {
+                     mif.authenticated = true;
+                  /* Write */
+                  } else if (mif.lastincmd == 0xA0 && mif.len >= 16 &&
+                        mif.authenticated) {
+                     int p;
+                     p = 0;
+                     while (p < 16) {
+                        mif.data[p] = grab(&cksum);
+                        mif.len = mif.len - 1;
+                        p = p + 1;
+                     }
+                  /* Read */
+                  } else if (mif.lastincmd == 0x30 && mif.authenticated) {
+                     ;
+                  } else {
+                     mif.cmdbad = true;
+                  }
+               }
+            }
             else if (mif.cmd == 0x4a) {
                mif.maxtg = msg;
                if (mif.len<1) {
@@ -302,7 +383,16 @@ void pn532_base::process_th() {
                if (mif.brty != 0x00) mif.cmdbad = true; /* we only support 00*/
             }
 
-            if (mif.len == 0) pn532state = DCS;
+            /* We flush out the rest of the payload. */
+            while (mif.len > 0) {
+               pn532state = DCS;
+               int i = grab(&cksum);
+               PRINTF_INFO("I", "%02x", i);
+               mif.len = mif.len - 1;
+            }
+
+            /* And we go to the DCS. */
+            pn532state = DCS;
             break;
          case DCS: {
             /* We now check the DCS. Note that the DCS was added, so we should
@@ -340,6 +430,12 @@ void pn532_base::process_th() {
             }
             else if (mif.cmd == 0x02) {
                PRINTF_INFO("PN532", "Accepted getVersion command");
+               mif.predelay = 0;
+               mif.delay = 1;
+               newcommand_ev.notify();
+            }
+            else if (mif.cmd == 0x40) {
+               PRINTF_INFO("PN532", "Accepted InDataExchange command");
                mif.predelay = 0;
                mif.delay = 1;
                newcommand_ev.notify();

@@ -60,6 +60,9 @@ SC_MODULE(pn532_base) {
       unsigned char cmd;
       unsigned char mode;
       bool cmdbad;
+      bool authenticated;
+      unsigned short int lastincmd;
+      unsigned short int data[16];
       unsigned short int maxtg;
       unsigned short int brty;
       int len;
