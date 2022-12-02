@@ -25,6 +25,17 @@
 
 #include <systemc.h>
 #include "gn_mixed.h"
+#include <map>
+
+struct data_block_t {
+   char data[16];
+   bool authenticated;
+   data_block_t() {
+      int i;
+      for (i = 0; i < 16; i = i + 1) data[i] = 0;
+      authenticated = false;
+   }
+};
 
 SC_MODULE(pn532_base) {
    /* Signals */
@@ -60,11 +71,11 @@ SC_MODULE(pn532_base) {
       unsigned char cmd;
       unsigned char mode;
       bool cmdbad;
-      bool authenticated;
       unsigned short int lastincmd;
-      unsigned short int data[16];
+      unsigned short int bn;
       unsigned short int maxtg;
       unsigned short int brty;
+      std::map<int, data_block_t> mem;
       int len;
       int timeout;
       bool useirq;
@@ -78,6 +89,9 @@ SC_MODULE(pn532_base) {
       SC_THREAD(resp_th);
       SC_THREAD(irqmanage_th);
    }
+
+   void mifset(int pos, const char *value);
+   void mifsetn(int pos, const uint8_t *value, int len);
 
    /* Private routines. */
    protected:

@@ -70,8 +70,35 @@ void pn532_base::setcardpresent(uint32_t uid) {
    mif.sel_res = 0;
    mif.uidLength = 4;
    mif.uidValue = uid;
-   mif.authenticated = false;
+   std::map<int, data_block_t>::iterator i;
+   for(i = mif.mem.begin(); i != mif.mem.end(); i++)
+      i->second.authenticated = false;
    mif.lastincmd = 0x0;
+   mif.bn = 0x0;
+}
+
+void pn532_base::mifset(int pos, const char *value) {
+   int i;
+   bool fillzero;
+   fillzero = false;
+   for (i = 0; i < 15; i = i + 1) {
+      if (!fillzero) {
+         mif.mem[pos].data[i] = value[i];
+         if (value[i] == '\0') fillzero = true;
+      } else mif.mem[pos].data[i] = 0;
+   }
+}
+
+void pn532_base::mifsetn(int pos, const uint8_t *value, int len) {
+   int i;
+   bool fillzero;
+   fillzero = false;
+   for (i = 0; i < 15; i = i + 1) {
+      if (!fillzero) {
+         mif.mem[pos].data[i] = value[i];
+         if (i == len-1) fillzero = true;
+      } else mif.mem[pos].data[i] = 0;
+   }
 }
 
 void pn532_base::start_of_simulation() {
@@ -154,27 +181,27 @@ void pn532_base::pushresp() {
          pushandcalc(0x02, &cksum);
          pushandcalc(0x03, &cksum);
       } else if (mif.lastincmd == 0x60) {
-         PRINTF_INFO("MIFARE", "Block Authenticated");
+         PRINTF_INFO("MIFARE", "Block 0x%02x Authenticated", mif.bn);
          pushpreamble(0x06, false, 0x41, &cksum);
          pushandcalc(0x00, &cksum); /* OK */
          pushandcalc(mif.lastincmd, &cksum);
          pushandcalc(0x02, &cksum);
          pushandcalc(0x03, &cksum);
       } else if (mif.lastincmd == 0xA0) {
-         PRINTF_INFO("MIFARE", "Write");
+         PRINTF_INFO("MIFARE", "Write to block 0x%02x", mif.bn);
          pushpreamble(0x06, false, 0x41, &cksum);
          pushandcalc(0x00, &cksum); /* OK */
          pushandcalc(mif.lastincmd, &cksum);
          pushandcalc(0x02, &cksum);
          pushandcalc(0x03, &cksum);
       } else if (mif.lastincmd == 0x30) {
-         PRINTF_INFO("MIFARE", "Read");
+         PRINTF_INFO("MIFARE", "Read from block 0x%02x", mif.bn);
          int p;
          pushpreamble(21, false, 0x41, &cksum);
          pushandcalc(0x00, &cksum); /* OK */
          p = 0;
          while (p < 16) {
-            pushandcalc(mif.data[p], &cksum);
+            pushandcalc(mif.mem[mif.bn].data[p], &cksum);
             p = p + 1;
          }
          pushandcalc(0x90, &cksum);
@@ -355,22 +382,23 @@ void pn532_base::process_th() {
                else {
                   /* msg has the Target No. */
                   mif.lastincmd = grab(&cksum); mif.len = mif.len - 1; /* cmd */
-                  (void)grab(&cksum); mif.len = mif.len - 1; /* Block No. */
+                  mif.bn = grab(&cksum); mif.len = mif.len - 1; /* Block No. */
                   /* Authenticate */
                   if (mif.lastincmd == 0x60 && mif.len >= 10) {
-                     mif.authenticated = true;
+                     mif.mem[mif.bn].authenticated = true;
                   /* Write */
                   } else if (mif.lastincmd == 0xA0 && mif.len >= 16 &&
-                        mif.authenticated) {
+                        mif.mem[mif.bn].authenticated) {
                      int p;
                      p = 0;
                      while (p < 16) {
-                        mif.data[p] = grab(&cksum);
+                        mif.mem[mif.bn].data[p] = grab(&cksum);
                         mif.len = mif.len - 1;
                         p = p + 1;
                      }
                   /* Read */
-                  } else if (mif.lastincmd == 0x30 && mif.authenticated) {
+                  } else if (mif.lastincmd == 0x30 &&
+                        mif.mem[mif.bn].authenticated) {
                      ;
                   /* Other commands we simply return a good as we do not know
                    * what to do.
@@ -428,20 +456,20 @@ void pn532_base::process_th() {
                PRINTF_INFO("PN532", "Accepted Inlist Passive Target");
                /* We put then the response in the buffer */
                mif.predelay = 5;
-               mif.delay = 25;
+               mif.delay = 900;
                newcommand_ev.notify();
             }
             else if (mif.cmd == 0x14) {
                PRINTF_INFO("PN532", "Accepted SAM configuration command");
                /* We put then the response in the buffer */
-               mif.predelay = 0;
-               mif.delay = 1;
+               mif.predelay = 5;
+               mif.delay = 20;
                newcommand_ev.notify();
             }
             else if (mif.cmd == 0x02) {
                PRINTF_INFO("PN532", "Accepted getVersion command");
-               mif.predelay = 0;
-               mif.delay = 1;
+               mif.predelay = 2;
+               mif.delay = 20;
                newcommand_ev.notify();
             }
             else if (mif.cmd == 0x40) {
