@@ -81,6 +81,8 @@ SC_MODULE(pn532_base) {
       bool useirq;
       unsigned int delay;
       unsigned int predelay;
+      unsigned int retries;
+      unsigned int mxrtypassiveactivation;
    } mif;
 
    // Constructor
@@ -97,10 +99,11 @@ SC_MODULE(pn532_base) {
    protected:
    typedef enum {OPOFF, OPIDLE, OPACK, OPACKRDOUT, OPPREDELAY, OPBUSY,
       OPREADOUT} op_t;
+   typedef enum {RESP_OK, RESP_RETRY} resp_t;
    void pushack();
    void pushsyntaxerr();
    void pushpreamble(int len, bool hosttopn, int cmd, unsigned char *c);
-   void pushresp();
+   resp_t pushresp();
    void flush_to() { while(to.num_available() != 0) (void)to.read(); }
    unsigned char grab(unsigned char *c) {
       unsigned char m = from.read();

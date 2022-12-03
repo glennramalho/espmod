@@ -104,11 +104,12 @@ void pn532_base::mifsetn(int pos, const uint8_t *value, int len) {
 void pn532_base::start_of_simulation() {
    /* We begin setting the card as non-present. */
    setcardnotpresent();
+   mif.mxrtypassiveactivation = 0xff;
    /* And we initialize the device to off and no IRQ. */
    opstate.write(OPOFF);
 }
 
-void pn532_base::pushresp() {
+pn532_base::resp_t pn532_base::pushresp() {
    unsigned char cksum = 0;
 
    /* Now we can start processing the commands. */
@@ -136,6 +137,19 @@ void pn532_base::pushresp() {
          pushandcalc(mif.uidValue&0xff, &cksum);
          to.write(0x100-cksum); /* DCS */
          to.write(0x00); /* ZERO */
+
+      /* If there is no card, and it is configured to infinite retries, we need
+       * to try again.
+       */
+      } else if (mif.retries == 0xff) {
+         return RESP_RETRY;
+      /* If we had a number of retries set, we then decrement the count and
+       * retry.
+       */
+      } else if (mif.retries > 0) {
+         mif.retries = mif.retries - 1;
+         return RESP_RETRY;
+      /* If we are out of retries, we can then return an empty frame. */
       } else {
          /* If no target came in, we return an empty list. */
          /* Preamble */
@@ -224,6 +238,7 @@ void pn532_base::pushresp() {
 
    /* We also clear the command so we do not keep on sending it back. */
    mif.cmd = 0;
+   return RESP_OK;
 }
 
 void pn532_base::resp_th() {
@@ -276,8 +291,14 @@ void pn532_base::resp_th() {
          /* Then we send the response. */
          case OPBUSY:
             flush_to();
-            pushresp();
-            opstate.write(OPREADOUT);
+            /* We try to push a response. If there is a retry request, we
+             * reissue the delay and do it again.
+             */
+            if (RESP_RETRY == pushresp())
+               ack_ev.notify(sc_time(mif.delay, SC_MS));
+
+            /* If the response was ok, we go to the READOUT state. */
+            else opstate.write(OPREADOUT);
             break;
          case OPREADOUT:
             opstate.write(OPIDLE);
@@ -408,6 +429,60 @@ void pn532_base::process_th() {
                   }
                }
             }
+            else if (mif.cmd == 0x32) {
+               int cfgitem = msg;
+               int cfg[3];
+               switch (cfgitem) {
+                  case 0x1: 
+                     cfg[0] = grab(&cksum); mif.len = mif.len - 1;
+                     PRINTF_INFO("PN532",
+                        "Accepted RFConfiguration [0x1]=%02x", cfg[0]);
+                     break;
+                  case 0x2:
+                     cfg[0] = grab(&cksum); mif.len = mif.len - 1;
+                     cfg[1] = grab(&cksum); mif.len = mif.len - 1;
+                     cfg[2] = grab(&cksum); mif.len = mif.len - 1;
+                     PRINTF_INFO("PN532",
+                        "Accepted RFConfiguration [0x2]=RFU: %02x", cfg[0]);
+                     PRINTF_INFO("PN532",
+                        "Accepted RFConfiguration [0x2]=fATR_RES_Timeout: %02x",
+                        cfg[1]);
+                     PRINTF_INFO("PN532",
+                        "Accepted RFConfiguration [0x2]=fRetryTimeout: %02x",
+                        cfg[2]);
+                     break;
+                  case 0x4:
+                     cfg[0] = grab(&cksum); mif.len = mif.len - 1;
+                     PRINTF_INFO("PN532",
+                        "Accepted RFConfiguration [0x4]=MxRetryCOM: %02x", 
+                           cfg[0]);
+                     break;
+                  case 0x5:
+                     cfg[0] = grab(&cksum); mif.len = mif.len - 1;
+                     cfg[1] = grab(&cksum); mif.len = mif.len - 1;
+                     cfg[2] = grab(&cksum); mif.len = mif.len - 1;
+                     PRINTF_INFO("PN532",
+                        "Accepted RFConfiguration [0x5]=MxRtyATR: %02x",cfg[0]);
+                     PRINTF_INFO("PN532",
+                        "Accepted RFConfiguration [0x5]=MxRtyPSL: %02x",
+                        cfg[1]);
+                     PRINTF_INFO("PN532",
+                  "Accepted RFConfiguration [0x5]=MxRtyPassiveActivation: %02x",
+                        cfg[2]);
+                     mif.mxrtypassiveactivation = cfg[2];
+                     break;
+               }
+               if (mif.len<1) {
+                  mif.cmdbad = true;
+               } else {
+                  mif.brty = grab(&cksum); mif.len = mif.len - 1;
+               }
+
+               /* brty=00 only supports 1 or 2 targets. */
+               if (mif.maxtg > 2 || mif.maxtg <= 0) mif.cmdbad = true;
+               if (mif.brty != 0x00) mif.cmdbad = true; /* we only support 00*/
+            }
+
             else if (mif.cmd == 0x4a) {
                mif.maxtg = msg;
                if (mif.len<1) {
@@ -456,7 +531,11 @@ void pn532_base::process_th() {
                PRINTF_INFO("PN532", "Accepted Inlist Passive Target");
                /* We put then the response in the buffer */
                mif.predelay = 5;
-               mif.delay = 900;
+               mif.delay = 200;
+               /* We set the retries to the maximum set and notify the process
+                * to begin.
+                */
+               mif.retries = mif.mxrtypassiveactivation;
                newcommand_ev.notify();
             }
             else if (mif.cmd == 0x14) {
@@ -474,6 +553,11 @@ void pn532_base::process_th() {
             }
             else if (mif.cmd == 0x40) {
                PRINTF_INFO("PN532", "Accepted InDataExchange command");
+               mif.predelay = 0;
+               mif.delay = 1;
+               newcommand_ev.notify();
+            }
+            else if (mif.cmd == 0x32) {
                mif.predelay = 0;
                mif.delay = 1;
                newcommand_ev.notify();
